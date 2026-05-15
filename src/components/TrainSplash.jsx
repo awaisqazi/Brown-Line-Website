@@ -108,63 +108,34 @@ const TrainSplash = () => {
         }}
       />
 
-      {/* Train tracks — perspective floor receding to the horizon behind the train */}
+      {/* Train tracks — converging rails with ties scrolling toward camera */}
       <div
-        className="absolute inset-0 pointer-events-none overflow-hidden z-0"
-        style={{ perspective: '520px', perspectiveOrigin: '50% 50%' }}
+        className="absolute inset-x-0 top-1/2 bottom-0 overflow-hidden pointer-events-none z-0"
         aria-hidden="true"
       >
-        <div
-          className="absolute"
-          style={{
-            left: '50%',
-            top: '50%',
-            width: '180vmax',
-            height: '150vmax',
-            marginLeft: '-90vmax',
-            transform: 'rotateX(76deg)',
-            transformOrigin: '50% 0%',
-          }}
+        {/* Rails: SVG lines that converge to a vanishing point at the horizon */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          aria-hidden="true"
         >
-          {/* Wooden ties (sleepers) — animated scrolling toward viewer */}
+          {/* Outer brown rails */}
+          <line x1="49" y1="0" x2="-6" y2="100" stroke="#642713" strokeWidth="4" opacity="0.55" vectorEffect="non-scaling-stroke" />
+          <line x1="51" y1="0" x2="106" y2="100" stroke="#642713" strokeWidth="4" opacity="0.55" vectorEffect="non-scaling-stroke" />
+          {/* Steel sheen highlight on top of each rail */}
+          <line x1="49.4" y1="0" x2="-5" y2="100" stroke="#FAF1EC" strokeWidth="1.2" opacity="0.45" vectorEffect="non-scaling-stroke" />
+          <line x1="50.6" y1="0" x2="105" y2="100" stroke="#FAF1EC" strokeWidth="1.2" opacity="0.45" vectorEffect="non-scaling-stroke" />
+        </svg>
+
+        {/* Railroad ties (sleepers) scrolling from horizon to foreground */}
+        {Array.from({ length: 8 }, (_, i) => (
           <div
-            className={isExiting ? 'animate-track-ties-warp' : 'animate-track-ties'}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage:
-                'repeating-linear-gradient(0deg, #642713 0 14px, transparent 14px 110px)',
-              WebkitMaskImage:
-                'linear-gradient(90deg, transparent 30%, black 42%, black 58%, transparent 70%), linear-gradient(0deg, black 0%, black 85%, transparent 100%)',
-              maskImage:
-                'linear-gradient(90deg, transparent 30%, black 42%, black 58%, transparent 70%), linear-gradient(0deg, black 0%, black 85%, transparent 100%)',
-              WebkitMaskComposite: 'source-in',
-              maskComposite: 'intersect',
-              opacity: 0.45,
-            }}
+            key={i}
+            className={isExiting ? 'splash-tie-warp' : 'splash-tie'}
+            style={{ animationDelay: `${-(i * 1.6) / 8}s` }}
           />
-          {/* Two parallel rails — static, converge at the horizon via perspective */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `linear-gradient(
-                90deg,
-                transparent calc(50% - 92px),
-                #642713 calc(50% - 92px),
-                #642713 calc(50% - 84px),
-                transparent calc(50% - 84px),
-                transparent calc(50% + 84px),
-                #642713 calc(50% + 84px),
-                #642713 calc(50% + 92px),
-                transparent calc(50% + 92px)
-              )`,
-              WebkitMaskImage: 'linear-gradient(0deg, black 5%, transparent 100%)',
-              maskImage: 'linear-gradient(0deg, black 5%, transparent 100%)',
-              opacity: 0.55,
-            }}
-          />
-        </div>
+        ))}
       </div>
 
       {/* Approaching/idle/exiting train container */}
@@ -292,22 +263,25 @@ const TrainSplash = () => {
           animation: marquee 12s linear infinite;
         }
 
-        @keyframes track-ties {
-          from { background-position: 0 0; }
-          to   { background-position: 0 110px; }
+        .splash-tie,
+        .splash-tie-warp {
+          position: absolute;
+          left: 50%;
+          background: #642713;
+          border-radius: 2px;
+          pointer-events: none;
+          will-change: top, width, height, margin-left, opacity;
         }
-        .animate-track-ties {
-          animation: track-ties 1.4s linear infinite;
-          will-change: background-position;
+        .splash-tie {
+          animation: splash-tie-move 1.6s linear infinite;
         }
-
-        @keyframes track-ties-warp {
-          from { background-position: 0 0; }
-          to   { background-position: 0 1800px; }
+        .splash-tie-warp {
+          animation: splash-tie-move 0.45s linear infinite;
         }
-        .animate-track-ties-warp {
-          animation: track-ties-warp ${EXIT_MS}ms cubic-bezier(0.7, 0, 0.84, 0) forwards;
-          will-change: background-position;
+        @keyframes splash-tie-move {
+          0%   { top: 0%;   width: 2%;   height: 2px;  margin-left: -1%;  opacity: 0; }
+          8%   { opacity: 0.5; }
+          100% { top: 100%; width: 110%; height: 18px; margin-left: -55%; opacity: 0.55; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -316,8 +290,8 @@ const TrainSplash = () => {
           .animate-train-zoom-off,
           .animate-rumble,
           .animate-marquee,
-          .animate-track-ties,
-          .animate-track-ties-warp {
+          .splash-tie,
+          .splash-tie-warp {
             animation: none !important;
           }
         }

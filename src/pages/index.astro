@@ -1,6 +1,5 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import TrainSplash from '../components/TrainSplash.jsx';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import IssueCard from '../components/IssueCard.astro';
 import TransitDivider from '../components/TransitDivider.astro';
@@ -49,8 +48,6 @@ const issues = [
 ];
 ---
 <Layout>
-  <TrainSplash client:load />
-
   {/* ---------- Hero ---------- */}
   <section id="subscribe" class="px-6 py-16 md:py-24 lg:py-28">
     <div class="max-w-4xl mx-auto text-center">
