@@ -140,3 +140,13 @@ html:not(.splash-done) body.splash-active {
   outline: 2px solid #5BC3FF;
   outline-offset: 2px;
 }
+
+/* ---------- Brand text selection ---------- */
+::selection {
+  background-color: #5BC3FF;
+  color: #642713;
+}
+::-moz-selection {
+  background-color: #5BC3FF;
+  color: #642713;
+}

@@ -1,0 +1,250 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SubscribeForm from '../components/SubscribeForm.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+
+const base = import.meta.env.BASE_URL;
+
+const stops = [
+  {
+    label: 'Read the latest issue',
+    href: 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation',
+    external: true,
+  },
+  {
+    label: 'Browse the full archive',
+    href: 'https://www.thebrownline.co',
+    external: true,
+  },
+  {
+    label: 'About the founder',
+    href: `${base}about`,
+    external: false,
+  },
+  {
+    label: 'Instagram @thebrownlinechi',
+    href: 'https://www.instagram.com/thebrownlinechi',
+    external: true,
+  },
+];
+---
+<Layout
+  minimal
+  title="The Brown Line: Links"
+  description="Chicago's overlooked stories. Always moving, always above ground. Subscribe, read, and follow."
+  ogImage="logos/4.png"
+>
+  <TransitDivider />
+
+  <section class="links-page bg-seashell">
+    <div class="links-frame relative max-w-md md:max-w-lg mx-auto min-h-[calc(100vh-6px)] px-6 md:px-10 pt-8 md:pt-16 pb-12 md:pb-16 flex flex-col">
+
+      {/* Profile header */}
+      <header class="text-center">
+        <div class="inline-block relative">
+          <img
+            src={`${base}logos/4.png`}
+            alt="The Brown Line"
+            class="w-28 h-28 md:w-36 md:h-36 rounded-full border-2 border-darkWalnut object-cover relative z-10 bg-seashell"
+            width="144"
+            height="144"
+            decoding="async"
+          />
+          <span class="absolute inset-0 rounded-full translate-x-1 translate-y-1 bg-cayenne -z-0" aria-hidden="true"></span>
+        </div>
+
+        <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenne font-bold mt-6 inline-flex items-center gap-2">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-cayenne animate-pulse"></span>
+          Now boarding
+        </p>
+        <h1 class="font-heading text-darkWalnut text-3xl md:text-5xl leading-none mt-1">@thebrownline</h1>
+        <p class="font-body text-darkWalnut/80 text-sm md:text-base mt-3 md:mt-4 leading-relaxed max-w-sm md:max-w-md mx-auto">
+          Chicago's overlooked stories. Always moving, always above ground.
+        </p>
+      </header>
+
+      {/* Subscribe (priority CTA) */}
+      <section class="mt-10 md:mt-12" aria-labelledby="subscribe-eyebrow">
+        <p id="subscribe-eyebrow" class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-darkWalnut/70 font-bold mb-3 md:mb-4">
+          Get the newsletter
+        </p>
+        <SubscribeForm />
+      </section>
+
+      <div class="my-10 md:my-14">
+        <TransitDivider />
+      </div>
+
+      {/* Transit stops (links) */}
+      <section aria-labelledby="stops-eyebrow">
+        <p id="stops-eyebrow" class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-darkWalnut/70 font-bold mb-3 md:mb-4">
+          Next stops
+        </p>
+        <nav aria-label="Profile links">
+          <ul class="link-stops flex flex-col">
+            {stops.map(({ label, href, external }) => (
+              <li class="link-stop-item">
+                <a
+                  href={href}
+                  {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  class="link-stop"
+                >
+                  <span class="link-stop-dot" aria-hidden="true"></span>
+                  <span class="link-stop-label">{label}</span>
+                  <span class="link-stop-arrow" aria-hidden="true">{external ? '↗' : '→'}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </section>
+
+      {/* Tagline closer pushed to bottom */}
+      <footer class="mt-auto pt-12">
+        <p class="font-body text-darkWalnut/55 text-[10px] md:text-xs uppercase tracking-[0.3em] text-center">
+          All stops, all stories.
+        </p>
+      </footer>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  /* Desktop "platform rails": two faint walnut lines flank the content column,
+     suggesting the column is a train platform. Hidden on mobile. */
+  @media (min-width: 768px) {
+    .links-frame::before,
+    .links-frame::after {
+      content: '';
+      position: absolute;
+      top: 1.5rem;
+      bottom: 1.5rem;
+      width: 2px;
+      background: rgba(100, 39, 19, 0.1);
+      pointer-events: none;
+    }
+    .links-frame::before { left: -1.5rem; }
+    .links-frame::after  { right: -1.5rem; }
+  }
+
+  /* Vertical transit track that connects the stops */
+  .link-stops {
+    position: relative;
+  }
+  .link-stops::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 1.25rem;
+    bottom: 1.25rem;
+    width: 2px;
+    background: #642713;
+    transform-origin: top;
+    transform: scaleY(0);
+    animation: track-draw 700ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+    animation-delay: 140ms;
+  }
+  @keyframes track-draw {
+    to { transform: scaleY(1); }
+  }
+
+  /* Stop colors: Cayenne leads (priority CTA), then Maya Blue, Celadon, Baby Pink, Amber */
+  .link-stop-item:nth-child(1) .link-stop-dot { background: #F35A0F; }
+  .link-stop-item:nth-child(2) .link-stop-dot { background: #5BC3FF; }
+  .link-stop-item:nth-child(3) .link-stop-dot { background: #90D393; }
+  .link-stop-item:nth-child(4) .link-stop-dot { background: #F79CD0; }
+  .link-stop-item:nth-child(5) .link-stop-dot { background: #FFBC29; }
+
+  /* Stagger entry: stops slide in one at a time like cars arriving */
+  .link-stop-item {
+    opacity: 0;
+    transform: translateX(20px);
+    animation: stop-arrive 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .link-stop-item:nth-child(1) { animation-delay: 220ms; }
+  .link-stop-item:nth-child(2) { animation-delay: 300ms; }
+  .link-stop-item:nth-child(3) { animation-delay: 380ms; }
+  .link-stop-item:nth-child(4) { animation-delay: 460ms; }
+  .link-stop-item:nth-child(5) { animation-delay: 540ms; }
+  @keyframes stop-arrive {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .link-stop {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.05rem 0;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+    font-size: 1.0625rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #642713;
+    line-height: 1;
+    transition: color 200ms ease, transform 220ms ease;
+  }
+
+  @media (min-width: 768px) {
+    .link-stop {
+      padding: 1.2rem 0;
+      font-size: 1.125rem;
+    }
+  }
+
+  .link-stop-dot {
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    border: 2px solid #642713;
+    box-shadow: 2px 2px 0 #642713;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .link-stop-label {
+    flex: 1;
+  }
+
+  .link-stop-arrow {
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 1.125rem;
+    letter-spacing: 0;
+    color: #642713;
+    opacity: 0.55;
+    transition: opacity 200ms ease, transform 200ms ease, color 200ms ease;
+  }
+
+  .link-stop:hover,
+  .link-stop:focus-visible {
+    color: #F35A0F;
+    transform: translateX(4px);
+    outline: none;
+  }
+  .link-stop:hover .link-stop-dot,
+  .link-stop:focus-visible .link-stop-dot {
+    transform: scale(1.15);
+    box-shadow: 3px 3px 0 #642713;
+  }
+  .link-stop:hover .link-stop-arrow,
+  .link-stop:focus-visible .link-stop-arrow {
+    opacity: 1;
+    color: #F35A0F;
+    transform: translateX(3px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .link-stop-item,
+    .link-stops::before,
+    .link-stop,
+    .link-stop-dot,
+    .link-stop-arrow {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+</style>

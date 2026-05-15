@@ -1,0 +1,54 @@
+---
+const phrases = [
+  'ALWAYS MOVING',
+  'ALWAYS ABOVE GROUND',
+  'NEXT STOP: CHICAGO',
+  'ALL STOPS, ALL STORIES',
+];
+const sep = '  ✶  ';
+const line = phrases.join(sep) + sep;
+---
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span class="marquee-line">{line}</span>
+    <span class="marquee-line">{line}</span>
+  </div>
+</div>
+
+<style>
+  .marquee {
+    overflow: hidden;
+    background: #642713;
+    color: #FFBC29;
+    border-top: 2px solid #FFBC29;
+    border-bottom: 2px solid #FFBC29;
+    padding: 0.7rem 0;
+    font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee-scroll 30s linear infinite;
+    will-change: transform;
+  }
+
+  .marquee-line {
+    white-space: nowrap;
+    padding-right: 1rem;
+  }
+
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track { animation: none; }
+  }
+</style>
