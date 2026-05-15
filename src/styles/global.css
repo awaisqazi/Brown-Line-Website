@@ -94,6 +94,35 @@ h1, h2, h3, h4, h5, h6,
   );
 }
 
+/* Transit Stripe underline: same 5-band gradient, slides in on hover/focus */
+.link-transit {
+  display: inline-block;
+  background-image: linear-gradient(
+    to right,
+    #F79CD0 0%,    #F79CD0 20%,
+    #5BC3FF 20%,   #5BC3FF 40%,
+    #90D393 40%,   #90D393 60%,
+    #FFBC29 60%,   #FFBC29 80%,
+    #F35A0F 80%,   #F35A0F 100%
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0 3px;
+  padding-bottom: 4px;
+  transition: background-size 200ms ease;
+}
+
+.link-transit:hover,
+.link-transit:focus-visible {
+  background-size: 100% 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-transit {
+    transition: none;
+  }
+}
+
 /* ---------- Splash gate ---------- */
 /* The inline <head> script in Layout.astro sets this class on <html> for
    returning visitors so the React splash component never paints. */
