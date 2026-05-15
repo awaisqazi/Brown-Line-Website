@@ -157,14 +157,22 @@ const TrainSplash = () => {
           <rect x="80" y="70" width="240" height="40" rx="8" fill="#111" />
           <rect x="80" y="70" width="240" height="40" rx="8" fill="none" stroke="#333" strokeWidth="2" />
 
-          {/* Scrolling marquee text */}
-          <foreignObject x="85" y="75" width="230" height="30">
-            <div className="w-full h-full overflow-hidden flex items-center bg-[#111]">
-              <div className="animate-marquee whitespace-nowrap text-[#FFBC29] font-mono text-lg uppercase font-bold tracking-widest drop-shadow-[0_0_8px_rgba(255,188,41,0.8)]">
-                NEXT STOP: THE BROWN LINE &bull; A CHICAGO CULTURAL NEWSLETTER &bull; ALL ABOARD &bull;
-              </div>
-            </div>
-          </foreignObject>
+          {/* Static LED destination sign — native SVG text scales with viewBox */}
+          <text
+            x="200"
+            y="90"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="#FFBC29"
+            fontFamily="ui-monospace, 'SF Mono', Menlo, monospace"
+            fontSize="14"
+            fontWeight="700"
+            textLength="220"
+            lengthAdjust="spacingAndGlyphs"
+            style={{ filter: 'drop-shadow(0 0 3px rgba(255,188,41,0.8))' }}
+          >
+            NEXT STOP: THE BROWN LINE
+          </text>
 
           {/* Windshield */}
           <rect x="70" y="130" width="260" height="130" rx="20" fill="#FAF1EC" fillOpacity="0.15" />
@@ -209,7 +217,7 @@ const TrainSplash = () => {
         style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
         className="absolute left-1/2 -translate-x-1/2 z-20 font-body text-xs uppercase tracking-widest text-[#642713]/60 hover:text-[#642713] focus-visible:text-[#642713] focus:outline-none focus-visible:underline decoration-[#5BC3FF] decoration-2 underline-offset-4 px-3 py-2 min-h-[44px] flex items-center"
       >
-        Skip intro &rarr;
+        Loading your next stop&hellip;
       </button>
 
       <style>{`
@@ -253,16 +261,6 @@ const TrainSplash = () => {
           animation-delay: 1.8s;
         }
 
-        @keyframes marquee {
-          0%   { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
-        }
-        .animate-marquee {
-          display: inline-block;
-          padding-left: 100%;
-          animation: marquee 12s linear infinite;
-        }
-
         .splash-tie,
         .splash-tie-warp {
           position: absolute;
@@ -289,7 +287,6 @@ const TrainSplash = () => {
           .animate-train-idle,
           .animate-train-zoom-off,
           .animate-rumble,
-          .animate-marquee,
           .splash-tie,
           .splash-tie-warp {
             animation: none !important;
