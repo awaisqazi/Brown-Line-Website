@@ -18,13 +18,15 @@ const DEFAULT_DESCRIPTION =
 const {
   title = 'The Brown Line: A Chicago Cultural Newsletter',
   description = DEFAULT_DESCRIPTION,
-  ogImage = '/logos/logo.png',
+  ogImage = 'logos/logo.png',
   ogType = 'website',
 } = Astro.props;
 
+const base = import.meta.env.BASE_URL;
 const baseUrl = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalUrl = new URL(Astro.url.pathname, baseUrl).toString();
-const ogImageUrl = new URL(ogImage, baseUrl).toString();
+// If ogImage is already absolute, use it as-is; otherwise resolve relative to site+base
+const ogImageUrl = ogImage.startsWith('http') ? ogImage : new URL(`${base}${ogImage.replace(/^\//, '')}`, baseUrl).toString();
 ---
 <!doctype html>
 <html lang="en">
@@ -34,7 +36,7 @@ const ogImageUrl = new URL(ogImage, baseUrl).toString();
     <meta name="description" content={description} />
     <meta name="theme-color" content="#FAF1EC" />
     <link rel="canonical" href={canonicalUrl} />
-    <link rel="icon" type="image/png" href="/logos/logo.png" />
+    <link rel="icon" type="image/png" href={`${base}logos/logo.png`} />
     <title>{title}</title>
 
     {/* Open Graph */}

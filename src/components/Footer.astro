@@ -1,5 +1,6 @@
 ---
 import TransitDivider from './TransitDivider.astro';
+const base = import.meta.env.BASE_URL;
 const year = new Date().getFullYear();
 ---
 <footer class="mt-24">
@@ -16,8 +17,8 @@ const year = new Date().getFullYear();
       <div class="md:justify-self-end">
         <p class="font-body uppercase text-xs tracking-widest text-seashell/60 mb-4">Follow the line</p>
         <ul class="space-y-2 font-body text-sm">
-          <li><a href="/about" class="link-transit">About</a></li>
-          <li><a href="/standards" class="link-transit">Standards &amp; Ethics</a></li>
+          <li><a href={`${base}about`} class="link-transit">About</a></li>
+          <li><a href={`${base}standards`} class="link-transit">Standards &amp; Ethics</a></li>
           <li><a href="#privacy" class="link-transit">Privacy</a></li>
           <li><a href="#rss" class="link-transit">RSS</a></li>
           <li><a href="mailto:hi@thebrownlinechi.com" class="link-transit">Contact</a></li>

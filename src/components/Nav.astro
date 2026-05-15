@@ -1,16 +1,17 @@
 ---
+const base = import.meta.env.BASE_URL;
 const navLinks = [
-  { href: '/#archive',   label: 'Archive' },
-  { href: '/about',      label: 'About' },
-  { href: '/standards',  label: 'Standards & Ethics' },
-  { href: '/#subscribe', label: 'Subscribe' },
+  { href: `${base}#archive`,   label: 'Archive' },
+  { href: `${base}about`,      label: 'About' },
+  { href: `${base}standards`,  label: 'Standards & Ethics' },
+  { href: `${base}#subscribe`, label: 'Subscribe' },
 ];
 ---
 <header class="bg-seashell">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
-    <a href="/" class="flex items-center gap-3 shrink-0" aria-label="The Brown Line, home">
+    <a href={base} class="flex items-center gap-3 shrink-0" aria-label="The Brown Line, home">
       <img
-        src="/logos/logo.png"
+        src={`${base}logos/logo.png`}
         alt="the Brown Line"
         class="h-12 w-auto md:h-14"
         width="120"
