@@ -12,6 +12,25 @@ const year = new Date().getFullYear();
         <p class="font-body text-seashell/70 text-sm mt-4 max-w-xs leading-relaxed">
           A cultural newsletter spotlighting Chicago's overlooked life-events, stories, and voices.
         </p>
+
+        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-seashell/55 font-semibold mt-8">Find us</p>
+        <ul class="flex items-center gap-2 mt-3">
+          <li>
+            <a
+              href="https://www.instagram.com/thebrownlinechi"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="The Brown Line on Instagram"
+              class="footer-social inline-flex items-center justify-center w-10 h-10 text-seashell rounded-sm"
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+            </a>
+          </li>
+        </ul>
       </div>
 
       <div class="md:justify-self-end">
@@ -33,3 +52,15 @@ const year = new Date().getFullYear();
     </div>
   </div>
 </footer>
+
+<style>
+  .footer-social {
+    transition: transform 180ms ease, color 180ms ease;
+  }
+  .footer-social:hover,
+  .footer-social:focus-visible {
+    color: #FFBC29;
+    transform: translateY(-2px);
+    outline: none;
+  }
+</style>
