@@ -27,6 +27,7 @@ jobs:
 
         env:
           PUBLIC_BEEHIIV_URL: ${{ vars.PUBLIC_BEEHIIV_URL }}
+          PUBLIC_SITE_URL: https://awaisqazi.github.io/Brown-Line-Website
 
   deploy:
     needs: build
