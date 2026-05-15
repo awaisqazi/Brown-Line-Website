@@ -1,0 +1,80 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article' | 'profile';
+}
+
+const DEFAULT_DESCRIPTION =
+  'Chicago arts, culture, and community, through a Global South diaspora lens. One weekly stop in your inbox. Independent voices. Real neighborhoods. All aboard.';
+
+const {
+  title = 'The Brown Line: A Chicago Cultural Newsletter',
+  description = DEFAULT_DESCRIPTION,
+  ogImage = '/logos/logo.png',
+  ogType = 'website',
+} = Astro.props;
+
+const baseUrl = Astro.site?.toString() ?? Astro.url.origin;
+const canonicalUrl = new URL(Astro.url.pathname, baseUrl).toString();
+const ogImageUrl = new URL(ogImage, baseUrl).toString();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#FAF1EC" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" type="image/png" href="/logos/logo.png" />
+    <title>{title}</title>
+
+    {/* Open Graph */}
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content="The Brown Line" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:alt" content="The Brown Line, a Chicago cultural newsletter" />
+    <meta property="og:locale" content="en_US" />
+
+    {/* Twitter / X */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content="The Brown Line, a Chicago cultural newsletter" />
+
+    {/* Prevent splash flicker for returning visitors, runs before paint */}
+    <script is:inline>
+      try {
+        if (sessionStorage.getItem('brownLineSplashShown') === '1') {
+          document.documentElement.classList.add('splash-done');
+        } else {
+          document.documentElement.classList.add('splash-pending');
+        }
+      } catch (_) {
+        document.documentElement.classList.add('splash-done');
+      }
+    </script>
+  </head>
+
+  <body class="font-body bg-seashell text-darkWalnut min-h-screen flex flex-col">
+    <Nav />
+    <TransitDivider />
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <Footer />
+  </body>
+</html>

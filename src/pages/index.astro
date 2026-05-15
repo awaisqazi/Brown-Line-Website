@@ -1,0 +1,133 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TrainSplash from '../components/TrainSplash.jsx';
+import SubscribeForm from '../components/SubscribeForm.astro';
+import IssueCard from '../components/IssueCard.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+
+const issues = [
+  {
+    category: 'Reporting',
+    date: 'Sep 4, 2025',
+    readTime: '10 min read',
+    title: '🐓 Chicago Latinos dance in defiance of 🧊 deportation',
+    href: 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation',
+    accent: 'cayenne',
+  },
+  {
+    category: 'Weekly Guide',
+    date: 'Aug 25, 2025',
+    readTime: '8 min read',
+    title: '🌆 Last stops, late summer vibes, & all that jazz before Labor Day',
+    href: 'https://www.thebrownline.co/p/last-stops-late-summer-vibes-all-that-jazz-before-labor-day',
+    accent: 'amber',
+  },
+  {
+    category: 'Weekly Guide',
+    date: 'Aug 19, 2025',
+    readTime: '13 min read',
+    title: 'This train runs on solidarity 🚇 🤎 ✊🏾',
+    href: 'https://www.thebrownline.co/p/this-train-runs-on-solidarity',
+    accent: 'cayenne',
+  },
+  {
+    category: 'Express Edition',
+    date: 'Aug 10, 2025',
+    readTime: '8 min read',
+    title: 'Issue #2: Back in service! 🚆',
+    href: 'https://www.thebrownline.co/p/issue-2-back-in-service-527769c8d207ab1d',
+    accent: 'amber',
+  },
+  {
+    category: 'Inaugural Issue',
+    date: 'Jul 29, 2025',
+    readTime: '8 min read',
+    title: 'Welcome aboard The Brown Line 🚆',
+    href: 'https://www.thebrownline.co/p/welcome-aboard-the-brown-line-35bfa6886556f128',
+    accent: 'cayenne',
+  },
+];
+---
+<Layout>
+  <TrainSplash client:load />
+
+  {/* ---------- Hero ---------- */}
+  <section id="subscribe" class="px-6 py-16 md:py-24 lg:py-28">
+    <div class="max-w-4xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
+        A Chicago cultural newsletter
+      </p>
+
+      <h1 class="font-heading text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance">
+        Chicago&rsquo;s weekly curated ride through <em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, &amp; community.
+      </h1>
+
+      <p class="font-body text-darkWalnut/75 text-base md:text-lg mt-6 max-w-2xl mx-auto leading-relaxed">
+        One stop in your inbox each week &mdash; stories, profiles, and field notes from the corners of Chicago the mainstream leaves behind.
+      </p>
+
+      <div class="mt-8 md:mt-10 flex justify-center">
+        <SubscribeForm />
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- Transit Stripe section divider ---------- */}
+  <div class="max-w-5xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  {/* ---------- Recent Rides ---------- */}
+  <section id="archive" class="px-6 py-20 md:py-28">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex items-end justify-between flex-wrap gap-4 mb-12">
+        <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl tracking-tight leading-none">
+          Recent rides
+        </h2>
+        <a
+          href="https://www.thebrownline.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-body text-darkWalnut text-sm font-bold uppercase tracking-widest hover:underline decoration-mayaBlue decoration-2 underline-offset-4"
+        >
+          View all &nearr;
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {issues.map((issue, i) => (
+          <div class:list={[i === 0 ? 'md:col-span-2' : '']}>
+            <IssueCard
+              category={issue.category}
+              date={issue.date}
+              readTime={issue.readTime}
+              title={issue.title}
+              href={issue.href}
+              accent={issue.accent as 'amber' | 'cayenne'}
+              featured={i === 0}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- About teaser ---------- */}
+  <section class="px-6 py-20 md:py-28 bg-seashell">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95] tracking-tight">
+        Communal. Gritty. Real.
+      </h2>
+      <p class="font-body text-darkWalnut/80 text-lg mt-6 leading-relaxed">
+        A Chicago-based, creator-led media brand serving Global South diaspora communities through culturally intelligent journalism: curated weekly guides, independent artist and small-business spotlights, original reporting, and values-driven commentary.
+      </p>
+      <a
+        href="/about"
+        class="inline-flex items-center gap-2 mt-8 font-body font-bold text-sm uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-6 py-3 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro"
+      >
+        Meet the founder
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+  </section>
+</Layout>

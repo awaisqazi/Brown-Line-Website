@@ -1,0 +1,37 @@
+---
+const navLinks = [
+  { href: '/#archive',   label: 'Archive' },
+  { href: '/about',      label: 'About' },
+  { href: '/standards',  label: 'Standards & Ethics' },
+  { href: '/#subscribe', label: 'Subscribe' },
+];
+---
+<header class="bg-seashell">
+  <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+    <a href="/" class="flex items-center gap-3 shrink-0" aria-label="The Brown Line, home">
+      <img
+        src="/logos/logo.png"
+        alt="the Brown Line"
+        class="h-12 w-auto md:h-14"
+        width="120"
+        height="120"
+        decoding="async"
+      />
+    </a>
+
+    <nav aria-label="Primary" class="min-w-0">
+      <ul class="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 md:gap-x-6 lg:gap-x-8">
+        {navLinks.map(({ href, label }) => (
+          <li>
+            <a
+              href={href}
+              class="font-body text-darkWalnut uppercase text-xs md:text-sm font-semibold tracking-widest hover:underline decoration-mayaBlue decoration-2 underline-offset-4"
+            >
+              {label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>

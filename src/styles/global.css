@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- JT Modernism (Headings, Logo) ---------- */
+@font-face {
+  font-family: 'JT Modernism';
+  src: url('/fonts/JT%20Modernism%20-%20Header/JtModernism-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JT Modernism';
+  src: url('/fonts/JT%20Modernism%20-%20Header/JtModernism-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JT Modernism';
+  src: url('/fonts/JT%20Modernism%20-%20Header/JtModernism-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Montserrat (Body, UI) ---------- */
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat%20-%20Body/Montserrat-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat%20-%20Body/Montserrat-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat%20-%20Body/Montserrat-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Base ---------- */
+html,
+body {
+  background-color: #FAF1EC;
+  color: #642713;
+}
+
+body {
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6,
+.font-heading {
+  font-family: 'JT Modernism', Georgia, serif;
+}
+
+/* ---------- Utilities from design.md ---------- */
+.retro-shadow {
+  box-shadow: 4px 4px 0px #642713;
+}
+
+.retro-shadow-amber {
+  box-shadow: 4px 4px 0px #FFBC29;
+}
+
+.retro-shadow-cayenne {
+  box-shadow: 4px 4px 0px #F35A0F;
+}
+
+/* Transit Stripe: 5 hard color bands across the full width */
+.transit-divider {
+  height: 6px;
+  width: 100%;
+  background: linear-gradient(
+    to right,
+    #F79CD0 0%,    #F79CD0 20%,
+    #5BC3FF 20%,   #5BC3FF 40%,
+    #90D393 40%,   #90D393 60%,
+    #FFBC29 60%,   #FFBC29 80%,
+    #F35A0F 80%,   #F35A0F 100%
+  );
+}
+
+/* ---------- Splash gate ---------- */
+/* The inline <head> script in Layout.astro sets this class on <html> for
+   returning visitors so the React splash component never paints. */
+html.splash-done .train-splash-root {
+  display: none !important;
+}
+
+/* Lock scroll while the splash is on screen so the homepage doesn't peek through. */
+html:not(.splash-done) body.splash-active {
+  overflow: hidden;
+}
+
+/* ---------- Focus visibility ---------- */
+:focus-visible {
+  outline: 2px solid #5BC3FF;
+  outline-offset: 2px;
+}

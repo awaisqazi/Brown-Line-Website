@@ -1,0 +1,69 @@
+---
+interface Props {
+  category: string;
+  date: string;
+  readTime?: string;
+  title: string;
+  href: string;
+  accent?: 'amber' | 'cayenne';
+  featured?: boolean;
+}
+
+const { category, date, readTime, title, href, accent = 'amber', featured = false } = Astro.props;
+const isExternal = /^https?:\/\//.test(href);
+---
+<a
+  href={href}
+  target={isExternal ? '_blank' : undefined}
+  rel={isExternal ? 'noopener noreferrer' : undefined}
+  class="group block focus:outline-none"
+>
+  <article
+    class:list={[
+      'h-full bg-seashell border-2 border-darkWalnut flex flex-col gap-3',
+      'transition-transform duration-150 ease-out',
+      'group-hover:-translate-y-1 group-hover:-translate-x-1',
+      accent === 'cayenne' ? 'group-hover:shadow-retro-cayenne' : 'group-hover:shadow-retro-amber',
+      'group-focus-visible:shadow-retro',
+      featured ? 'p-7 md:p-10' : 'p-6',
+    ]}
+  >
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="font-body text-mayaBlue text-xs font-bold uppercase tracking-widest">
+        {category}
+      </span>
+      {featured && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne px-2 py-0.5">
+          Featured Issue
+        </span>
+      )}
+    </div>
+
+    <p class="font-body text-darkWalnut/70 text-sm">
+      <time>{date}</time>{readTime ? <span> &middot; {readTime}</span> : null}
+    </p>
+
+    <h3
+      class:list={[
+        'font-body font-extrabold text-darkWalnut leading-snug tracking-tight mt-1',
+        featured
+          ? 'text-2xl md:text-4xl lg:text-5xl leading-[1.05]'
+          : 'text-xl md:text-2xl',
+      ]}
+    >
+      {title}
+    </h3>
+
+    <span
+      class:list={[
+        'mt-auto pt-4 inline-flex items-center gap-1 font-body font-bold text-darkWalnut uppercase tracking-widest',
+        featured ? 'text-base' : 'text-sm',
+      ]}
+    >
+      Read
+      <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-1">
+        {isExternal ? '↗' : '→'}
+      </span>
+    </span>
+  </article>
+</a>

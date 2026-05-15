@@ -1,0 +1,34 @@
+---
+import TransitDivider from './TransitDivider.astro';
+const year = new Date().getFullYear();
+---
+<footer class="mt-24">
+  <TransitDivider />
+  <div class="bg-darkWalnut text-seashell">
+    <div class="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6">
+      <div>
+        <p class="font-heading text-3xl md:text-4xl leading-none">the Brown Line</p>
+        <p class="font-body text-seashell/70 text-sm mt-4 max-w-xs leading-relaxed">
+          A cultural newsletter spotlighting Chicago's overlooked life-events, stories, and voices.
+        </p>
+      </div>
+
+      <div class="md:justify-self-end">
+        <p class="font-body uppercase text-xs tracking-widest text-seashell/60 mb-4">Follow the line</p>
+        <ul class="space-y-2 font-body text-sm">
+          <li><a href="/about" class="hover:underline decoration-mayaBlue decoration-2 underline-offset-4">About</a></li>
+          <li><a href="/standards" class="hover:underline decoration-mayaBlue decoration-2 underline-offset-4">Standards &amp; Ethics</a></li>
+          <li><a href="#privacy" class="hover:underline decoration-mayaBlue decoration-2 underline-offset-4">Privacy</a></li>
+          <li><a href="#rss" class="hover:underline decoration-mayaBlue decoration-2 underline-offset-4">RSS</a></li>
+          <li><a href="mailto:hi@thebrownlinechi.com" class="hover:underline decoration-mayaBlue decoration-2 underline-offset-4">Contact</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-6 pb-8">
+      <p class="font-body text-seashell/60 text-xs uppercase tracking-widest">
+        &copy; {year} The Brown Line. All stops, all stories.
+      </p>
+    </div>
+  </div>
+</footer>

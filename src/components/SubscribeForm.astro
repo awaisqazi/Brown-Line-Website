@@ -1,0 +1,55 @@
+---
+interface Props {
+  placeholder?: string;
+  cta?: string;
+  class?: string;
+}
+
+const {
+  placeholder = 'your.email@stop.com',
+  cta = 'All Aboard',
+  class: className = '',
+} = Astro.props;
+
+const beehiivUrl = import.meta.env.PUBLIC_BEEHIIV_URL ?? '#BEEHIIV_EMBED_URL';
+---
+<form
+  action={beehiivUrl}
+  method="POST"
+  class:list={['w-full max-w-xl', className]}
+  aria-label="Subscribe to The Brown Line newsletter"
+>
+  <div class="flex flex-col md:flex-row gap-3 md:gap-2">
+    <label for="brown-line-email" class="sr-only">Email address</label>
+    <input
+      id="brown-line-email"
+      type="email"
+      name="email"
+      required
+      autocomplete="email"
+      placeholder={placeholder}
+      class="flex-1 bg-seashell border-2 border-darkWalnut px-4 py-3 font-body text-darkWalnut placeholder:text-darkWalnut/60 focus:outline-none focus-visible:outline-none focus:shadow-retro transition-shadow"
+    />
+
+    {/* Honeypot. Real subscribers leave this blank. */}
+    <input
+      type="text"
+      name="hp"
+      tabindex="-1"
+      autocomplete="off"
+      aria-hidden="true"
+      class="hidden"
+    />
+
+    <button
+      type="submit"
+      class="bg-cayenne text-seashell border-2 border-darkWalnut px-6 py-3 font-body font-bold uppercase tracking-widest text-sm md:text-base transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro active:translate-y-0 active:translate-x-0 active:shadow-none focus-visible:shadow-retro"
+    >
+      {cta}
+    </button>
+  </div>
+
+  <p class="font-body text-darkWalnut/60 text-xs mt-3 uppercase tracking-widest">
+    No spam. No transfers. One stop a week.
+  </p>
+</form>
