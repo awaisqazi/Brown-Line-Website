@@ -186,23 +186,28 @@ const TrainSplash = () => {
   const audioRef = useRef(null);
   const dismissRef = useRef(null);
 
-  // Dynamic next stop detection
+  // Universal next stop path detection
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const path = window.location.pathname;
-      if (path === '/' || path.endsWith('index.html')) {
-        setNextStop('HOME PLATFORM');
-      } else if (path.includes('about')) {
+      const path = window.location.pathname.toLowerCase();
+
+      if (path.includes('about')) {
         setNextStop('ABOUT THE LINE');
       } else if (path.includes('links')) {
         setNextStop('THE DIRECTORY');
       } else if (path.includes('standards')) {
         setNextStop('EDITORIAL STANDARDS');
+      } else if (path === '/' || path === '/index.html' || path.endsWith('/')) {
+        setNextStop('HOME PLATFORM');
       } else {
         const segments = path.split('/').filter(Boolean);
         if (segments.length > 0) {
-          const lastSegment = segments[segments.length - 1].replace(/\.[^/.]+$/, "");
-          setNextStop(lastSegment.replace(/[-_]/g, ' ').toUpperCase());
+          let lastSegment = segments[segments.length - 1];
+          if (lastSegment === 'index.html' && segments.length > 1) {
+            lastSegment = segments[segments.length - 2];
+          }
+          const cleanName = lastSegment.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ').toUpperCase();
+          setNextStop(cleanName || 'THE PLATFORM');
         } else {
           setNextStop('THE PLATFORM');
         }
