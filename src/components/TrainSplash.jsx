@@ -377,28 +377,37 @@ const TrainSplash = () => {
         <div className="absolute right-12 top-0 bottom-0 w-[1.5px] bg-[#642713] animate-speed-line-4" />
       </div>
 
-      {/* Retro Dashboard Audio Toggle */}
-      <button
-        onClick={toggleSound}
-        type="button"
-        className="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-6 z-[10000] flex items-center gap-2 px-3 py-1.5 rounded-md border-2 border-[#642713] bg-[#FAF1EC] shadow-[3px_3px_0px_#642713] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#642713] active:translate-y-[2px] active:shadow-[0px_0px_0px_#642713] transition-all duration-100 cursor-pointer"
-        title={isMuted ? "Unmute system chimes & traction hum" : "Mute station audio"}
-      >
-        <div className="relative flex h-2 w-2">
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isMuted ? 'bg-[#F35A0F]' : 'bg-[#90D393]'}`} />
-          <span className={`relative inline-flex rounded-full h-2 w-2 ${isMuted ? 'bg-[#F35A0F]' : 'bg-[#90D393]'}`} />
-        </div>
-        <span className="font-mono text-[10px] font-bold tracking-wider text-[#642713] uppercase">
-          AUDIO: {isMuted ? 'OFF' : 'ON'}
-        </span>
-        <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 stroke-[#642713] fill-none stroke-2" aria-hidden="true">
-          {isMuted ? (
-            <path d="M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
-          ) : (
-            <path d="M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14" strokeLinecap="round" strokeLinejoin="round" />
-          )}
-        </svg>
-      </button>
+      {/* Retro Dashboard Audio Toggle & Silent Switch Warning Container */}
+      <div className="absolute top-[max(1.25rem,env(safe-area-inset-top))] right-6 z-[10000] flex flex-col items-end pointer-events-auto">
+        <button
+          onClick={toggleSound}
+          type="button"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md border-2 border-[#642713] bg-[#FAF1EC] shadow-[3px_3px_0px_#642713] hover:translate-y-[1px] hover:shadow-[2px_2px_0px_#642713] active:translate-y-[2px] active:shadow-[0px_0px_0px_#642713] transition-all duration-100 cursor-pointer"
+          title={isMuted ? "Unmute system chimes & traction hum" : "Mute station audio"}
+        >
+          <div className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isMuted ? 'bg-[#F35A0F]' : 'bg-[#90D393]'}`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isMuted ? 'bg-[#F35A0F]' : 'bg-[#90D393]'}`} />
+          </div>
+          <span className="font-mono text-[10px] font-bold tracking-wider text-[#642713] uppercase">
+            AUDIO: {isMuted ? 'OFF' : 'ON'}
+          </span>
+          <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 stroke-[#642713] fill-none stroke-2" aria-hidden="true">
+            {isMuted ? (
+              <path d="M11 5L6 9H2v6h4l5 4V5z M23 9l-6 6 M17 9l6 6" strokeLinecap="round" strokeLinejoin="round" />
+            ) : (
+              <path d="M11 5L6 9H2v6h4l5 4V5z M15.54 8.46a5 5 0 0 1 0 7.07 M19.07 4.93a10 10 0 0 1 0 14.14" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+          </svg>
+        </button>
+
+        {/* iOS silent/vibrate switch hardware hint */}
+        {!isMuted && (
+          <span className="font-mono text-[8px] text-[#642713]/60 text-right uppercase tracking-wider mt-1.5 select-none pointer-events-none max-w-[130px] leading-tight">
+            Muted if phone is on silent
+          </span>
+        )}
+      </div>
 
       {/* --- Elevated Railway Environment ("L" Tracks) --- */}
       <div className="absolute inset-x-0 top-1/2 bottom-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
@@ -650,12 +659,11 @@ const TrainSplash = () => {
         )}
       </div>
 
-      {/* Dynamic Destination Board Loader Notice */}
+      {/* Dynamic Destination Board Loader Notice with safe top-offset classes */}
       <div
-        className={`absolute left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 transition-opacity duration-300 ${phase === 'idle' ? 'opacity-100' : 'opacity-0'
+        className={`next-stop-indicator flex items-center gap-2.5 transition-opacity duration-300 ${phase === 'idle' ? 'opacity-100' : 'opacity-0'
           }`}
         style={{
-          top: 'max(1.5rem, env(safe-area-inset-top))',
           fontFamily: "'JT Modernism', 'Montserrat', sans-serif"
         }}
         aria-hidden="true"
@@ -715,6 +723,20 @@ const TrainSplash = () => {
           0%   { top: 0%;   width: 2%;   height: 2px;  margin-left: -1%;  opacity: 0; }
           12%  { opacity: 0.65; }
           100% { top: 100%; width: 130%; height: 26px; margin-left: -65%; opacity: 0.85; }
+        }
+
+        /* Next Stop Layout positioning to prevent overlap on mobile */
+        .next-stop-indicator {
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 20;
+          top: max(4.35rem, env(safe-area-inset-top) + 2.75rem);
+        }
+        @media (min-width: 640px) {
+          .next-stop-indicator {
+            top: max(1.5rem, env(safe-area-inset-top));
+          }
         }
 
         /* Speed lines falling down in background overlay */
