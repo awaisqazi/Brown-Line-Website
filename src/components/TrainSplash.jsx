@@ -5,12 +5,19 @@ const MIN_DURATION_MS = 2500; // Slightly longer to enjoy the animation
 const MAX_DURATION_MS = 6000;
 const EXIT_MS = 900; // Snappy, dynamic exit transition
 
-// --- Synthesized CTA Audio Engine ---
+// --- Synthesized & High-Fidelity CTA Audio Engine ---
 class CTATrainAudio {
   constructor() {
     this.ctx = null;
     this.humNode = null;
     this.isMuted = true;
+    this.ctaDing = null;
+    this.welcomeAboard = null;
+    this.welcomeSource = null;
+    this.welcomeGainNode = null;
+    this.isFadingOut = false;
+    this.onWelcomeEnded = null;
+    this.welcomeStarted = false;
   }
 
   init() {
@@ -20,6 +27,75 @@ class CTATrainAudio {
       this.ctx = new AudioContextClass();
     } catch (e) {
       console.warn("Web Audio API not supported", e);
+    }
+
+    // Initialize HTML5 Audio elements
+    try {
+      if (!this.ctaDing) {
+        this.ctaDing = new Audio('/audio/CTA Ding.mov');
+        this.ctaDing.crossOrigin = 'anonymous';
+        this.ctaDing.preload = 'auto';
+        
+        // Listen to timeupdate to blend the two tracks smoothly near the end of CTA Ding
+        this.ctaDing.addEventListener('timeupdate', () => {
+          const duration = this.ctaDing.duration;
+          const currentTime = this.ctaDing.currentTime;
+          if (duration && (duration - currentTime <= 0.4) && !this.welcomeStarted && !this.isMuted) {
+            this.welcomeStarted = true;
+            this.playWelcomeAboard();
+          }
+        });
+
+        // Safety fallback listener
+        this.ctaDing.addEventListener('ended', () => {
+          if (!this.welcomeStarted && !this.isMuted) {
+            this.welcomeStarted = true;
+            this.playWelcomeAboard();
+          }
+        });
+      }
+      if (!this.welcomeAboard) {
+        this.welcomeAboard = new Audio('/audio/Welcome Aboard.mov');
+        this.welcomeAboard.crossOrigin = 'anonymous';
+        this.welcomeAboard.preload = 'auto';
+        
+        // Listen to timeupdate to trigger fade out before the very end of Welcome Aboard
+        this.welcomeAboard.addEventListener('timeupdate', () => {
+          const duration = this.welcomeAboard.duration;
+          const currentTime = this.welcomeAboard.currentTime;
+          if (duration && (duration - currentTime <= 1.5) && !this.isFadingOut && !this.isMuted) {
+            this.isFadingOut = true;
+            this.fadeAudio(this.welcomeAboard, this.welcomeAboard.volume, 0, 1500, () => {
+              this.welcomeAboard.pause();
+              if (this.onWelcomeEnded) {
+                this.onWelcomeEnded();
+              }
+            });
+          }
+        });
+
+        // Backup ended listener
+        this.welcomeAboard.addEventListener('ended', () => {
+          if (this.onWelcomeEnded && !this.isFadingOut && !this.isMuted) {
+            this.onWelcomeEnded();
+          }
+        });
+      }
+
+      // Route Welcome Aboard through Web Audio gain node for high-fidelity amplification
+      if (this.ctx && !this.welcomeGainNode && this.welcomeAboard) {
+        try {
+          this.welcomeSource = this.ctx.createMediaElementSource(this.welcomeAboard);
+          this.welcomeGainNode = this.ctx.createGain();
+          this.welcomeGainNode.gain.setValueAtTime(3.5, this.ctx.currentTime); // High volume boost (+10.8dB) to make voice crystal clear and extremely rich
+          this.welcomeSource.connect(this.welcomeGainNode);
+          this.welcomeGainNode.connect(this.ctx.destination);
+        } catch (err) {
+          console.error("Web Audio routing failed for Welcome Aboard", err);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to initialize HTML5 Audio elements", err);
     }
   }
 
@@ -73,7 +149,7 @@ class CTATrainAudio {
       lfoGain.gain.setValueAtTime(0.03, now);
 
       const gainHum = this.ctx.createGain();
-      gainHum.gain.setValueAtTime(0.1, now);
+      gainHum.gain.setValueAtTime(0.04, now); // Softened from 0.1 to keep voice dominant and prevent cluttering frequencies
 
       lfo.connect(lfoGain);
       lfoGain.connect(gainHum.gain);
@@ -93,23 +169,32 @@ class CTATrainAudio {
     }
   }
 
-  stopHum() {
+  stopHum(immediate = false) {
     if (this.humNode) {
       try {
         const { osc1, osc2, lfo, gain } = this.humNode;
         if (this.ctx) {
-          const now = this.ctx.currentTime;
-          osc1.frequency.exponentialRampToValueAtTime(20, now + 0.8);
-          osc2.frequency.exponentialRampToValueAtTime(40, now + 0.8);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-
-          setTimeout(() => {
+          if (immediate) {
             try {
+              gain.gain.setValueAtTime(0, this.ctx.currentTime);
               osc1.stop();
               osc2.stop();
               lfo.stop();
             } catch (err) { }
-          }, 900);
+          } else {
+            const now = this.ctx.currentTime;
+            osc1.frequency.exponentialRampToValueAtTime(20, now + 0.8);
+            osc2.frequency.exponentialRampToValueAtTime(40, now + 0.8);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+            setTimeout(() => {
+              try {
+                osc1.stop();
+                osc2.stop();
+                lfo.stop();
+              } catch (err) { }
+            }, 900);
+          }
         }
       } catch (e) { }
       this.humNode = null;
@@ -175,6 +260,108 @@ class CTATrainAudio {
       console.error("Failed to play doors closing chime", e);
     }
   }
+
+  playSequence() {
+    if (this.isMuted) return;
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    this.stopSequence();
+    this.welcomeStarted = false;
+    if (this.ctaDing) {
+      this.ctaDing.volume = 0.45; // Reduced chime volume slightly so the voice shines and commands attention
+      this.ctaDing.currentTime = 0;
+      this.ctaDing.play().catch(err => console.warn("Failed to play CTA Ding:", err));
+    }
+  }
+
+  playWelcomeAboard() {
+    if (this.isMuted || !this.welcomeAboard) return;
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    this.isFadingOut = false;
+    this.welcomeAboard.volume = 0.0;
+    this.welcomeAboard.currentTime = 0;
+    this.welcomeAboard.play().then(() => {
+      this.fadeAudio(this.welcomeAboard, 0, 1.0, 800); // 800ms fade-in to full volume (1.0), will be amplified by welcomeGainNode
+    }).catch(err => console.warn("Failed to play Welcome Aboard:", err));
+  }
+
+  fadeAudio(audio, startVol, endVol, durationMs, onComplete) {
+    if (!audio) return;
+    const startTime = performance.now();
+
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / durationMs, 1);
+
+      audio.volume = startVol + (endVol - startVol) * progress;
+
+      if (progress < 1) {
+        audio.fadeFrameId = requestAnimationFrame(tick);
+      } else {
+        if (onComplete) onComplete();
+      }
+    };
+
+    if (audio.fadeFrameId) {
+      cancelAnimationFrame(audio.fadeFrameId);
+    }
+    audio.fadeFrameId = requestAnimationFrame(tick);
+  }
+
+  fadeOutAndStop(durationMs = 800) {
+    const activeAudios = [];
+    if (this.ctaDing && !this.ctaDing.paused) activeAudios.push(this.ctaDing);
+    if (this.welcomeAboard && !this.welcomeAboard.paused) activeAudios.push(this.welcomeAboard);
+
+    if (activeAudios.length === 0) return;
+
+    activeAudios.forEach(audio => {
+      if (audio.fadeFrameId) {
+        cancelAnimationFrame(audio.fadeFrameId);
+      }
+
+      const startTime = performance.now();
+      const startVol = audio.volume;
+
+      const tick = () => {
+        const elapsed = performance.now() - startTime;
+        const progress = Math.min(elapsed / durationMs, 1);
+
+        audio.volume = startVol * (1 - progress);
+
+        if (progress < 1) {
+          audio.fadeFrameId = requestAnimationFrame(tick);
+        } else {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      };
+      audio.fadeFrameId = requestAnimationFrame(tick);
+    });
+  }
+
+  stopSequence() {
+    if (this.ctaDing) {
+      if (this.ctaDing.fadeFrameId) {
+        cancelAnimationFrame(this.ctaDing.fadeFrameId);
+      }
+      this.ctaDing.pause();
+      this.ctaDing.currentTime = 0;
+    }
+    if (this.welcomeAboard) {
+      if (this.welcomeAboard.fadeFrameId) {
+        cancelAnimationFrame(this.welcomeAboard.fadeFrameId);
+      }
+      this.welcomeAboard.pause();
+      this.welcomeAboard.currentTime = 0;
+    }
+    this.isFadingOut = false;
+    this.welcomeStarted = false;
+  }
 }
 
 const TrainSplash = () => {
@@ -185,6 +372,9 @@ const TrainSplash = () => {
   const exitScheduledRef = useRef(false);
   const audioRef = useRef(null);
   const dismissRef = useRef(null);
+  const exitTimeoutRef = useRef(null);
+  const safetyTimeoutRef = useRef(null);
+  const isAudioActiveRef = useRef(false);
 
   // Universal next stop path detection
   useEffect(() => {
@@ -219,8 +409,14 @@ const TrainSplash = () => {
     startedAtRef.current = performance.now();
     document.body.classList.add('splash-active');
 
-    // Initialize Synthesized Audio Instance
-    audioRef.current = new CTATrainAudio();
+    // Initialize Audio Instance
+    const audioInstance = new CTATrainAudio();
+    audioInstance.onWelcomeEnded = () => {
+      if (dismissRef.current) {
+        dismissRef.current();
+      }
+    };
+    audioRef.current = audioInstance;
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -246,10 +442,13 @@ const TrainSplash = () => {
 
     const scheduleExit = () => {
       if (exitScheduledRef.current) return;
+      if (isAudioActiveRef.current) return; // Keep splash active if audio is playing
+
       exitScheduledRef.current = true;
       const elapsed = performance.now() - startedAtRef.current;
       const wait = Math.max(0, MIN_DURATION_MS - elapsed);
-      window.setTimeout(() => {
+      
+      exitTimeoutRef.current = window.setTimeout(() => {
         setPhase('exit');
         if (audioRef.current) {
           audioRef.current.stopHum();
@@ -265,15 +464,18 @@ const TrainSplash = () => {
     } else {
       window.addEventListener('load', onLoad, { once: true });
     }
-    const safety = window.setTimeout(scheduleExit, MAX_DURATION_MS);
+    
+    safetyTimeoutRef.current = window.setTimeout(scheduleExit, MAX_DURATION_MS);
 
     return () => {
       window.clearTimeout(approachTimer);
-      window.clearTimeout(safety);
+      if (exitTimeoutRef.current) window.clearTimeout(exitTimeoutRef.current);
+      if (safetyTimeoutRef.current) window.clearTimeout(safetyTimeoutRef.current);
       window.removeEventListener('load', onLoad);
       document.body.classList.remove('splash-active');
       if (audioRef.current) {
         audioRef.current.stopHum();
+        audioRef.current.stopSequence();
       }
     };
   }, []);
@@ -284,8 +486,8 @@ const TrainSplash = () => {
 
     setPhase('exit');
     if (audioRef.current) {
-      audioRef.current.stopHum();
-      audioRef.current.playChime();
+      audioRef.current.stopHum(true); // Cut engine hum immediately
+      audioRef.current.stopSequence(); // Cut chimes and voice announcements immediately
     }
 
     window.setTimeout(() => {
@@ -329,10 +531,31 @@ const TrainSplash = () => {
 
     audioRef.current.playSwitchClick();
 
-    if (!nextMuted && (phase === 'approach' || phase === 'idle')) {
-      audioRef.current.startHum();
+    if (!nextMuted) {
+      isAudioActiveRef.current = true;
+      // Clear any pending auto-exit timers so they don't cut off our audio
+      if (exitTimeoutRef.current) {
+        window.clearTimeout(exitTimeoutRef.current);
+        exitTimeoutRef.current = null;
+      }
+      if (safetyTimeoutRef.current) {
+        window.clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+
+      if (phase === 'approach' || phase === 'idle') {
+        audioRef.current.startHum();
+      }
+      audioRef.current.playSequence();
     } else {
+      isAudioActiveRef.current = false;
       audioRef.current.stopHum();
+      audioRef.current.stopSequence();
+      
+      // If we muted it and the page is loaded (or exit was already scheduled), dismiss
+      if (document.readyState === 'complete' || exitScheduledRef.current) {
+        dismiss();
+      }
     }
   };
 

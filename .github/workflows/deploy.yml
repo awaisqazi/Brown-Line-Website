@@ -2,9 +2,12 @@ name: Deploy to GitHub Pages
 
 on:
   # Trigger the workflow every time you push to the `main` branch
-  # Using a dynamic branch name would be better if you use a different name
   push:
     branches: [ main ]
+
+  # Rebuild the site automatically every day at 9:00 AM UTC (4:00 AM CST)
+  schedule:
+    - cron: '0 9 * * *'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
