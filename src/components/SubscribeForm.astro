@@ -11,7 +11,8 @@ const {
   class: className = '',
 } = Astro.props;
 
-const beehiivUrl = import.meta.env.PUBLIC_BEEHIIV_URL ?? '#BEEHIIV_EMBED_URL';
+// Update this in your .env as: PUBLIC_BEEHIIV_URL="https://app.beehiiv.com/v1/subscribers"
+const beehiivUrl = import.meta.env.PUBLIC_BEEHIIV_URL ?? 'https://app.beehiiv.com/v1/subscribers';
 ---
 <form
   action={beehiivUrl}
@@ -19,6 +20,9 @@ const beehiivUrl = import.meta.env.PUBLIC_BEEHIIV_URL ?? '#BEEHIIV_EMBED_URL';
   class:list={['w-full max-w-xl', className]}
   aria-label="Subscribe to The Brown Line newsletter"
 >
+  {/* Connects this custom form to your specific beehiiv publication form */}
+  <input type="hidden" name="form_id" value="ca1b5de3-a598-4e22-82d6-6aa2c32dfae7" />
+
   <div class="flex flex-col md:flex-row gap-3 md:gap-2">
     <label for="brown-line-email" class="sr-only">Email address</label>
     <input
