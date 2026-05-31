@@ -4,7 +4,7 @@ const APPROACH_MS = 1800;
 const MIN_DURATION_MS = 2500; // Slightly longer to enjoy the animation
 const MAX_DURATION_MS = 6000;
 const EXIT_MS = 900; // Snappy, dynamic exit transition
-const AUDIO_SEQUENCE_FALLBACK_MS = 8500;
+const AUDIO_SEQUENCE_FALLBACK_MS = 7000;
 const BASE_URL = import.meta.env.BASE_URL || '/';
 
 const assetPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
@@ -418,33 +418,43 @@ const TrainSplash = () => {
   const dismissRef = useRef(null);
   const exitTimeoutRef = useRef(null);
   const safetyTimeoutRef = useRef(null);
+  const audioExitTimeoutRef = useRef(null);
   const isAudioActiveRef = useRef(false);
 
   // Universal next stop path detection
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase();
+      const rawPath = window.location.pathname.toLowerCase();
+      const normalizedBase = BASE_URL.toLowerCase().replace(/\/+$/, '');
+      let path = rawPath.replace(/\/+$/, '') || '/';
 
-      if (path.includes('about')) {
-        setNextStop('ABOUT THE LINE');
-      } else if (path.includes('links')) {
-        setNextStop('THE DIRECTORY');
-      } else if (path.includes('standards')) {
-        setNextStop('EDITORIAL STANDARDS');
-      } else if (path === '/' || path === '/index.html' || path.endsWith('/')) {
+      if (normalizedBase && normalizedBase !== '/' && (path === normalizedBase || path.startsWith(`${normalizedBase}/`))) {
+        path = path.slice(normalizedBase.length) || '/';
+      }
+
+      const segments = path.split('/').filter(Boolean);
+      let routeName = segments[segments.length - 1] || '';
+
+      if (routeName === 'index.html' && segments.length > 1) {
+        routeName = segments[segments.length - 2];
+      }
+
+      const cleanRouteName = routeName
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]/g, ' ');
+
+      if (!cleanRouteName || cleanRouteName === 'index') {
         setNextStop('HOME PLATFORM');
+      } else if (cleanRouteName === 'about') {
+        setNextStop('ABOUT THE LINE');
+      } else if (cleanRouteName === 'events') {
+        setNextStop('EVENTS');
+      } else if (cleanRouteName === 'links') {
+        setNextStop('THE DIRECTORY');
+      } else if (cleanRouteName === 'standards') {
+        setNextStop('EDITORIAL STANDARDS');
       } else {
-        const segments = path.split('/').filter(Boolean);
-        if (segments.length > 0) {
-          let lastSegment = segments[segments.length - 1];
-          if (lastSegment === 'index.html' && segments.length > 1) {
-            lastSegment = segments[segments.length - 2];
-          }
-          const cleanName = lastSegment.replace(/\.[^/.]+$/, "").replace(/[-_]/g, ' ').toUpperCase();
-          setNextStop(cleanName || 'THE PLATFORM');
-        } else {
-          setNextStop('THE PLATFORM');
-        }
+        setNextStop(cleanRouteName.toUpperCase() || 'THE PLATFORM');
       }
     }
   }, []);
@@ -456,6 +466,7 @@ const TrainSplash = () => {
     // Initialize Audio Instance
     const audioInstance = new CTATrainAudio();
     audioInstance.onWelcomeEnded = () => {
+      clearAudioExitTimeout();
       isAudioActiveRef.current = false;
       if (dismissRef.current) {
         dismissRef.current();
@@ -516,6 +527,7 @@ const TrainSplash = () => {
       window.clearTimeout(approachTimer);
       if (exitTimeoutRef.current) window.clearTimeout(exitTimeoutRef.current);
       if (safetyTimeoutRef.current) window.clearTimeout(safetyTimeoutRef.current);
+      if (audioExitTimeoutRef.current) window.clearTimeout(audioExitTimeoutRef.current);
       window.removeEventListener('load', onLoad);
       document.body.classList.remove('splash-active');
       if (audioRef.current) {
@@ -525,8 +537,16 @@ const TrainSplash = () => {
     };
   }, []);
 
+  const clearAudioExitTimeout = () => {
+    if (audioExitTimeoutRef.current) {
+      window.clearTimeout(audioExitTimeoutRef.current);
+      audioExitTimeoutRef.current = null;
+    }
+  };
+
   const dismiss = () => {
     if (phase === 'exit' || phase === 'gone') return;
+    clearAudioExitTimeout();
     exitScheduledRef.current = true;
     isAudioActiveRef.current = false;
 
@@ -587,6 +607,15 @@ const TrainSplash = () => {
 
     if (!nextMuted) {
       isAudioActiveRef.current = true;
+      clearAudioExitTimeout();
+      audioExitTimeoutRef.current = window.setTimeout(() => {
+        audioExitTimeoutRef.current = null;
+        if (!isAudioActiveRef.current) return;
+        isAudioActiveRef.current = false;
+        if (dismissRef.current) {
+          dismissRef.current();
+        }
+      }, AUDIO_SEQUENCE_FALLBACK_MS);
       // Clear any pending auto-exit timers so they don't cut off our audio
       if (exitTimeoutRef.current) {
         window.clearTimeout(exitTimeoutRef.current);
@@ -602,6 +631,7 @@ const TrainSplash = () => {
       }
       audioRef.current.playSequence();
     } else {
+      clearAudioExitTimeout();
       isAudioActiveRef.current = false;
       audioRef.current.stopHum();
       audioRef.current.stopSequence();

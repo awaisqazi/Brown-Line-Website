@@ -196,7 +196,7 @@ Components live in `src/components/`:
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
 - `EventCard.astro`: Supabase event renderer with giveaway, curated, and regular variants.
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
-- `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy). The audio toggle uses base-aware `/audio/` asset URLs and an 8.5s sequence watchdog so mobile playback stalls or failed media events cannot strand visitors on the splash.
+- `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy, including `/events` as `EVENTS`). The audio toggle uses base-aware `/audio/` asset URLs and a 7s sequence watchdog at both the audio-engine and splash-overlay levels so stalled media events cannot strand visitors on the splash.
 
 Pages live in `src/pages/`:
 - `index.astro`: hero, RSS-powered recent rides grid, about teaser.
@@ -323,7 +323,7 @@ Future project work should keep the docs fresh as part of the work itself.
 ## 12. Changelog
 
 - **2026-05-31 (mobile app icons):** Added a web app manifest, Apple touch icon metadata, and generated iOS and Android home-screen PNGs from `public/logos/logo.png` with Seashell backing and launcher-safe padding.
-- **2026-05-31 (splash audio reliability):** Made `TrainSplash.jsx` resolve audio files through Astro `BASE_URL` for subpath deployments and added a guarded audio-sequence fallback so enabling sound on mobile still exits to the page if media playback rejects, stalls, or misses completion events.
+- **2026-05-31 (splash audio reliability):** Made `TrainSplash.jsx` resolve audio files through Astro `BASE_URL` for subpath deployments, added guarded audio/splash fallbacks so enabling sound still exits to the page if media playback rejects, stalls, or misses completion events, and fixed route detection so `/events/` displays `EVENTS` instead of `HOME PLATFORM`.
 - **2026-05-30 (documentation practice):** Added `AGENTS.md` with a project-wide instruction to update `design.md` and the ignored `PRIVATE_README.md` whenever future changes make those docs relevant. Documented the convention here so it is visible in the design system itself.
 - **2026-05-30 (events infrastructure):** Added Supabase-backed public events at `/events`, the noindexed admin portal at `/admin/events`, `EventCard.astro`, `src/lib/supabase.ts`, `src/lib/ticker.ts`, and `src/lib/issues.ts`. Reworked the marquee into a dynamic, draggable, pauseable ticker fed by Beehiiv RSS and next-7-days Supabase events. Updated nav/footer links to include Events. Added GitHub Pages 4-hour scheduled rebuilds. Added Supabase env typing and dependencies. Removed `.env.example` from tracking and moved sensitive operational details into an ignored private runbook.
 - **2026-05-15 (links polish):** Removed the redundant "Follow" row from `/links` (Instagram is already a stop on the Platform Map). Made the page read intentionally on desktop: wider `max-w-lg` column, larger handle and avatar at `md+`, extra vertical padding, and two faint walnut "platform rails" flanking the column at desktop widths. Mobile presentation is unchanged.
