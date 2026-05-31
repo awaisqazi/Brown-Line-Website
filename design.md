@@ -69,8 +69,16 @@ The mobile menu is themed as a transit route map.
 - A vertical Dark Walnut "track" line scales down from top to bottom after the drawer settles.
 - Each link is a "stop" with a 22×22 colored dot, 2px walnut border, and the retro hard shadow.
 - Stops slide in from the right with a 200 / 280 / 360 / 440 ms stagger, like train cars arriving.
-- Stop colors map in order: Baby Pink → Maya Blue → Celadon → Cayenne. Subscribe is always the Cayenne terminus (matches the CTA token).
+- Stop colors map in order: Baby Pink → Maya Blue → Celadon → Amber → Cayenne. Subscribe is always the Cayenne terminus (matches the CTA token).
 - Closes on link tap, backdrop tap, Escape, or resizing past `md`.
+
+### Desktop Header Route Map (`Nav.astro`, `md+` only)
+The desktop primary nav mirrors the mobile transit-stop language as a compact horizontal route.
+- A Dark Walnut track runs behind the stop group and ends at the first and last dots.
+- Each link has a 20×20 colored dot, 2px walnut border, and the retro hard shadow.
+- Labels stay Montserrat, bold, uppercase, and compact so the header reads like signage rather than body copy.
+- Stop colors match the mobile drawer order: Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
+- Hover/focus lifts the station slightly, scales the dot, and tints the label Cayenne.
 
 ### Sticky Header Rule
 Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
@@ -127,7 +135,7 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 ## 9. Component & Page Inventory
 
 Components live in `src/components/`:
-- `Nav.astro`: header with logo and four primary links. Desktop = horizontal link row. Mobile = hamburger that opens the sliding route-map drawer (see § 5). Sticky on mobile, static on desktop.
+- `Nav.astro`: header with logo and five primary links. Desktop = horizontal route-map nav. Mobile = hamburger that opens the sliding route-map drawer (see § 5). Sticky on mobile, static on desktop.
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
 - `Marquee.astro`: LED ticker with Amber-on-Walnut scrolling phrases. Reserved for the slot directly above the footer divider. Site-wide.
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts an optional `class` prop for width tuning.

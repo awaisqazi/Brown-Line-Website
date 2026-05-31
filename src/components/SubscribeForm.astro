@@ -1,59 +1,65 @@
 ---
 interface Props {
-  placeholder?: string;
-  cta?: string;
   class?: string;
+  caption?: string;
 }
 
 const {
-  placeholder = 'your.email@stop.com',
-  cta = 'All Aboard',
   class: className = '',
+  caption = 'No spam. No transfers. One stop a week.',
 } = Astro.props;
 
-// Update this in your .env as: PUBLIC_BEEHIIV_URL="https://app.beehiiv.com/v1/subscribers"
-const beehiivUrl = import.meta.env.PUBLIC_BEEHIIV_URL ?? 'https://app.beehiiv.com/v1/subscribers';
+const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
 ---
-<form
-  action={beehiivUrl}
-  method="POST"
-  class:list={['w-full max-w-xl', className]}
-  aria-label="Subscribe to The Brown Line newsletter"
->
-  {/* Connects this custom form to your specific beehiiv publication form */}
-  <input type="hidden" name="form_id" value="ca1b5de3-a598-4e22-82d6-6aa2c32dfae7" />
 
-  <div class="flex flex-col md:flex-row gap-3 md:gap-2">
-    <label for="brown-line-email" class="sr-only">Email address</label>
-    <input
-      id="brown-line-email"
-      type="email"
-      name="email"
-      required
-      autocomplete="email"
-      placeholder={placeholder}
-      class="flex-1 bg-seashell border-2 border-darkWalnut px-4 py-3 font-body text-darkWalnut placeholder:text-darkWalnut/60 focus:outline-none focus-visible:outline-none focus:shadow-retro transition-shadow"
-    />
-
-    {/* Honeypot. Real subscribers leave this blank. */}
-    <input
-      type="text"
-      name="hp"
-      tabindex="-1"
-      autocomplete="off"
-      aria-hidden="true"
-      class="hidden"
-    />
-
-    <button
-      type="submit"
-      class="bg-cayenne text-seashell border-2 border-darkWalnut px-6 py-3 font-body font-bold uppercase tracking-widest text-sm md:text-base transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro active:translate-y-0 active:translate-x-0 active:shadow-none focus-visible:shadow-retro"
-    >
-      {cta}
-    </button>
+<!--
+  Strategy: Use the real Beehiiv V3 embed for reliable subscription, but
+  wrap it in our design language. The iframe renders Beehiiv's own form
+  which handles email capture and subscription natively.
+-->
+<div class:list={['subscribe-wrapper w-full max-w-xl', className]}>
+  <!-- Beehiiv embed form — the V3 loader injects an iframe here -->
+  <div id="beehiiv-form-container" class="beehiiv-embed-wrapper">
+    <script
+      async
+      src="https://subscribe-forms.beehiiv.com/v3/loader.js"
+      data-beehiiv-form={BEEHIIV_FORM_ID}
+    ></script>
   </div>
 
-  <p class="font-body text-darkWalnut/60 text-xs mt-3 uppercase tracking-widest">
-    No spam. No transfers. One stop a week.
-  </p>
-</form>
+  {caption && (
+    <p
+      class="font-body text-darkWalnut/60 text-xs mt-3 uppercase tracking-widest text-center"
+    >
+      {caption}
+    </p>
+  )}
+</div>
+
+<style>
+  /* 
+   * Override Beehiiv's default embed wrapper styling.
+   * The V3 loader injects a <div> + <iframe>. We target both to ensure
+   * the form fills our container properly and feels native to the design.
+   */
+  .beehiiv-embed-wrapper {
+    width: 100%;
+    max-width: 36rem;   /* max-w-xl */
+    margin: 0 auto;
+  }
+
+  /* The loader creates a wrapper div with class containing "beehiiv" */
+  .beehiiv-embed-wrapper :global(div) {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .beehiiv-embed-wrapper :global(iframe) {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: none !important;
+    min-height: 80px;
+  }
+</style>

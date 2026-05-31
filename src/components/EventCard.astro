@@ -1,0 +1,255 @@
+---
+import type { TransitEvent } from '../lib/supabase';
+
+interface Props {
+  event: TransitEvent;
+}
+
+const { event } = Astro.props;
+
+const isGiveaway = event.is_giveaway;
+const isCurated = event.is_curated;
+const tags = event.tags ?? [];
+const eventUrl = event.event_url?.trim() ?? '';
+const safeEventUrl = /^https?:\/\//i.test(eventUrl) ? eventUrl : '';
+const CardRoot = safeEventUrl ? 'a' : 'article';
+const cardLinkAttributes = safeEventUrl
+  ? {
+      href: safeEventUrl,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      'aria-label': `Open event details for ${event.title}`,
+    }
+  : {};
+const linkedCardClass = safeEventUrl
+  ? 'block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue focus-visible:ring-offset-4 focus-visible:ring-offset-seashell'
+  : '';
+
+const sentencePattern = /[^.!?]+[.!?]+|[^.!?]+$/g;
+
+function protectAbbreviations(value: string) {
+  return value
+    .replace(/\b([ap])\.m\./gi, '$1__MERIDIEM__')
+    .replace(/\b(Sun|Mon|Tue|Wed|Thu|Fri|Sat)\./g, '$1__DAY_DOT__');
+}
+
+function restoreAbbreviations(value: string) {
+  return value
+    .replace(/__MERIDIEM__/g, '.m.')
+    .replace(/__DAY_DOT__/g, '.');
+}
+
+function splitGiveawayDescription(description: string | null) {
+  if (!description) {
+    return { body: '', rules: '' };
+  }
+
+  const protectedDescription = protectAbbreviations(description);
+  const sentences =
+    protectedDescription
+      .match(sentencePattern)
+      ?.map((sentence) => restoreAbbreviations(sentence.trim())) ?? [description];
+  const ruleIndex = sentences.findIndex((sentence) =>
+    /\b(enter|forward|giveaway|ticket|tickets|win|winner|submit|submission)\b/i.test(sentence)
+  );
+
+  if (ruleIndex === -1) {
+    return { body: description, rules: '' };
+  }
+
+  return {
+    body: sentences.slice(0, ruleIndex).join(' '),
+    rules: sentences.slice(ruleIndex).join(' '),
+  };
+}
+
+const giveawayDescription = splitGiveawayDescription(event.description);
+const giveawayRules =
+  giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
+const hasMeta = event.organizer || event.cost_info;
+const hasCuratedMeta = Boolean(event.organizer);
+---
+
+{isGiveaway ? (
+  <CardRoot
+    {...cardLinkAttributes}
+    class:list={[
+      'ticket-stub relative overflow-visible bg-[#FFF4D8] border-[3px] border-dashed border-darkWalnut p-5 md:p-6 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro',
+      linkedCardClass,
+    ]}
+  >
+    <div class="flex flex-wrap items-center gap-2">
+      {isCurated && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-[#FDFBF7] border-2 border-darkWalnut px-2 py-1">
+          ⭐ Conductor's Pick
+        </span>
+      )}
+      <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-amber border-2 border-darkWalnut px-2 py-1">
+        Ticket Giveaway
+      </span>
+      {safeEventUrl && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-darkWalnut px-2 py-1">
+          Details ↗
+        </span>
+      )}
+    </div>
+
+    <div class="mt-4 flex items-start gap-3 md:gap-4">
+      {event.emoji && (
+        <span class="text-3xl md:text-4xl leading-none" aria-hidden="true">
+          {event.emoji}
+        </span>
+      )}
+      <div class="min-w-0">
+        <h3 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95]">
+          {event.title}
+        </h3>
+        <p class="font-body text-sm md:text-base text-darkWalnut/75 font-bold mt-3">
+          {event.venue}
+        </p>
+      </div>
+    </div>
+
+    {giveawayDescription.body && (
+      <p class="font-body text-darkWalnut/85 text-sm md:text-base leading-relaxed mt-5">
+        {giveawayDescription.body}
+      </p>
+    )}
+
+    <div class="mt-5 border-t-2 border-dashed border-darkWalnut pt-4">
+      <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">
+        Giveaway rules
+      </p>
+      <p class="font-body text-darkWalnut text-base md:text-lg leading-snug font-extrabold mt-2">
+        {giveawayRules}
+      </p>
+    </div>
+
+    {hasMeta && (
+      <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
+        {event.organizer && <span>{event.organizer}</span>}
+        {event.cost_info && <span>{event.cost_info}</span>}
+      </div>
+    )}
+  </CardRoot>
+) : isCurated ? (
+  <CardRoot
+    {...cardLinkAttributes}
+    class:list={[
+      'bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro',
+      linkedCardClass,
+    ]}
+  >
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne px-2 py-1">
+        ⭐ Conductor's Pick
+      </span>
+      {event.cost_info && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-celadon border-2 border-darkWalnut px-2 py-0.5">
+          {event.cost_info}
+        </span>
+      )}
+      {safeEventUrl && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-darkWalnut px-2 py-1">
+          Details ↗
+        </span>
+      )}
+    </div>
+
+    <div class="mt-4 flex items-start gap-3 md:gap-4">
+      {event.emoji && (
+        <span class="text-3xl md:text-4xl leading-none" aria-hidden="true">
+          {event.emoji}
+        </span>
+      )}
+      <div class="min-w-0">
+        <h3 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95]">
+          {event.title}
+        </h3>
+        <p class="font-body text-sm md:text-base text-darkWalnut/75 font-bold mt-3">
+          {event.venue}
+        </p>
+      </div>
+    </div>
+
+    {event.description && (
+      <p class="font-body text-darkWalnut/85 text-sm md:text-base leading-relaxed mt-5">
+        {event.description}
+      </p>
+    )}
+
+    {event.author_note && (
+      <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-5 border-l-4 border-mayaBlue pl-4">
+        {event.author_note}
+      </p>
+    )}
+
+    {hasCuratedMeta && (
+      <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
+        {event.organizer && <span>{event.organizer}</span>}
+      </div>
+    )}
+  </CardRoot>
+) : (
+  <CardRoot
+    {...cardLinkAttributes}
+    class:list={[
+      'bg-transparent border-b border-dashed border-darkWalnut/35 py-3 md:py-4',
+      linkedCardClass,
+    ]}
+  >
+    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      <div class="min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <h3 class="font-body text-darkWalnut text-base md:text-lg leading-snug font-extrabold">
+            {event.title}
+          </h3>
+          {safeEventUrl && (
+            <span class="font-body text-[10px] uppercase tracking-widest text-darkWalnut/65 border border-dashed border-darkWalnut/35 px-2 py-0.5 font-bold">
+              Details ↗
+            </span>
+          )}
+        </div>
+        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-body text-xs md:text-sm text-darkWalnut/65">
+          <span class="font-bold">{event.venue}</span>
+          {event.organizer && <span>{event.organizer}</span>}
+          {event.cost_info && <span>{event.cost_info}</span>}
+        </div>
+      </div>
+
+      {tags.length > 0 && (
+        <div class="flex flex-wrap gap-1.5 md:justify-end md:max-w-xs">
+          {tags.map((tag) => (
+            <span class="font-body text-[10px] uppercase tracking-widest text-darkWalnut/55 bg-darkWalnut/5 border border-dashed border-darkWalnut/25 px-2 py-1 font-bold">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  </CardRoot>
+)}
+
+<style>
+  .ticket-stub::before,
+  .ticket-stub::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 3px dashed #642713;
+    border-radius: 9999px;
+    background: #FAF1EC;
+    transform: translateY(-50%);
+    z-index: 1;
+  }
+
+  .ticket-stub::before {
+    left: -0.85rem;
+  }
+
+  .ticket-stub::after {
+    right: -0.85rem;
+  }
+</style>

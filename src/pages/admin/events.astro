@@ -1,0 +1,547 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TransitDivider from '../../components/TransitDivider.astro';
+
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+const supabasePublishableKey = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
+const base = import.meta.env.BASE_URL;
+
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error('Missing Supabase environment variables.');
+}
+
+const inputClass =
+  'mt-2 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue';
+const labelClass = 'block font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65';
+const buttonClass =
+  'border-2 border-darkWalnut bg-cayenne px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-seashell shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const secondaryButtonClass =
+  'inline-flex border-2 border-darkWalnut bg-amber px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const fieldMarkerClass = 'ml-2 text-[9px] tracking-widest';
+const csvHeaders = [
+  'event_date',
+  'display_date',
+  'title',
+  'venue',
+  'description',
+  'organizer',
+  'cost_info',
+  'event_url',
+  'author_note',
+  'emoji',
+  'tags',
+  'is_curated',
+  'is_giveaway',
+];
+const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csvHeaders.join(',')}\n`)}`;
+---
+
+<Layout
+  title="Events Admin | The Brown Line"
+  description="Internal event management for The Brown Line."
+  minimal
+  noindex
+>
+  <section
+    data-admin-events-app
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabasePublishableKey}
+    class="min-h-screen px-6 py-8 md:px-10 md:py-12"
+  >
+    <div class="mx-auto max-w-6xl">
+      <div class="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+        <div>
+          <img src={`${base}logos/logo.png`} alt="The Brown Line" class="h-12 w-auto" />
+          <p class="mt-8 font-body text-xs font-bold uppercase tracking-[0.3em] text-cayenne">
+            Internal platform
+          </p>
+          <h1 class="mt-3 font-heading text-[2.75rem] leading-none text-darkWalnut md:text-6xl">
+            Events admin portal
+          </h1>
+          <p class="mt-5 max-w-2xl font-body text-base leading-relaxed text-darkWalnut/75 md:text-lg">
+            Add single events or import a spreadsheet. The public events page refreshes automatically every 4 hours, so saved events should show up on the next refresh.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          data-admin-logout
+          hidden
+          class="self-start border-2 border-darkWalnut bg-seashell px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+        >
+          Lock portal
+        </button>
+      </div>
+
+      <div class="mt-10">
+        <TransitDivider />
+      </div>
+
+      <section
+        data-login-panel
+        class="mt-10 max-w-xl border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7"
+      >
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          Staff only
+        </p>
+        <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+          Enter the line room.
+        </h2>
+        <form data-password-form class="mt-6 space-y-4">
+          <label class={labelClass} for="admin-password">
+            Password
+            <input
+              id="admin-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              class={inputClass}
+              required
+            />
+          </label>
+          <button type="submit" class={buttonClass}>Unlock admin</button>
+        </form>
+      </section>
+
+      <section data-admin-portal hidden class="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+            Single stop
+          </p>
+          <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+            Add one event
+          </h2>
+          <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+            Fill the fields marked Required. Optional fields can stay blank if we do not have that detail yet.
+          </p>
+
+          <form data-single-event-form class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class={labelClass} for="event-title">
+              Title
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-title" name="title" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="event-date">
+              Event date
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-date" name="event_date" type="date" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="event-display-date">
+              Display date
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-display-date" name="display_date" type="text" placeholder="Fri. May 29" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="event-venue">
+              Venue
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-venue" name="venue" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="event-organizer">
+              Organizer
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-organizer" name="organizer" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass} for="event-cost-info">
+              Cost info
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-cost-info" name="cost_info" type="text" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="event-url">
+              Event URL
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
+            </label>
+
+            <label class={labelClass} for="event-emoji">
+              Emoji
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-emoji" name="emoji" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass} for="event-tags">
+              Tags
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-tags" name="tags" type="text" placeholder="Asian, Workshop" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="event-description">
+              Description
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea id="event-description" name="description" rows="5" class={inputClass}></textarea>
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="event-author-note">
+              Author note
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea id="event-author-note" name="author_note" rows="3" class={inputClass}></textarea>
+            </label>
+
+            <div class="flex flex-wrap gap-3 md:col-span-2">
+              <p class="basis-full font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/45">
+                Optional flags
+              </p>
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input name="is_curated" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Conductor's pick
+              </label>
+
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input name="is_giveaway" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Giveaway
+              </label>
+            </div>
+
+            <div class="md:col-span-2">
+              <button type="submit" class={buttonClass}>Add event</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+            Spreadsheet transfer
+          </p>
+          <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+            Bulk CSV upload
+          </h2>
+
+          <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+            Download the template, fill one row per event, then upload the finished CSV here. Optional columns can stay blank or be removed from the file.
+          </p>
+
+          <a
+            href={csvTemplateHref}
+            download="brown-line-events-template.csv"
+            class={`${secondaryButtonClass} mt-5`}
+          >
+            Download CSV template
+          </a>
+
+          <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div class="border-2 border-darkWalnut bg-seashell p-4">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenne">
+                Required columns
+              </p>
+              <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
+                event_date, display_date, title, venue
+              </p>
+            </div>
+
+            <div class="border-2 border-dashed border-darkWalnut/35 bg-seashell p-4">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/55">
+                Optional columns
+              </p>
+              <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
+                description, organizer, cost_info, event_url, author_note, emoji, tags, is_curated, is_giveaway
+              </p>
+            </div>
+          </div>
+
+          <p class="mt-4 font-body text-sm leading-relaxed text-darkWalnut/75">
+            Tags can be comma-separated inside one cell. For pick or giveaway columns, use true, false, yes, no, 1, or 0.
+          </p>
+
+          <form data-csv-form class="mt-7 space-y-5">
+            <label class={labelClass} for="event-csv">
+              CSV file
+              <input
+                id="event-csv"
+                data-csv-file
+                type="file"
+                accept=".csv,text/csv"
+                class="mt-2 w-full border-2 border-dashed border-darkWalnut bg-seashell px-3 py-8 font-body text-sm text-darkWalnut file:mr-4 file:border-2 file:border-darkWalnut file:bg-amber file:px-3 file:py-2 file:font-body file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+                required
+              />
+            </label>
+
+            <div class="border-2 border-dashed border-darkWalnut/35 bg-seashell p-4">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+                When will it show up?
+              </p>
+              <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
+                The public events page refreshes every 4 hours. Most new events will appear automatically within a few hours after you save or upload them.
+              </p>
+            </div>
+
+            <button type="submit" class={buttonClass}>Upload CSV</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  [data-admin-events-app] [hidden] {
+    display: none !important;
+  }
+</style>
+
+<script>
+  import Papa from 'papaparse';
+  import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+  type AdminEventRecord = {
+    event_date: string;
+    display_date: string;
+    title: string;
+    venue: string;
+    description: string | null;
+    organizer: string | null;
+    cost_info: string | null;
+    event_url: string | null;
+    author_note: string | null;
+    emoji: string | null;
+    tags: string[] | null;
+    is_curated: boolean;
+    is_giveaway: boolean;
+  };
+
+  type CsvRow = Record<string, unknown>;
+
+  const app = document.querySelector('[data-admin-events-app]') as HTMLElement | null;
+
+  if (app) {
+    const supabaseUrl = app.dataset.supabaseUrl ?? '';
+    const supabaseKey = app.dataset.supabaseKey ?? '';
+    let adminSupabase: SupabaseClient | null = null;
+
+    const loginPanel = app.querySelector('[data-login-panel]') as HTMLElement | null;
+    const portal = app.querySelector('[data-admin-portal]') as HTMLElement | null;
+    const passwordForm = app.querySelector('[data-password-form]') as HTMLFormElement | null;
+    const logoutButton = app.querySelector('[data-admin-logout]') as HTMLButtonElement | null;
+    const singleEventForm = app.querySelector('[data-single-event-form]') as HTMLFormElement | null;
+    const csvForm = app.querySelector('[data-csv-form]') as HTMLFormElement | null;
+    const csvFileInput = app.querySelector('[data-csv-file]') as HTMLInputElement | null;
+
+    function setUnlocked(isUnlocked: boolean) {
+      if (loginPanel) loginPanel.hidden = isUnlocked;
+      if (portal) portal.hidden = !isUnlocked;
+      if (logoutButton) logoutButton.hidden = !isUnlocked;
+    }
+
+    function createAdminClient(password: string) {
+      return createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: {
+          headers: {
+            'x-admin-password': password,
+          },
+        },
+      });
+    }
+
+    function cleanText(value: unknown) {
+      return typeof value === 'string' ? value.trim() : '';
+    }
+
+    function nullableText(value: unknown) {
+      const clean = cleanText(value);
+      return clean.length > 0 ? clean : null;
+    }
+
+    function requiredText(value: unknown, fieldName: string) {
+      const clean = cleanText(value);
+      if (!clean) throw new Error(`${fieldName} is required.`);
+      return clean;
+    }
+
+    function requiredDate(value: unknown) {
+      const clean = requiredText(value, 'event_date');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+        throw new Error('event_date must use YYYY-MM-DD format.');
+      }
+      return clean;
+    }
+
+    function normalizeUrl(value: unknown) {
+      const clean = nullableText(value);
+      if (!clean) return null;
+      if (!/^https?:\/\//i.test(clean)) {
+        throw new Error('event_url must start with http:// or https://.');
+      }
+      return clean;
+    }
+
+    function parseTags(value: unknown) {
+      const clean = cleanText(value);
+      if (!clean) return null;
+
+      if (clean.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(clean);
+          if (Array.isArray(parsed)) {
+            const tags = parsed.map((tag) => cleanText(tag)).filter(Boolean);
+            return tags.length > 0 ? tags : null;
+          }
+        } catch (_) {
+          // Fall back to delimiter parsing below.
+        }
+      }
+
+      const tags = clean
+        .split(/[|,]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+
+      return tags.length > 0 ? tags : null;
+    }
+
+    function parseBoolean(value: unknown) {
+      const clean = cleanText(value).toLowerCase();
+      if (!clean) return false;
+      return ['true', '1', 'yes', 'y', 'x'].includes(clean);
+    }
+
+    function getFormValue(formData: FormData, name: string) {
+      return formData.get(name);
+    }
+
+    function recordFromForm(form: HTMLFormElement): AdminEventRecord {
+      const formData = new FormData(form);
+      return {
+        title: requiredText(getFormValue(formData, 'title'), 'title'),
+        event_date: requiredDate(getFormValue(formData, 'event_date')),
+        display_date: requiredText(getFormValue(formData, 'display_date'), 'display_date'),
+        venue: requiredText(getFormValue(formData, 'venue'), 'venue'),
+        organizer: nullableText(getFormValue(formData, 'organizer')),
+        cost_info: nullableText(getFormValue(formData, 'cost_info')),
+        event_url: normalizeUrl(getFormValue(formData, 'event_url')),
+        description: nullableText(getFormValue(formData, 'description')),
+        author_note: nullableText(getFormValue(formData, 'author_note')),
+        emoji: nullableText(getFormValue(formData, 'emoji')),
+        tags: parseTags(getFormValue(formData, 'tags')),
+        is_curated: formData.get('is_curated') === 'on',
+        is_giveaway: formData.get('is_giveaway') === 'on',
+      };
+    }
+
+    function recordFromCsvRow(row: CsvRow, rowNumber: number): AdminEventRecord {
+      try {
+        return {
+          event_date: requiredDate(row.event_date),
+          display_date: requiredText(row.display_date, 'display_date'),
+          title: requiredText(row.title, 'title'),
+          venue: requiredText(row.venue, 'venue'),
+          description: nullableText(row.description),
+          organizer: nullableText(row.organizer),
+          cost_info: nullableText(row.cost_info),
+          event_url: normalizeUrl(row.event_url),
+          author_note: nullableText(row.author_note),
+          emoji: nullableText(row.emoji),
+          tags: parseTags(row.tags),
+          is_curated: parseBoolean(row.is_curated),
+          is_giveaway: parseBoolean(row.is_giveaway),
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid row.';
+        throw new Error(`Row ${rowNumber}: ${message}`);
+      }
+    }
+
+    function isBlankCsvRow(row: CsvRow) {
+      return Object.values(row).every((value) => cleanText(value) === '');
+    }
+
+    async function insertEvents(records: AdminEventRecord[]) {
+      if (!adminSupabase) {
+        throw new Error('Unlock the admin portal first.');
+      }
+
+      const { error } = await adminSupabase.from('events').insert(records);
+      if (error) throw new Error(error.message);
+    }
+
+    passwordForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void (async () => {
+        const formData = new FormData(passwordForm);
+        const password = cleanText(formData.get('password'));
+
+        try {
+          const client = createAdminClient(password);
+          adminSupabase = client;
+          passwordForm.reset();
+          setUnlocked(true);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          alert(`Could not unlock admin portal: ${message}`);
+        }
+      })();
+    });
+
+    logoutButton?.addEventListener('click', () => {
+      adminSupabase = null;
+      setUnlocked(false);
+    });
+
+    singleEventForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      try {
+        const record = recordFromForm(singleEventForm);
+        await insertEvents([record]);
+        singleEventForm.reset();
+        alert('Event added. The public events page refreshes every 4 hours, so it should appear soon.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error.';
+        alert(`Could not add event: ${message}`);
+      }
+    });
+
+    csvForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const file = csvFileInput?.files?.[0];
+
+      if (!file) {
+        alert('Choose a CSV file first.');
+        return;
+      }
+
+      Papa.parse<CsvRow>(file, {
+        header: true,
+        skipEmptyLines: 'greedy',
+        transformHeader: (header) => header.trim().toLowerCase(),
+        complete: (results) => {
+          void (async () => {
+            try {
+              if (results.errors.length > 0) {
+                const firstError = results.errors[0];
+                throw new Error(`CSV parse error on row ${firstError.row ?? 'unknown'}: ${firstError.message}`);
+              }
+
+              const records = results.data
+                .filter((row) => !isBlankCsvRow(row))
+                .map((row, index) => recordFromCsvRow(row, index + 2));
+
+              if (records.length === 0) {
+                throw new Error('No event rows found in the CSV.');
+              }
+
+              await insertEvents(records);
+              csvForm.reset();
+              alert(`${records.length} events added. The public events page refreshes every 4 hours, so they should appear soon.`);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Unknown error.';
+              alert(`Could not upload CSV: ${message}`);
+            }
+          })();
+        },
+        error: (error) => {
+          alert(`Could not read CSV: ${error.message}`);
+        },
+      });
+    });
+
+    setUnlocked(false);
+  }
+</script>

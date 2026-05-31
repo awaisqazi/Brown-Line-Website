@@ -1,10 +1,11 @@
 ---
 const base = import.meta.env.BASE_URL;
 const navLinks = [
-  { href: `${base}#archive`,   label: 'Archive' },
-  { href: `${base}about`,      label: 'About' },
-  { href: `${base}standards`,  label: 'Standards & Ethics' },
-  { href: `${base}#subscribe`, label: 'Subscribe' },
+  { href: `${base}#archive`,   label: 'Archive',            stopColor: '#F79CD0' },
+  { href: `${base}events`,     label: 'Events',             stopColor: '#5BC3FF' },
+  { href: `${base}about`,      label: 'About',              stopColor: '#90D393' },
+  { href: `${base}standards`,  label: 'Standards & Ethics', stopColor: '#FFBC29' },
+  { href: `${base}#subscribe`, label: 'Subscribe',          stopColor: '#F35A0F' },
 ];
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 ---
@@ -22,15 +23,16 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     </a>
 
     {/* Desktop nav */}
-    <nav aria-label="Primary" class="hidden md:block min-w-0">
-      <ul class="flex items-center justify-end gap-x-4 md:gap-x-6 lg:gap-x-8">
-        {navLinks.map(({ href, label }) => (
-          <li>
+    <nav aria-label="Primary" class="desktop-route-nav hidden md:block min-w-0">
+      <ul class="desktop-route">
+        {navLinks.map(({ href, label, stopColor }) => (
+          <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
             <a
               href={href}
-              class="link-transit font-body text-darkWalnut uppercase text-xs md:text-sm font-semibold tracking-widest"
+              class="desktop-route-link"
             >
-              {label}
+              <span class="desktop-route-stop" aria-hidden="true"></span>
+              <span class="desktop-route-label">{label}</span>
             </a>
           </li>
         ))}
@@ -75,8 +77,8 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
     <nav aria-label="Mobile primary" class="px-6 pt-4 pb-2 flex-1">
       <ul id="mobile-nav-list" class="nav-stops flex flex-col">
-        {navLinks.map(({ href, label }) => (
-          <li class="mobile-nav-item">
+        {navLinks.map(({ href, label, stopColor }) => (
+          <li class="mobile-nav-item" style={`--stop-color: ${stopColor};`}>
             <a href={href} class="mobile-nav-link" data-mobile-link>
               <span class="mobile-nav-stop" aria-hidden="true"></span>
               <span class="mobile-nav-label">{label}</span>
@@ -162,6 +164,101 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     transform: translateY(-8px) rotate(-45deg);
   }
 
+  /* Desktop route map mirrors the mobile stop language on a compact horizontal track */
+  .desktop-route-nav {
+    flex: 1 1 auto;
+  }
+
+  .desktop-route {
+    --route-gap: 5.25rem;
+    --stop-size: 20px;
+    position: relative;
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    margin-left: auto;
+    align-items: flex-start;
+    justify-content: flex-end;
+    column-gap: var(--route-gap);
+    padding-bottom: 1.75rem;
+    isolation: isolate;
+  }
+
+  .desktop-route::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--stop-size) / 2);
+    right: calc(var(--stop-size) / 2);
+    top: calc(var(--stop-size) / 2);
+    height: 2px;
+    background: #642713;
+    z-index: 0;
+  }
+
+  .desktop-route-item {
+    position: relative;
+    width: var(--stop-size);
+    height: calc(var(--stop-size) + 1.75rem);
+    z-index: 1;
+  }
+
+  .desktop-route-link {
+    position: relative;
+    display: block;
+    width: var(--stop-size);
+    height: 100%;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+    color: #642713;
+    white-space: nowrap;
+    transition: color 200ms ease, transform 220ms ease;
+  }
+
+  .desktop-route-stop {
+    display: block;
+    width: var(--stop-size);
+    height: var(--stop-size);
+    border-radius: 9999px;
+    border: 2px solid #642713;
+    background: var(--stop-color);
+    box-shadow: 2px 2px 0 #642713;
+    transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .desktop-route-label {
+    display: block;
+    position: absolute;
+    top: calc(var(--stop-size) + 0.55rem);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .desktop-route-link:hover,
+  .desktop-route-link:focus-visible {
+    color: #F35A0F;
+    transform: translateY(-2px);
+    outline: none;
+  }
+
+  .desktop-route-link:hover .desktop-route-stop,
+  .desktop-route-link:focus-visible .desktop-route-stop {
+    transform: scale(1.15);
+    box-shadow: 3px 3px 0 #642713;
+  }
+
+  @media (min-width: 1024px) {
+    .desktop-route {
+      --route-gap: 7.25rem;
+    }
+
+    .desktop-route-link {
+      font-size: 0.78rem;
+    }
+  }
+
   /* Vertical transit line connecting the stops, draws downward as the drawer opens */
   #mobile-nav .nav-stops {
     position: relative;
@@ -183,12 +280,6 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     transition-delay: 140ms;
   }
 
-  /* Four transit colors map onto the four stops; Subscribe is the Cayenne terminus per the CTA token */
-  #mobile-nav .mobile-nav-item:nth-child(1) .mobile-nav-stop { background: #F79CD0; }
-  #mobile-nav .mobile-nav-item:nth-child(2) .mobile-nav-stop { background: #5BC3FF; }
-  #mobile-nav .mobile-nav-item:nth-child(3) .mobile-nav-stop { background: #90D393; }
-  #mobile-nav .mobile-nav-item:nth-child(4) .mobile-nav-stop { background: #F35A0F; }
-
   /* Each stop slides in from the right with a stagger, like cars arriving */
   #mobile-nav .mobile-nav-item {
     opacity: 0;
@@ -203,6 +294,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(2) { transition-delay: 280ms; }
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(3) { transition-delay: 360ms; }
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(4) { transition-delay: 440ms; }
+  #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(5) { transition-delay: 520ms; }
 
   /* Social icons row at the drawer footer, fades in after the stops */
   #mobile-nav .social-icon {
@@ -236,6 +328,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     height: 22px;
     border-radius: 9999px;
     border: 2px solid #642713;
+    background: var(--stop-color);
     box-shadow: 2px 2px 0 #642713;
     flex-shrink: 0;
     transition: transform 220ms ease, box-shadow 220ms ease;
@@ -278,6 +371,8 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     .mobile-nav-link,
     .mobile-nav-stop,
     .mobile-nav-arrow,
+    .desktop-route-link,
+    .desktop-route-stop,
     #nav-toggle .nav-bar {
       transition: none !important;
     }

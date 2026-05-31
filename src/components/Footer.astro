@@ -1,11 +1,18 @@
 ---
 import TransitDivider from './TransitDivider.astro';
 import Marquee from './Marquee.astro';
+import type { TickerItem } from '../lib/ticker';
+
+interface Props {
+  tickerItems?: TickerItem[];
+}
+
 const base = import.meta.env.BASE_URL;
 const year = new Date().getFullYear();
+const { tickerItems = [] } = Astro.props;
 ---
 <footer class="mt-24">
-  <Marquee />
+  <Marquee items={tickerItems} />
   <TransitDivider />
   <div class="bg-darkWalnut text-seashell">
     <div class="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6">
@@ -39,6 +46,7 @@ const year = new Date().getFullYear();
         <p class="font-body uppercase text-xs tracking-widest text-seashell/60 mb-4">Follow the line</p>
         <ul class="space-y-2 font-body text-sm">
           <li><a href={`${base}about`} class="link-transit">About</a></li>
+          <li><a href={`${base}events`} class="link-transit">Events</a></li>
           <li><a href={`${base}standards`} class="link-transit">Standards &amp; Ethics</a></li>
           <li><a href="#privacy" class="link-transit">Privacy</a></li>
           <li><a href="https://rss.beehiiv.com/feeds/utXCBZV29P.xml" target="_blank" rel="noopener noreferrer" class="link-transit">RSS</a></li>

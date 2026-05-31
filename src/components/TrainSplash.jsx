@@ -502,21 +502,29 @@ const TrainSplash = () => {
     dismissRef.current = dismiss;
   });
 
-  // Listen for Space Bar shortcut
+  // Listen for Space Bar shortcut while the splash is visible.
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space') {
-        e.preventDefault(); // Prevent standard browser space-scrolling
-        if (dismissRef.current) {
-          dismissRef.current();
-        }
+      if (e.code !== 'Space' || phase === 'exit' || phase === 'gone') return;
+
+      const target = e.target;
+      const isInteractiveTarget =
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName));
+
+      if (isInteractiveTarget) return;
+
+      e.preventDefault(); // Prevent standard browser space-scrolling during the splash.
+      if (dismissRef.current) {
+        dismissRef.current();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [phase]);
 
   const toggleSound = (e) => {
     if (e) {

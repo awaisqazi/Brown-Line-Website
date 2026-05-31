@@ -5,9 +5,9 @@ on:
   push:
     branches: [ main ]
 
-  # Rebuild the site automatically every day at 9:00 AM UTC (4:00 AM CST)
+  # Rebuild the site automatically every 4 hours so Supabase CSV imports go live.
   schedule:
-    - cron: '0 9 * * *'
+    - cron: '0 */4 * * *'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -27,10 +27,11 @@ jobs:
 
       - name: Install, build, and upload your site
         uses: withastro/action@v3
-
         env:
           PUBLIC_BEEHIIV_URL: ${{ vars.PUBLIC_BEEHIIV_URL }}
           PUBLIC_SITE_URL: https://awaisqazi.github.io/Brown-Line-Website
+          SUPABASE_URL: https://xuursvzrlbqiwcevzhao.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_aqwn4tleOVrkkFS1NUJLxw_xW2NExGD
 
   deploy:
     needs: build

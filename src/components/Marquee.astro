@@ -1,22 +1,66 @@
 ---
-const phrases = [
-  'ALWAYS MOVING',
-  'ALWAYS ABOVE GROUND',
-  'NEXT STOP: CHICAGO',
-  'ALL STOPS, ALL STORIES',
+import type { TickerItem } from '../lib/ticker';
+
+interface Props {
+  items?: TickerItem[];
+}
+
+const fallbackItems: TickerItem[] = [
+  { label: 'The Brown Line', text: 'Always moving' },
+  { label: 'The Brown Line', text: 'Always above ground' },
+  { label: 'Next stop', text: 'Chicago' },
+  { label: 'All stops', text: 'All stories' },
 ];
-const sep = '  ✶  ';
-const line = phrases.join(sep) + sep;
+
+const { items: providedItems = [] } = Astro.props;
+const items = providedItems.length > 0 ? providedItems : fallbackItems;
+const screenReaderText = items
+  .map((item) => (item.text ? `${item.label}: ${item.text}` : item.label))
+  .join('. ');
+const tickerCharacterCount = items.reduce((total, item) => total + item.label.length + item.text.length, 0);
+const durationSeconds = Math.min(180, Math.max(70, Math.ceil(tickerCharacterCount / 8)));
 ---
-<div class="marquee" aria-hidden="true">
-  <div class="marquee-track">
-    <span class="marquee-line">{line}</span>
-    <span class="marquee-line">{line}</span>
+<div
+  class="marquee"
+  data-marquee
+  data-marquee-duration={durationSeconds}
+  role="group"
+  aria-label="Latest issue and upcoming events ticker"
+>
+  <p class="sr-only">{screenReaderText}</p>
+  <div class="marquee-grip" aria-hidden="true"></div>
+  <div class="marquee-viewport" data-marquee-viewport aria-hidden="true">
+    <div class="marquee-track" data-marquee-track>
+    {[0, 1, 2].map(() => (
+      <span class="marquee-line">
+        {items.map((item) => (
+          <span class="marquee-item">
+            <span class="marquee-label">{item.label}{item.text && ':'}</span>
+            {item.text && <span>{item.text}</span>}
+            <span class="marquee-separator" aria-hidden="true">✶</span>
+          </span>
+        ))}
+      </span>
+    ))}
+    </div>
   </div>
+  <button
+    class="marquee-toggle"
+    type="button"
+    data-marquee-toggle
+    aria-label="Pause ticker"
+    aria-pressed="false"
+  >
+    <span class="marquee-icon" aria-hidden="true">
+      <span class="marquee-pause-bars"></span>
+      <span class="marquee-play-triangle"></span>
+    </span>
+  </button>
 </div>
 
 <style>
   .marquee {
+    position: relative;
     overflow: hidden;
     background: #642713;
     color: #FFBC29;
@@ -31,11 +75,49 @@ const line = phrases.join(sep) + sep;
     line-height: 1;
   }
 
+  .marquee::before,
+  .marquee::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 1;
+    width: 3.25rem;
+    pointer-events: none;
+  }
+
+  .marquee::before {
+    left: 0;
+    background: linear-gradient(to right, #642713 0%, rgba(100, 39, 19, 0) 100%);
+  }
+
+  .marquee::after {
+    right: 0;
+    background: linear-gradient(to left, #642713 0%, rgba(100, 39, 19, 0) 100%);
+  }
+
+  .marquee-viewport {
+    overflow-x: auto;
+    overflow-y: hidden;
+    cursor: grab;
+    scrollbar-width: none;
+    touch-action: pan-y;
+    overscroll-behavior-x: contain;
+    user-select: none;
+  }
+
+  .marquee-viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .marquee.is-dragging .marquee-viewport {
+    cursor: grabbing;
+  }
+
   .marquee-track {
     display: flex;
     width: max-content;
-    animation: marquee-scroll 30s linear infinite;
-    will-change: transform;
+    will-change: scroll-position;
   }
 
   .marquee-line {
@@ -43,12 +125,281 @@ const line = phrases.join(sep) + sep;
     padding-right: 1rem;
   }
 
-  @keyframes marquee-scroll {
-    from { transform: translateX(0); }
-    to   { transform: translateX(-50%); }
+  .marquee-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-right: 1rem;
+  }
+
+  .marquee-label {
+    color: #FAF1EC;
+  }
+
+  .marquee-separator {
+    color: #FFBC29;
+    padding-left: 0.65rem;
+  }
+
+  .marquee-grip {
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    z-index: 2;
+    width: 1.15rem;
+    height: 0.8rem;
+    transform: translateY(-50%);
+    opacity: 0.34;
+    background-image: radial-gradient(circle, #FAF1EC 1.4px, transparent 1.6px);
+    background-size: 6px 6px;
+    pointer-events: none;
+  }
+
+  .marquee-toggle {
+    position: absolute;
+    right: 0.55rem;
+    top: 50%;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.55rem;
+    height: 1.55rem;
+    transform: translateY(-50%);
+    color: #FFBC29;
+    background: rgba(100, 39, 19, 0.78);
+    border: 1px solid rgba(255, 188, 41, 0.48);
+    border-radius: 2px;
+    opacity: 0.62;
+    transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+
+  .marquee:hover .marquee-toggle,
+  .marquee:focus-within .marquee-toggle,
+  .marquee.is-paused .marquee-toggle {
+    opacity: 0.95;
+  }
+
+  .marquee-toggle:focus-visible {
+    outline: 2px solid #5BC3FF;
+    outline-offset: 2px;
+  }
+
+  .marquee-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .marquee-pause-bars,
+  .marquee-pause-bars::after {
+    display: block;
+    width: 3px;
+    height: 0.72rem;
+    background: currentColor;
+    border-radius: 1px;
+  }
+
+  .marquee-pause-bars {
+    position: relative;
+    transform: translateX(-3px);
+  }
+
+  .marquee-pause-bars::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 0;
+  }
+
+  .marquee-play-triangle {
+    display: none;
+    width: 0;
+    height: 0;
+    margin-left: 1px;
+    border-top: 0.36rem solid transparent;
+    border-bottom: 0.36rem solid transparent;
+    border-left: 0.56rem solid currentColor;
+  }
+
+  .marquee.is-paused .marquee-pause-bars {
+    display: none;
+  }
+
+  .marquee.is-paused .marquee-play-triangle {
+    display: block;
+  }
+
+  .marquee.is-paused {
+    box-shadow: inset 0 0 0 1px rgba(250, 241, 236, 0.1);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .marquee-track { animation: none; }
+    .marquee-toggle {
+      opacity: 0.95;
+    }
   }
 </style>
+
+<script>
+  const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  document.querySelectorAll('[data-marquee]').forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.marqueeReady === 'true') return;
+
+    const viewport = root.querySelector('[data-marquee-viewport]');
+    const track = root.querySelector('[data-marquee-track]');
+    const toggle = root.querySelector('[data-marquee-toggle]');
+
+    if (!(viewport instanceof HTMLElement) || !(track instanceof HTMLElement) || !(toggle instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    root.dataset.marqueeReady = 'true';
+
+    const durationMs = (Number(root.dataset.marqueeDuration) || 30) * 1000;
+    const dragThreshold = 5;
+    let loopWidth = 0;
+    let lastFrame = 0;
+    let isPointerDown = false;
+    let isInteracting = false;
+    let userPaused = reduceMotionQuery.matches;
+    let dragDistance = 0;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let activePointerId = 0;
+    let resumeTimer = 0;
+    let autoScrollTime = 0;
+
+    function syncControls() {
+      const isPaused = userPaused || reduceMotionQuery.matches;
+      root.classList.toggle('is-paused', isPaused);
+      toggle.setAttribute('aria-pressed', String(isPaused));
+      toggle.setAttribute('aria-label', isPaused ? 'Resume ticker' : 'Pause ticker');
+    }
+
+    function measure() {
+      loopWidth = track.scrollWidth / 3;
+      root.classList.toggle('is-scrollable', loopWidth > viewport.clientWidth);
+
+      if (loopWidth > viewport.clientWidth) {
+        viewport.scrollLeft = loopWidth;
+      }
+
+      syncControls();
+    }
+
+    function normalizeScroll() {
+      if (!loopWidth) return;
+
+      if (viewport.scrollLeft >= loopWidth * 2) {
+        viewport.scrollLeft -= loopWidth;
+      } else if (viewport.scrollLeft <= 0) {
+        viewport.scrollLeft += loopWidth;
+      }
+    }
+
+    function holdBriefly(delay = 1200) {
+      if (userPaused || reduceMotionQuery.matches) return;
+
+      isInteracting = true;
+      window.clearTimeout(resumeTimer);
+      resumeTimer = window.setTimeout(() => {
+        isInteracting = false;
+      }, delay);
+    }
+
+    function togglePaused() {
+      userPaused = !userPaused;
+      isInteracting = false;
+      window.clearTimeout(resumeTimer);
+      syncControls();
+    }
+
+    function tick(frameTime) {
+      if (!lastFrame) lastFrame = frameTime;
+
+      const frameDelta = frameTime - lastFrame;
+      lastFrame = frameTime;
+
+      if (!userPaused && !isInteracting && !reduceMotionQuery.matches && loopWidth > viewport.clientWidth) {
+        autoScrollTime = performance.now();
+        viewport.scrollLeft += (loopWidth / durationMs) * frameDelta;
+        normalizeScroll();
+      }
+
+      window.requestAnimationFrame(tick);
+    }
+
+    viewport.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || event.target instanceof Element && event.target.closest('[data-marquee-toggle]')) {
+        return;
+      }
+
+      isPointerDown = true;
+      isInteracting = true;
+      dragDistance = 0;
+      startX = event.clientX;
+      startScrollLeft = viewport.scrollLeft;
+      activePointerId = event.pointerId;
+      root.classList.add('is-dragging');
+      viewport.setPointerCapture(event.pointerId);
+      window.clearTimeout(resumeTimer);
+    });
+
+    viewport.addEventListener('pointermove', (event) => {
+      if (!isPointerDown || event.pointerId !== activePointerId) return;
+
+      const deltaX = event.clientX - startX;
+      dragDistance = Math.max(dragDistance, Math.abs(deltaX));
+
+      if (dragDistance > 1) {
+        viewport.scrollLeft = startScrollLeft - deltaX;
+        normalizeScroll();
+        startScrollLeft = viewport.scrollLeft + deltaX;
+      }
+    });
+
+    viewport.addEventListener('pointerup', (event) => {
+      if (!isPointerDown || event.pointerId !== activePointerId) return;
+
+      isPointerDown = false;
+      root.classList.remove('is-dragging');
+      viewport.releasePointerCapture(event.pointerId);
+
+      if (dragDistance < dragThreshold) {
+        togglePaused();
+      } else {
+        holdBriefly();
+      }
+    });
+
+    viewport.addEventListener('pointercancel', () => {
+      isPointerDown = false;
+      root.classList.remove('is-dragging');
+      holdBriefly();
+    });
+
+    viewport.addEventListener('scroll', () => {
+      normalizeScroll();
+
+      if (performance.now() - autoScrollTime > 80) {
+        holdBriefly(1500);
+      }
+    }, { passive: true });
+
+    toggle.addEventListener('click', (event) => {
+      event.stopPropagation();
+      togglePaused();
+    });
+
+    reduceMotionQuery.addEventListener('change', syncControls);
+    window.addEventListener('resize', measure, { passive: true });
+
+    measure();
+    window.requestAnimationFrame(tick);
+  });
+</script>
