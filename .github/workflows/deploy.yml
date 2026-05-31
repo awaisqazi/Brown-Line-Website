@@ -18,6 +18,11 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  # Supabase's realtime client expects native WebSocket support during the
+  # Astro static build; Node 24 also avoids GitHub's Node 20 deprecation warning.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,6 +32,8 @@ jobs:
 
       - name: Install, build, and upload your site
         uses: withastro/action@v3
+        with:
+          node-version: 24
         env:
           PUBLIC_BEEHIIV_URL: ${{ vars.PUBLIC_BEEHIIV_URL }}
           PUBLIC_SITE_URL: https://awaisqazi.github.io/Brown-Line-Website

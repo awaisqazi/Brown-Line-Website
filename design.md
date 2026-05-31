@@ -84,7 +84,16 @@ The desktop primary nav mirrors the mobile transit-stop language as a compact ho
 Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
 
 ### LED Marquee (`Marquee.astro`)
-Dark Walnut bar with Amber text, top and bottom 2px Amber borders. Two copies of the phrase concatenated and translated `0 → -50%` over 30s linear infinite so the loop is seamless. Reserved for the slot directly above the footer's `TransitDivider`; do not duplicate elsewhere. Static under `prefers-reduced-motion`.
+Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a scrollable track so the JS can normalize scroll position for an endless loop. Duration is calculated from total character count and clamped between 70 and 180 seconds.
+
+Interaction details:
+- The marquee auto-scrolls with `requestAnimationFrame`, not CSS keyframes, so dragging and pause/resume stay in sync.
+- The viewport is horizontally draggable with pointer capture. Manual scroll or drag pauses motion briefly, then resumes unless the user pressed pause.
+- A compact pause/play button sits at the right edge, uses `aria-pressed`, and changes label between "Pause ticker" and "Resume ticker".
+- Under `prefers-reduced-motion`, the ticker starts paused and leaves the controls visible.
+- The same ticker items render near the top of the site chrome and above the footer. Minimal pages skip ticker data entirely.
+
+Content source: `Layout.astro` calls `getTickerItems()` from `src/lib/ticker.ts`. The ticker combines the latest Beehiiv issue from `src/lib/issues.ts` with Supabase events in the next 7 days.
 
 ### Paper-Grain Noise Overlay (`Layout.astro`)
 A single fixed div with an inline SVG noise texture (`feTurbulence` `baseFrequency=0.85`, `numOctaves=3`, `stitchTiles=stitch`) at `opacity: 0.04` with `mix-blend-mode: multiply`. `pointer-events-none`, `aria-hidden="true"`, `z-[999]` so it never blocks clicks and applies texture site-wide (including over the splash and mobile drawer). The result reads as recycled newsprint, not visual noise.
@@ -98,9 +107,49 @@ The Link-in-Bio page reuses the Mobile Drawer Route Map pattern as its primary a
 ### Social Icons (Nav drawer and Footer)
 40×40 touch target, icon stroke is `currentColor` at 2px, default fill `text-darkWalnut` (on Seashell) or `text-seashell` (on Dark Walnut). Hover lifts by 2px and tints to Cayenne (on Seashell) or Amber (on Dark Walnut). Render in a flex row so new socials drop in cleanly.
 
+### Events Route Board (`/events`)
+The public events page is a static Supabase-powered route board. It should feel like a transit guide, not a generic card directory.
+- Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl`.
+- Main controls: bordered Seashell panel with result count, search, date jump, start/end dates, line type segmented radios, "Has link", tag pills, and Reset.
+- Event groups: events are grouped by `display_date`; each date block is a "Platform" with a vertical Dark Walnut route line and colored stop dots.
+- Stop colors rotate Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
+- The default client-side start date is today's America/Chicago date. Past events can still be reached by moving the start date backward, and render dimmed/grayscale.
+- The no-results state is a bordered Seashell panel reading "Try a different route."
+
+### Floating Event Controls (`/events`)
+When the main route controls scroll out of view, a compact fixed filter panel appears near the bottom edge.
+- Uses `IntersectionObserver` with a top root margin so it appears after the full controls have left the viewport.
+- Mirrors all real controls through shared `data-*` selectors: search, date jump, date range, line type, link filter, tags, and reset.
+- Collapsed by default with a plus button; expanded state uses `aria-expanded`, `aria-controls`, and a hidden panel.
+- Uses `inert` and `aria-hidden` while invisible so keyboard focus does not land in offscreen controls.
+
+### Event Card Variants (`EventCard.astro`)
+`EventCard` chooses its visual treatment from the Supabase flags:
+- Giveaway: ticket-stub card, dashed 3px border, Amber badge, optional "Conductor's Pick" badge, dashed giveaway rules section, and side punch-outs via pseudo-elements.
+- Curated: large bordered feature card with Cayenne "Conductor's Pick" badge, optional Celadon cost chip, optional author note with Maya Blue rule.
+- Regular: compact transfer row with dashed bottom border, small metadata, and dashed tag chips.
+- If `event_url` is a valid `http` or `https` URL, the root becomes an external `<a>` with `target="_blank"` and `rel="noopener noreferrer"`. Invalid or missing URLs render as `<article>`.
+
+### Events Admin Portal (`/admin/events`)
+The admin portal is intentionally utilitarian but still brand-native.
+- Uses `<Layout minimal noindex>` so there is no global nav/footer/splash and search engines receive `noindex, nofollow, noarchive`.
+- Starts with a staff-only password panel. The UI unlocks locally; the real write authorization happens in Supabase RLS when an insert request is made.
+- The typed password is attached as the `x-admin-password` header on the Supabase client. It is held in memory only.
+- Two work surfaces: "Single stop" for one event and "Spreadsheet transfer" for CSV imports.
+- CSV template is generated as a `data:text/csv` download with the canonical column list.
+- Required fields are `event_date`, `display_date`, `title`, and `venue`. Optional fields match the `public.events` nullable columns.
+- CSV booleans accept `true`, `1`, `yes`, `y`, or `x`.
+- Tags accept JSON arrays, comma-separated strings, or pipe-separated strings.
+- `event_url` validation requires `http://` or `https://`.
+
 ## 6. Layout & Integration
 - **Spacing:** Generous padding (e.g., `py-24`). Content should be constrained to readable max-widths (e.g., `max-w-3xl` for text, `max-w-5xl` for grids, `max-w-md` for the Link-in-Bio page).
-- **Beehiiv Integration:** The primary hero section features a custom-styled HTML form that visually matches our design system, posting directly to the Beehiiv subscriber endpoint. Avoid the unstyled default Beehiiv iframe. The form action is read from `PUBLIC_BEEHIIV_URL` at build time.
+- **Beehiiv Subscribe Form:** The primary hero section features a custom-styled HTML form that visually matches the design system, posting directly to the Beehiiv subscriber endpoint. Avoid the unstyled default Beehiiv iframe. The form action is read from `PUBLIC_BEEHIIV_URL` at build time. `SubscribeForm.astro` accepts `caption` and `class` props.
+- **Beehiiv RSS:** Homepage issue cards now come from the Beehiiv RSS feed through `src/lib/issues.ts`; the static fallback list lives in the same file.
+- **Supabase Events:** Public events and ticker events come from Supabase at build time through `src/lib/supabase.ts`. The site is static, so data changes require a rebuild.
+- **GitHub Pages Base Path:** `astro.config.mjs` switches `base` to `/Brown-Line-Website/` only when `PUBLIC_SITE_URL` includes `github.io`; otherwise base is `/`.
+- **Scheduled Rebuilds:** GitHub Actions rebuilds every 4 hours (`0 */4 * * *`) so new Supabase event imports show up without a code push.
+- **Minimal Pages:** `Layout` supports `minimal` to remove global chrome and `noindex` to add robots meta. Use both for internal admin surfaces.
 
 ## 7. Writing Style
 
@@ -137,19 +186,27 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 Components live in `src/components/`:
 - `Nav.astro`: header with logo and five primary links. Desktop = horizontal route-map nav. Mobile = hamburger that opens the sliding route-map drawer (see § 5). Sticky on mobile, static on desktop.
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
-- `Marquee.astro`: LED ticker with Amber-on-Walnut scrolling phrases. Reserved for the slot directly above the footer divider. Site-wide.
+- `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, and dynamic data from `src/lib/ticker.ts`.
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts an optional `class` prop for width tuning.
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
+- `EventCard.astro`: Supabase event renderer with giveaway, curated, and regular variants.
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
 - `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign reads `NEXT STOP: THE BROWN LINE`).
 
 Pages live in `src/pages/`:
-- `index.astro`: hero, recent rides grid, about teaser.
+- `index.astro`: hero, RSS-powered recent rides grid, about teaser.
 - `about.astro`: founder portrait and bio, affiliations, outlet description, values strip, subscribe CTA.
+- `events.astro`: Supabase-powered public events route board with static build data and client-side filtering.
+- `admin/events.astro`: internal events admin portal for single-event and CSV inserts. Minimal, noindexed, and protected by Supabase RLS on insert.
 - `standards.astro`: editorial Standards & Ethics page. Linked from the footer.
 - `links.astro`: Link-in-Bio destination optimized for IG / TikTok in-app browser traffic. Uses `<Layout minimal>` so no site chrome (no Nav, Footer, top TransitDivider, or splash) renders. The noise overlay and ::selection still apply.
 
-The `Layout` component accepts an optional `minimal?: boolean` prop (default `false`). Set `minimal` when a page should render standalone without the global Nav, top TransitDivider, Footer, or TrainSplash. Reach for it for deep-link entry points like Link-in-Bio pages or future campaign landings.
+Library modules live in `src/lib/`:
+- `issues.ts`: fetches and parses Beehiiv RSS, formats dates, alternates issue card accents, and falls back to a static issue list.
+- `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface.
+- `ticker.ts`: composes ticker items from the latest issue and the next 7 days of Supabase events.
+
+The `Layout` component accepts optional `minimal?: boolean` (default `false`) and `noindex?: boolean` (default `false`) props. Set `minimal` when a page should render standalone without the global Nav, top TransitDivider, Footer, Marquee, or TrainSplash. Set `noindex` for internal or utility surfaces.
 
 ## 10. Page Templates
 
@@ -186,8 +243,73 @@ Desktop styling:
 
 Stop colors on `/links` lead with Cayenne (the latest issue, primary CTA token) then run Maya Blue → Celadon → Baby Pink → Amber. This is intentionally different from the Mobile Drawer Route Map, which terminates at Cayenne for Subscribe. The principle is the same in both: Cayenne marks the priority action on the page.
 
-## 11. Changelog
+### Events (`/events`)
+Public events page with full site chrome. Structure:
+1. Hero with `Now boarding` eyebrow, H1, and Supabase rebuild explanation.
+2. `<TransitDivider />`.
+3. Route controls panel when events exist.
+4. Floating controls panel, hidden until the main controls scroll away.
+5. Events board grouped by `display_date`, each group rendered as a platform with route-line stop dots.
+6. Empty state if Supabase returns zero events.
 
+Client-side filter behavior:
+- Search indexes title, description, venue, organizer, cost, display date, and tags.
+- Line type filters: All, Picks, Giveaways, Transfers. Transfers means neither curated nor giveaway.
+- Start date defaults to today's America/Chicago date.
+- Date jump scrolls to the selected date and expands the start date backward if needed.
+- Tags are multi-select. "Any tag" clears tag selection only.
+- Result counts update in both the main and floating controls.
+
+### Events Admin (`/admin/events`)
+Internal page using `<Layout minimal noindex>`. Structure:
+1. Logo, "Internal platform" eyebrow, H1, and lock button.
+2. Login panel with password input.
+3. Transit divider.
+4. Two-column admin workspace at `lg+`: single event form and CSV upload panel.
+5. CSV template download, required/optional column reference cards, and importer notes.
+
+The page is not a full auth system. It is a static admin tool backed by RLS. Do not put passwords or hashes in tracked files; use the ignored `PRIVATE_README.md` for recovery details.
+
+## 11. Infrastructure & Data
+
+### Supabase
+Production project ref: `xuursvzrlbqiwcevzhao`. Public API URL: `https://xuursvzrlbqiwcevzhao.supabase.co`.
+
+Tables:
+- `public.events`: source of public event data. RLS enabled. Public `SELECT` allowed. `INSERT` allowed only when the RLS check confirms the admin password header and required fields.
+- `private.events_admin_credentials`: one-row private table containing the admin password salt/hash. RLS enabled. Direct access denied to public client roles.
+
+Important policy shape:
+- Public reads are intentional because the events page is public.
+- Writes are intentionally narrow: `anon` and `authenticated` may insert only when `private.events_admin_password_matches()` returns true and the required event fields are present.
+- The password helper function lives in the private schema to avoid exposing a public RPC endpoint.
+- The publishable key is allowed in frontend/build contexts; never use a service-role key in this static site.
+
+### GitHub Pages Build
+The site deploys through `.github/workflows/deploy.yml`.
+- Pushes to `main` deploy immediately.
+- Scheduled rebuilds run every 4 hours so Supabase changes propagate to static pages.
+- Manual dispatch is available for urgent event updates.
+- Build Node is pinned to 24 because the current Supabase client path initializes Realtime during static rendering and expects native WebSocket support. Node 20 fails during route generation.
+- `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` is set at workflow level to opt GitHub Actions into the Node 24 action runtime.
+- `PUBLIC_SITE_URL` is hardcoded to the GitHub Pages URL in the workflow.
+- `PUBLIC_BEEHIIV_URL` is read from GitHub repository variables.
+- Supabase URL and publishable key are supplied at build time.
+
+### Data Freshness
+- `/events` is static. New rows do not appear until the next build.
+- The homepage issue grid is fetched from Beehiiv RSS at build time and falls back to bundled data.
+- The marquee is also static per build, combining latest issue plus next-7-days events.
+- Admin inserts write to Supabase immediately, but public visibility waits for rebuild.
+
+### Dependencies Added
+- `@supabase/supabase-js`: public Supabase client for build-time reads and admin insert requests.
+- `papaparse`: browser CSV parsing in the admin portal.
+- `@types/papaparse`: TypeScript support for CSV parsing.
+
+## 12. Changelog
+
+- **2026-05-30 (events infrastructure):** Added Supabase-backed public events at `/events`, the noindexed admin portal at `/admin/events`, `EventCard.astro`, `src/lib/supabase.ts`, `src/lib/ticker.ts`, and `src/lib/issues.ts`. Reworked the marquee into a dynamic, draggable, pauseable ticker fed by Beehiiv RSS and next-7-days Supabase events. Updated nav/footer links to include Events. Added GitHub Pages 4-hour scheduled rebuilds. Added Supabase env typing and dependencies. Removed `.env.example` from tracking and moved sensitive operational details into an ignored private runbook.
 - **2026-05-15 (links polish):** Removed the redundant "Follow" row from `/links` (Instagram is already a stop on the Platform Map). Made the page read intentionally on desktop: wider `max-w-lg` column, larger handle and avatar at `md+`, extra vertical padding, and two faint walnut "platform rails" flanking the column at desktop widths. Mobile presentation is unchanged.
 - **2026-05-15 (links redesign):** Replaced the `/links` brutalist button stack with a Platform Map: vertical Dark Walnut track with colored transit stops, staggered entry animation, and the same hover language as the Mobile Drawer Route Map. Added a `minimal?: boolean` prop to `Layout` so `/links` renders with no Nav, Footer, top divider, or splash chrome (the noise overlay and brand `::selection` still apply).
 - **2026-05-15:** Visual "next level" pass. Added a site-wide SVG paper-grain noise overlay in `Layout.astro` at 4% multiply opacity. Built `Marquee.astro` (Amber-on-Walnut LED ticker) and wired it into the slot above the footer divider. Added brand `::selection` (Maya Blue background, Dark Walnut text) to `global.css`. Built the initial `/links` Link-in-Bio page (later redesigned, see above). Documented the new patterns and page templates in this file.

@@ -17,6 +17,10 @@ pnpm-debug.log*
 .env.production
 .env.local
 
+# local private runbooks / credentials
+PRIVATE_README.md
+*.private.md
+
 # macOS
 .DS_Store
 
