@@ -31,11 +31,24 @@ const dateStops = groupedEventEntries.map(([displayDate, dayEvents]) => ({
   displayDate,
   eventDate: dayEvents[0]?.event_date ?? '',
 }));
+const todayDateString = getChicagoDateString();
+const dateFilterStopsByDate = new Map(
+  dateStops
+    .filter((dateStop) => dateStop.eventDate)
+    .map((dateStop) => [dateStop.eventDate, dateStop])
+);
+if (todayDateString && !dateFilterStopsByDate.has(todayDateString)) {
+  dateFilterStopsByDate.set(todayDateString, {
+    displayDate: formatLongDate(todayDateString),
+    eventDate: todayDateString,
+  });
+}
+const dateFilterStops = Array.from(dateFilterStopsByDate.values()).sort((a, b) =>
+  a.eventDate.localeCompare(b.eventDate)
+);
 const tags = Array.from(new Set(events.flatMap((event) => event.tags ?? []))).sort((a, b) =>
   a.localeCompare(b)
 );
-const minEventDate = events[0]?.event_date ?? '';
-const maxEventDate = events[events.length - 1]?.event_date ?? '';
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 const pageDescription =
   'A static, Supabase-powered guide to Chicago arts, culture, and community events from The Brown Line.';
@@ -59,6 +72,31 @@ function getEventSearchText(event: TransitEvent) {
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
+}
+
+function getChicagoDateString() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${byType.year}-${byType.month}-${byType.day}`;
+}
+
+function formatLongDate(dateString: string) {
+  const [year, month, day] = dateString.split('-').map(Number);
+
+  if (!year || !month || !day) return dateString;
+
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 ---
 <Layout
@@ -89,19 +127,19 @@ function getEventSearchText(event: TransitEvent) {
   </div>
 
   {events.length > 0 && (
-    <section class="px-6 pt-14 md:pt-20">
+    <section class="px-4 pt-8 sm:px-6 md:pt-20">
       <div
         data-event-controls
-        class="max-w-5xl mx-auto border-2 border-darkWalnut bg-[#FDFBF7] p-4 md:p-5 shadow-retro"
+        class="max-w-5xl mx-auto overflow-hidden border-2 border-darkWalnut bg-[#FDFBF7] p-4 shadow-[3px_3px_0_#642713] md:p-5 md:shadow-retro"
       >
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
+        <div class="flex items-start justify-between gap-3 md:items-center">
+          <div class="min-w-0">
             <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">
               Route controls
             </p>
             <p
               data-event-result-count
-              class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-2"
+              class="font-heading text-darkWalnut text-[2rem] sm:text-4xl md:text-5xl leading-none mt-1.5"
               aria-live="polite"
             >
               {events.length} stops
@@ -110,14 +148,14 @@ function getEventSearchText(event: TransitEvent) {
           <button
             type="button"
             data-reset-filters
-            class="self-start md:self-auto font-body text-xs font-bold uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-4 py-2 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro focus-visible:outline-none"
+            class="shrink-0 self-start font-body text-[10px] sm:text-xs font-bold uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-3 py-2 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro focus-visible:outline-none md:self-auto md:px-4"
           >
             Reset
           </button>
         </div>
 
-        <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_repeat(2,minmax(0,0.85fr))]">
-          <label class="block">
+        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_repeat(2,minmax(0,0.85fr))]">
+          <label class="block min-w-0 sm:col-span-2 md:col-span-1">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Search
             </span>
@@ -126,17 +164,17 @@ function getEventSearchText(event: TransitEvent) {
               data-event-search-input
               type="search"
               placeholder="Title, venue, organizer"
-              class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
             />
           </label>
 
-          <label class="block">
+          <label class="block min-w-0 sm:col-span-2 md:col-span-1">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Jump
             </span>
             <select
               data-date-jump
-              class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
             >
               <option value="">Choose date</option>
               {dateStops.map((dateStop) => (
@@ -145,34 +183,38 @@ function getEventSearchText(event: TransitEvent) {
             </select>
           </label>
 
-          <label class="block">
+          <label class="block min-w-0">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               From
             </span>
-            <input
+            <select
               data-start-date
-              type="date"
-              min={minEventDate}
-              max={maxEventDate}
-              class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
-            />
+              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
+            >
+              <option value="">All dates</option>
+              {dateFilterStops.map((dateStop) => (
+                <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
+              ))}
+            </select>
           </label>
 
-          <label class="block">
+          <label class="block min-w-0">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               To
             </span>
-            <input
+            <select
               data-end-date
-              type="date"
-              min={minEventDate}
-              max={maxEventDate}
-              class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
-            />
+              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
+            >
+              <option value="">No end date</option>
+              {dateFilterStops.map((dateStop) => (
+                <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
+              ))}
+            </select>
           </label>
         </div>
 
-        <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div class="mt-4 grid grid-cols-1 gap-4 md:mt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <fieldset>
             <legend class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Line type
@@ -193,7 +235,7 @@ function getEventSearchText(event: TransitEvent) {
                     checked={option.value === 'all'}
                     data-kind-filter
                   />
-                  <span class="block border-2 border-darkWalnut bg-seashell px-3 py-2 text-center font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut transition-colors peer-checked:bg-darkWalnut peer-checked:text-seashell peer-focus-visible:ring-2 peer-focus-visible:ring-mayaBlue">
+                  <span class="block border-2 border-darkWalnut bg-seashell px-2 py-2 text-center font-body text-[10px] font-bold uppercase tracking-[0.16em] text-darkWalnut transition-colors peer-checked:bg-darkWalnut peer-checked:text-seashell peer-focus-visible:ring-2 peer-focus-visible:ring-mayaBlue sm:text-[11px] sm:tracking-widest">
                     {option.label}
                   </span>
                 </label>
@@ -205,7 +247,7 @@ function getEventSearchText(event: TransitEvent) {
             <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Extras
             </p>
-            <label class="mt-2 inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+            <label class="mt-2 inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut sm:text-[11px]">
               <input
                 data-linked-filter
                 type="checkbox"
@@ -221,11 +263,11 @@ function getEventSearchText(event: TransitEvent) {
             <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Tags
             </p>
-            <div class="mt-2 flex flex-wrap gap-2">
+            <div class="mt-2 flex flex-nowrap gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
               <button
                 type="button"
                 data-clear-tags
-                class="font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-darkWalnut border-2 border-darkWalnut px-3 py-2"
+                class="shrink-0 font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-darkWalnut border-2 border-darkWalnut px-3 py-2"
               >
                 Any tag
               </button>
@@ -234,7 +276,7 @@ function getEventSearchText(event: TransitEvent) {
                   type="button"
                   data-tag-filter={tag}
                   aria-pressed="false"
-                  class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/70 bg-seashell border-2 border-dashed border-darkWalnut/35 px-3 py-2 transition-colors hover:border-darkWalnut focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+                  class="shrink-0 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/70 bg-seashell border-2 border-dashed border-darkWalnut/35 px-3 py-2 transition-colors hover:border-darkWalnut focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
                 >
                   {tag}
                 </button>
@@ -249,12 +291,15 @@ function getEventSearchText(event: TransitEvent) {
   {events.length > 0 && (
     <div
       data-floating-event-controls
-      class="fixed inset-x-4 bottom-4 z-40 md:left-auto md:right-6 md:w-[min(31rem,calc(100vw-3rem))]"
+      class="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-40 md:left-auto md:right-6 md:bottom-6 md:w-[min(31rem,calc(100vw-3rem))]"
       aria-label="Floating event filters"
       aria-hidden="true"
       inert
     >
-      <div class="max-h-[calc(100vh-2rem)] overflow-y-auto border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro">
+      <div
+        data-floating-panel-shell
+        class="floating-event-panel max-h-[calc(100vh-7rem)] overflow-y-auto border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro md:max-h-[calc(100vh-2rem)]"
+      >
         <div class="h-1 bg-[linear-gradient(to_right,#F79CD0_0_20%,#5BC3FF_20%_40%,#90D393_40%_60%,#FFBC29_60%_80%,#F35A0F_80%_100%)]"></div>
 
         <div class="p-3">
@@ -272,16 +317,27 @@ function getEventSearchText(event: TransitEvent) {
               </p>
             </div>
 
-            <button
-              type="button"
-              data-floating-filter-toggle
-              aria-expanded="false"
-              aria-controls="floating-event-filters"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center border-2 border-darkWalnut bg-amber font-body text-xl font-bold leading-none text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-            >
-              <span data-floating-toggle-symbol aria-hidden="true">+</span>
-              <span data-floating-toggle-label class="sr-only">Open event filters</span>
-            </button>
+            <div class="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                data-floating-minimize
+                aria-label="Hide floating filters"
+                class="inline-flex h-10 w-10 items-center justify-center border-2 border-darkWalnut bg-seashell font-body text-lg font-bold leading-none text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >
+                <span aria-hidden="true">&rarr;</span>
+              </button>
+
+              <button
+                type="button"
+                data-floating-filter-toggle
+                aria-expanded="false"
+                aria-controls="floating-event-filters"
+                class="inline-flex h-10 w-10 items-center justify-center border-2 border-darkWalnut bg-amber font-body text-xl font-bold leading-none text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >
+                <span data-floating-toggle-symbol aria-hidden="true">+</span>
+                <span data-floating-toggle-label class="sr-only">Open event filters</span>
+              </button>
+            </div>
           </div>
 
           <label class="mt-3 block">
@@ -290,7 +346,7 @@ function getEventSearchText(event: TransitEvent) {
               data-event-search-input
               type="search"
               placeholder="Search the route"
-              class="w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              class="w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
             />
           </label>
 
@@ -300,14 +356,14 @@ function getEventSearchText(event: TransitEvent) {
             hidden
             class="mt-3 border-t-2 border-dashed border-darkWalnut/35 pt-3"
           >
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label class="block">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
                   Jump
                 </span>
                 <select
                   data-date-jump
-                  class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
                 >
                   <option value="">Choose date</option>
                   {dateStops.map((dateStop) => (
@@ -316,13 +372,13 @@ function getEventSearchText(event: TransitEvent) {
                 </select>
               </label>
 
-              <label class="block">
+              <label class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
                   Line type
                 </span>
                 <select
                   data-kind-select
-                  class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
                 >
                   <option value="all">All</option>
                   <option value="curated">Picks</option>
@@ -331,30 +387,34 @@ function getEventSearchText(event: TransitEvent) {
                 </select>
               </label>
 
-              <label class="block">
+              <label class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
                   From
                 </span>
-                <input
+                <select
                   data-start-date
-                  type="date"
-                  min={minEventDate}
-                  max={maxEventDate}
-                  class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
-                />
+                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
+                >
+                  <option value="">All dates</option>
+                  {dateFilterStops.map((dateStop) => (
+                    <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
+                  ))}
+                </select>
               </label>
 
-              <label class="block">
+              <label class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
                   To
                 </span>
-                <input
+                <select
                   data-end-date
-                  type="date"
-                  min={minEventDate}
-                  max={maxEventDate}
-                  class="mt-1 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
-                />
+                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
+                >
+                  <option value="">No end date</option>
+                  {dateFilterStops.map((dateStop) => (
+                    <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
+                  ))}
+                </select>
               </label>
             </div>
 
@@ -406,6 +466,16 @@ function getEventSearchText(event: TransitEvent) {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        data-floating-restore
+        hidden
+        aria-label="Show floating filters"
+        class="floating-event-restore-tab"
+      >
+        <span aria-hidden="true">&larr;</span>
+      </button>
     </div>
   )}
 
@@ -540,8 +610,46 @@ function getEventSearchText(event: TransitEvent) {
     transform: translateY(0);
   }
 
+  .floating-event-panel {
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .floating-event-restore-tab {
+    position: absolute;
+    right: -0.25rem;
+    bottom: 0;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 3rem;
+    border: 2px solid #642713;
+    background: #FFBC29;
+    color: #642713;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 2px 2px 0 #642713;
+    pointer-events: auto;
+  }
+
+  .floating-event-restore-tab[hidden] {
+    display: none;
+  }
+
+  [data-floating-event-controls].is-minimized .floating-event-panel {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(calc(100% + 1rem));
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    [data-floating-event-controls] {
+    [data-floating-event-controls],
+    .floating-event-panel {
       transition: none;
     }
   }
@@ -567,14 +675,19 @@ function getEventSearchText(event: TransitEvent) {
     const tagButtons = getControlFields('[data-tag-filter]');
     const resultCounts = getControlFields('[data-event-result-count]');
     const floatingToggle = floatingControls?.querySelector('[data-floating-filter-toggle]');
+    const floatingMinimize = floatingControls?.querySelector('[data-floating-minimize]');
+    const floatingRestore = floatingControls?.querySelector('[data-floating-restore]');
     const floatingToggleSymbol = floatingControls?.querySelector('[data-floating-toggle-symbol]');
     const floatingToggleLabel = floatingControls?.querySelector('[data-floating-toggle-label]');
     const floatingPanel = floatingControls?.querySelector('[data-floating-filter-panel]');
+    const floatingPanelShell = floatingControls?.querySelector('[data-floating-panel-shell]');
     const eventCards = Array.from(document.querySelectorAll('[data-event-card]'));
     const daySections = Array.from(document.querySelectorAll('[data-event-day-section]'));
     const noMatches = document.querySelector('[data-no-event-matches]');
     const selectedTags = new Set();
     let selectedKind = kindInputs.find((input) => input.checked)?.value ?? kindSelects[0]?.value ?? 'all';
+    let controlsAreOutOfView = false;
+    let floatingIsMinimized = false;
 
     const normalize = (value) => value.toString().trim().toLowerCase();
 
@@ -623,6 +736,25 @@ function getEventSearchText(event: TransitEvent) {
       floatingControls.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
     }
 
+    function setFloatingMinimized(isMinimized) {
+      if (!floatingControls) return;
+
+      floatingIsMinimized = isMinimized;
+      floatingControls.classList.toggle('is-minimized', isMinimized);
+      floatingPanelShell?.toggleAttribute('inert', isMinimized);
+      floatingPanelShell?.setAttribute('aria-hidden', isMinimized ? 'true' : 'false');
+
+      if (floatingRestore) {
+        floatingRestore.hidden = !isMinimized;
+      }
+
+      if (isMinimized) {
+        setFloatingExpanded(false);
+      }
+
+      syncFloatingVisibility();
+    }
+
     function getChicagoDateString() {
       const parts = new Intl.DateTimeFormat('en-US', {
         timeZone: 'America/Chicago',
@@ -639,6 +771,32 @@ function getEventSearchText(event: TransitEvent) {
 
     function getDefaultStartDate() {
       return today;
+    }
+
+    function hasActiveFilters() {
+      const defaultStartDate = getDefaultStartDate();
+      return Boolean(
+        getSyncedValue(searchInputs) ||
+        getSyncedValue(jumpSelects) ||
+        (getSyncedValue(startDateInputs) && getSyncedValue(startDateInputs) !== defaultStartDate) ||
+        getSyncedValue(endDateInputs) ||
+        selectedKind !== 'all' ||
+        linkedInputs.some((input) => input.checked) ||
+        selectedTags.size > 0
+      );
+    }
+
+    function shouldPinFloatingControls() {
+      return Boolean(
+        floatingControls?.contains(document.activeElement) ||
+        floatingIsMinimized ||
+        hasActiveFilters()
+      );
+    }
+
+    function syncFloatingVisibility() {
+      if (!floatingControls) return;
+      setFloatingVisible(controlsAreOutOfView || shouldPinFloatingControls());
     }
 
     function updateTagButtons() {
@@ -681,6 +839,8 @@ function getEventSearchText(event: TransitEvent) {
     }
 
     function renderFilters() {
+      const shouldPreserveScroll = Boolean(floatingControls?.contains(document.activeElement));
+      const previousScrollY = window.scrollY;
       let visibleCount = 0;
 
       eventCards.forEach((card) => {
@@ -710,6 +870,18 @@ function getEventSearchText(event: TransitEvent) {
       }
 
       updateTagButtons();
+      syncFloatingVisibility();
+
+      if (shouldPreserveScroll) {
+        window.requestAnimationFrame(() => {
+          const maxScrollY = Math.max(
+            0,
+            document.documentElement.scrollHeight - window.innerHeight
+          );
+          window.scrollTo({ top: Math.min(previousScrollY, maxScrollY), behavior: 'auto' });
+          syncFloatingVisibility();
+        });
+      }
     }
 
     function resetFilters() {
@@ -822,6 +994,18 @@ function getEventSearchText(event: TransitEvent) {
     resetButtons.forEach((button) => button.addEventListener('click', resetFilters));
     floatingToggle?.addEventListener('click', () => {
       setFloatingExpanded(floatingToggle.getAttribute('aria-expanded') !== 'true');
+      syncFloatingVisibility();
+    });
+    floatingMinimize?.addEventListener('click', () => {
+      setFloatingMinimized(true);
+    });
+    floatingRestore?.addEventListener('click', () => {
+      setFloatingMinimized(false);
+      setFloatingVisible(true);
+    });
+    floatingControls?.addEventListener('focusin', syncFloatingVisibility);
+    floatingControls?.addEventListener('focusout', () => {
+      window.setTimeout(syncFloatingVisibility, 0);
     });
     eventCards.forEach((card) => {
       card.classList.toggle('is-past-event', (card.dataset.eventDate ?? '') < today);
@@ -838,13 +1022,15 @@ function getEventSearchText(event: TransitEvent) {
     if (floatingControls && controls && 'IntersectionObserver' in window) {
       const observer = new IntersectionObserver(
         ([entry]) => {
-          setFloatingVisible(!entry.isIntersecting);
+          controlsAreOutOfView = !entry.isIntersecting;
+          syncFloatingVisibility();
         },
         { rootMargin: '-80px 0px 0px 0px' }
       );
       observer.observe(controls);
     } else {
-      setFloatingVisible(true);
+      controlsAreOutOfView = true;
+      syncFloatingVisibility();
     }
 
     renderFilters();

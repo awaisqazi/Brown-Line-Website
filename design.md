@@ -84,11 +84,12 @@ The desktop primary nav mirrors the mobile transit-stop language as a compact ho
 Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
 
 ### LED Marquee (`Marquee.astro`)
-Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a scrollable track so the JS can normalize scroll position for an endless loop. Duration is calculated from total character count and clamped between 70 and 180 seconds.
+Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. Duration is calculated from total character count and clamped between 70 and 180 seconds.
 
 Interaction details:
 - The marquee auto-scrolls with `requestAnimationFrame`, not CSS keyframes, so dragging and pause/resume stay in sync.
-- The viewport is horizontally draggable with pointer capture. Manual scroll or drag pauses motion briefly, then resumes unless the user pressed pause.
+- The viewport is horizontally draggable with pointer capture. Dragging updates a `translate3d` offset instead of native `scrollLeft` so mobile Safari and Android Chrome stay smooth.
+- Horizontal wheel or shift-wheel input also scrubs the ticker. Manual movement pauses motion briefly, then resumes unless the user pressed pause.
 - A compact pause/play button sits at the right edge, uses `aria-pressed`, and changes label between "Pause ticker" and "Resume ticker".
 - Under `prefers-reduced-motion`, the ticker starts paused and leaves the controls visible.
 - The same ticker items render near the top of the site chrome and above the footer. Minimal pages skip ticker data entirely.
@@ -121,6 +122,9 @@ When the main route controls scroll out of view, a compact fixed filter panel ap
 - Uses `IntersectionObserver` with a top root margin so it appears after the full controls have left the viewport.
 - Mirrors all real controls through shared `data-*` selectors: search, date jump, date range, line type, link filter, tags, and reset.
 - Collapsed by default with a plus button; expanded state uses `aria-expanded`, `aria-controls`, and a hidden panel.
+- Search and select fields use 16px mobile text to avoid iOS focus zoom.
+- Stays pinned while focused or while filters are active, preserving scroll position when filtering from the floating panel.
+- Includes a hide button that slides the panel aside and leaves an Amber restore tab on the edge.
 - Uses `inert` and `aria-hidden` while invisible so keyboard focus does not land in offscreen controls.
 
 ### Event Card Variants (`EventCard.astro`)
@@ -173,9 +177,10 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 
 ## 8. Brand Assets
 
-- **Primary logo (color, transparent BG):** `public/logos/logo.png`. Used in the nav and as the favicon. Source for the homepage Open Graph share image.
+- **Primary logo (color, transparent BG):** `public/logos/logo.png`. Used in the nav, as the browser favicon, and as the source for the homepage Open Graph share image. Mobile launcher icons in `public/app-icons/` are generated from this logo with a Seashell background and safe padding for iOS and Android home-screen crops.
 - **Logo variants:** Numbered `public/logos/1.png` through `public/logos/11.png` are designer-supplied variations. `4.png` is the circular avatar variant used on the Link-in-Bio page. `5.png` is the dark-background inverse, useful if the footer ever needs a logo on Dark Walnut.
 - **Founder portrait:** `public/images/ghazala.jpeg`. Used on the About page and as that page's Open Graph share image.
+- **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
   - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf`
   - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold}.ttf`
@@ -191,7 +196,7 @@ Components live in `src/components/`:
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
 - `EventCard.astro`: Supabase event renderer with giveaway, curated, and regular variants.
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
-- `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign reads `NEXT STOP: THE BROWN LINE`).
+- `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy). The audio toggle uses base-aware `/audio/` asset URLs and an 8.5s sequence watchdog so mobile playback stalls or failed media events cannot strand visitors on the splash.
 
 Pages live in `src/pages/`:
 - `index.astro`: hero, RSS-powered recent rides grid, about teaser.
@@ -256,6 +261,7 @@ Client-side filter behavior:
 - Search indexes title, description, venue, organizer, cost, display date, and tags.
 - Line type filters: All, Picks, Giveaways, Transfers. Transfers means neither curated nor giveaway.
 - Start date defaults to today's America/Chicago date.
+- Start and end date filters are select controls populated from event dates plus today's Chicago date, avoiding clipped native date inputs on narrow mobile screens.
 - Date jump scrolls to the selected date and expands the start date backward if needed.
 - Tags are multi-select. "Any tag" clears tag selection only.
 - Result counts update in both the main and floating controls.
@@ -316,6 +322,8 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-05-31 (mobile app icons):** Added a web app manifest, Apple touch icon metadata, and generated iOS and Android home-screen PNGs from `public/logos/logo.png` with Seashell backing and launcher-safe padding.
+- **2026-05-31 (splash audio reliability):** Made `TrainSplash.jsx` resolve audio files through Astro `BASE_URL` for subpath deployments and added a guarded audio-sequence fallback so enabling sound on mobile still exits to the page if media playback rejects, stalls, or misses completion events.
 - **2026-05-30 (documentation practice):** Added `AGENTS.md` with a project-wide instruction to update `design.md` and the ignored `PRIVATE_README.md` whenever future changes make those docs relevant. Documented the convention here so it is visible in the design system itself.
 - **2026-05-30 (events infrastructure):** Added Supabase-backed public events at `/events`, the noindexed admin portal at `/admin/events`, `EventCard.astro`, `src/lib/supabase.ts`, `src/lib/ticker.ts`, and `src/lib/issues.ts`. Reworked the marquee into a dynamic, draggable, pauseable ticker fed by Beehiiv RSS and next-7-days Supabase events. Updated nav/footer links to include Events. Added GitHub Pages 4-hour scheduled rebuilds. Added Supabase env typing and dependencies. Removed `.env.example` from tracking and moved sensitive operational details into an ignored private runbook.
 - **2026-05-15 (links polish):** Removed the redundant "Follow" row from `/links` (Instagram is already a stop on the Platform Map). Made the page read intentionally on desktop: wider `max-w-lg` column, larger handle and avatar at `md+`, extra vertical padding, and two faint walnut "platform rails" flanking the column at desktop widths. Mobile presentation is unchanged.

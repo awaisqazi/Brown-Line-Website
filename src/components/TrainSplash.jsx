@@ -4,6 +4,10 @@ const APPROACH_MS = 1800;
 const MIN_DURATION_MS = 2500; // Slightly longer to enjoy the animation
 const MAX_DURATION_MS = 6000;
 const EXIT_MS = 900; // Snappy, dynamic exit transition
+const AUDIO_SEQUENCE_FALLBACK_MS = 8500;
+const BASE_URL = import.meta.env.BASE_URL || '/';
+
+const assetPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
 
 // --- Synthesized & High-Fidelity CTA Audio Engine ---
 class CTATrainAudio {
@@ -18,6 +22,8 @@ class CTATrainAudio {
     this.isFadingOut = false;
     this.onWelcomeEnded = null;
     this.welcomeStarted = false;
+    this.sequenceFallbackTimer = null;
+    this.hasCompletedSequence = false;
   }
 
   init() {
@@ -32,7 +38,7 @@ class CTATrainAudio {
     // Initialize HTML5 Audio elements
     try {
       if (!this.ctaDing) {
-        this.ctaDing = new Audio('/audio/CTA Ding.mov');
+        this.ctaDing = new Audio(assetPath('audio/CTA Ding.mov'));
         this.ctaDing.crossOrigin = 'anonymous';
         this.ctaDing.preload = 'auto';
         
@@ -55,7 +61,7 @@ class CTATrainAudio {
         });
       }
       if (!this.welcomeAboard) {
-        this.welcomeAboard = new Audio('/audio/Welcome Aboard.mov');
+        this.welcomeAboard = new Audio(assetPath('audio/Welcome Aboard.mov'));
         this.welcomeAboard.crossOrigin = 'anonymous';
         this.welcomeAboard.preload = 'auto';
         
@@ -67,9 +73,7 @@ class CTATrainAudio {
             this.isFadingOut = true;
             this.fadeAudio(this.welcomeAboard, this.welcomeAboard.volume, 0, 1500, () => {
               this.welcomeAboard.pause();
-              if (this.onWelcomeEnded) {
-                this.onWelcomeEnded();
-              }
+              this.finishSequence();
             });
           }
         });
@@ -77,7 +81,7 @@ class CTATrainAudio {
         // Backup ended listener
         this.welcomeAboard.addEventListener('ended', () => {
           if (this.onWelcomeEnded && !this.isFadingOut && !this.isMuted) {
-            this.onWelcomeEnded();
+            this.finishSequence();
           }
         });
       }
@@ -268,11 +272,20 @@ class CTATrainAudio {
       this.ctx.resume();
     }
     this.stopSequence();
+    this.hasCompletedSequence = false;
     this.welcomeStarted = false;
+    this.scheduleSequenceFallback();
     if (this.ctaDing) {
       this.ctaDing.volume = 0.45; // Reduced chime volume slightly so the voice shines and commands attention
       this.ctaDing.currentTime = 0;
-      this.ctaDing.play().catch(err => console.warn("Failed to play CTA Ding:", err));
+      this.ctaDing.play().catch(err => {
+        console.warn("Failed to play CTA Ding:", err);
+        if (!this.isMuted) {
+          this.finishSequence();
+        }
+      });
+    } else {
+      this.finishSequence();
     }
   }
 
@@ -286,7 +299,37 @@ class CTATrainAudio {
     this.welcomeAboard.currentTime = 0;
     this.welcomeAboard.play().then(() => {
       this.fadeAudio(this.welcomeAboard, 0, 1.0, 800); // 800ms fade-in to full volume (1.0), will be amplified by welcomeGainNode
-    }).catch(err => console.warn("Failed to play Welcome Aboard:", err));
+    }).catch(err => {
+      console.warn("Failed to play Welcome Aboard:", err);
+      if (!this.isMuted) {
+        this.finishSequence();
+      }
+    });
+  }
+
+  scheduleSequenceFallback() {
+    this.clearSequenceFallback();
+    this.sequenceFallbackTimer = window.setTimeout(() => {
+      if (!this.isMuted) {
+        this.finishSequence();
+      }
+    }, AUDIO_SEQUENCE_FALLBACK_MS);
+  }
+
+  clearSequenceFallback() {
+    if (this.sequenceFallbackTimer) {
+      window.clearTimeout(this.sequenceFallbackTimer);
+      this.sequenceFallbackTimer = null;
+    }
+  }
+
+  finishSequence() {
+    if (this.hasCompletedSequence) return;
+    this.hasCompletedSequence = true;
+    this.clearSequenceFallback();
+    if (this.onWelcomeEnded) {
+      this.onWelcomeEnded();
+    }
   }
 
   fadeAudio(audio, startVol, endVol, durationMs, onComplete) {
@@ -345,6 +388,7 @@ class CTATrainAudio {
   }
 
   stopSequence() {
+    this.clearSequenceFallback();
     if (this.ctaDing) {
       if (this.ctaDing.fadeFrameId) {
         cancelAnimationFrame(this.ctaDing.fadeFrameId);
@@ -412,6 +456,7 @@ const TrainSplash = () => {
     // Initialize Audio Instance
     const audioInstance = new CTATrainAudio();
     audioInstance.onWelcomeEnded = () => {
+      isAudioActiveRef.current = false;
       if (dismissRef.current) {
         dismissRef.current();
       }
@@ -483,6 +528,7 @@ const TrainSplash = () => {
   const dismiss = () => {
     if (phase === 'exit' || phase === 'gone') return;
     exitScheduledRef.current = true;
+    isAudioActiveRef.current = false;
 
     setPhase('exit');
     if (audioRef.current) {
@@ -1052,7 +1098,7 @@ const TrainSplash = () => {
           .splash-tie-warp,
           .spark,
           .animate-ambient-glare,
-          [class*="animate-speed-line"] {
+          [class*=animate-speed-line] {
             animation: none !important;
           }
         }

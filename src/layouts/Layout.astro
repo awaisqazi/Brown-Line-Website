@@ -31,6 +31,10 @@ const {
 const base = import.meta.env.BASE_URL;
 const baseUrl = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalUrl = new URL(Astro.url.pathname, baseUrl).toString();
+const brandName = 'The Brown Line';
+const faviconUrl = `${base}logos/logo.png`;
+const appleTouchIconUrl = `${base}app-icons/apple-touch-icon.png`;
+const manifestUrl = `${base}site.webmanifest`;
 // If ogImage is already absolute, use it as-is; otherwise resolve relative to site+base
 const ogImageUrl = ogImage.startsWith('http') ? ogImage : new URL(`${base}${ogImage.replace(/^\//, '')}`, baseUrl).toString();
 const tickerItems = minimal ? [] : await getTickerItems();
@@ -42,14 +46,21 @@ const tickerItems = minimal ? [] : await getTickerItems();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#FAF1EC" />
+    <meta name="application-name" content={brandName} />
+    <meta name="apple-mobile-web-app-title" content={brandName} />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
     <link rel="canonical" href={canonicalUrl} />
-    <link rel="icon" type="image/png" href={`${base}logos/logo.png`} />
+    <link rel="icon" type="image/png" href={faviconUrl} />
+    <link rel="apple-touch-icon" sizes="180x180" href={appleTouchIconUrl} />
+    <link rel="manifest" href={manifestUrl} />
     <title>{title}</title>
 
     {/* Open Graph */}
     <meta property="og:type" content={ogType} />
-    <meta property="og:site_name" content="The Brown Line" />
+    <meta property="og:site_name" content={brandName} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
