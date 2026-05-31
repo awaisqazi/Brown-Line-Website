@@ -307,8 +307,16 @@ The site deploys through `.github/workflows/deploy.yml`.
 - `papaparse`: browser CSV parsing in the admin portal.
 - `@types/papaparse`: TypeScript support for CSV parsing.
 
+### Documentation Practice
+Future project work should keep the docs fresh as part of the work itself.
+- Update `design.md` when changing UI, styling, interactions, page structure, component behavior, infrastructure, deployment, data flow, or public conventions.
+- Update the ignored `PRIVATE_README.md` when changing sensitive or operational details: passwords, keys, local env values, runbooks, migrations, recovery steps, or deployment gotchas.
+- Keep secrets out of tracked files. Put sensitive recovery material only in ignored local docs.
+- Skip doc edits only when the action has no meaningful documentation impact.
+
 ## 12. Changelog
 
+- **2026-05-30 (documentation practice):** Added `AGENTS.md` with a project-wide instruction to update `design.md` and the ignored `PRIVATE_README.md` whenever future changes make those docs relevant. Documented the convention here so it is visible in the design system itself.
 - **2026-05-30 (events infrastructure):** Added Supabase-backed public events at `/events`, the noindexed admin portal at `/admin/events`, `EventCard.astro`, `src/lib/supabase.ts`, `src/lib/ticker.ts`, and `src/lib/issues.ts`. Reworked the marquee into a dynamic, draggable, pauseable ticker fed by Beehiiv RSS and next-7-days Supabase events. Updated nav/footer links to include Events. Added GitHub Pages 4-hour scheduled rebuilds. Added Supabase env typing and dependencies. Removed `.env.example` from tracking and moved sensitive operational details into an ignored private runbook.
 - **2026-05-15 (links polish):** Removed the redundant "Follow" row from `/links` (Instagram is already a stop on the Platform Map). Made the page read intentionally on desktop: wider `max-w-lg` column, larger handle and avatar at `md+`, extra vertical padding, and two faint walnut "platform rails" flanking the column at desktop widths. Mobile presentation is unchanged.
 - **2026-05-15 (links redesign):** Replaced the `/links` brutalist button stack with a Platform Map: vertical Dark Walnut track with colored transit stops, staggered entry animation, and the same hover language as the Mobile Drawer Route Map. Added a `minimal?: boolean` prop to `Layout` so `/links` renders with no Nav, Footer, top divider, or splash chrome (the noise overlay and brand `::selection` still apply).
