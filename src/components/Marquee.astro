@@ -3,6 +3,8 @@ import type { TickerItem } from '../lib/ticker';
 
 interface Props {
   items?: TickerItem[];
+  durationSeconds?: number;
+  visualRepeat?: number;
 }
 
 const fallbackItems: TickerItem[] = [
@@ -12,13 +14,20 @@ const fallbackItems: TickerItem[] = [
   { label: 'All stops', text: 'All stories' },
 ];
 
-const { items: providedItems = [] } = Astro.props;
+const {
+  items: providedItems = [],
+  durationSeconds: providedDurationSeconds,
+  visualRepeat: providedVisualRepeat = 1,
+} = Astro.props;
 const items = providedItems.length > 0 ? providedItems : fallbackItems;
+const visualRepeat = Math.max(1, Math.floor(providedVisualRepeat));
+const visualItems = Array.from({ length: visualRepeat }, () => items).flat();
 const screenReaderText = items
   .map((item) => (item.text ? `${item.label}: ${item.text}` : item.label))
   .join('. ');
-const tickerCharacterCount = items.reduce((total, item) => total + item.label.length + item.text.length, 0);
-const durationSeconds = Math.min(180, Math.max(70, Math.ceil(tickerCharacterCount / 8)));
+const tickerCharacterCount = visualItems.reduce((total, item) => total + item.label.length + item.text.length, 0);
+const defaultDurationSeconds = Math.min(180, Math.max(70, Math.ceil(tickerCharacterCount / 8)));
+const durationSeconds = providedDurationSeconds ?? defaultDurationSeconds;
 ---
 <div
   class="marquee"
@@ -33,7 +42,7 @@ const durationSeconds = Math.min(180, Math.max(70, Math.ceil(tickerCharacterCoun
     <div class="marquee-track" data-marquee-track>
     {[0, 1, 2].map(() => (
       <span class="marquee-line">
-        {items.map((item) => (
+        {visualItems.map((item) => (
           <span class="marquee-item">
             <span class="marquee-label">{item.label}{item.text && ':'}</span>
             {item.text && <span>{item.text}</span>}

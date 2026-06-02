@@ -2,10 +2,61 @@
 import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import IssueCard from '../components/IssueCard.astro';
+import EventCard from '../components/EventCard.astro';
+import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
+import { supabase } from '../lib/supabase';
+import type { TickerItem } from '../lib/ticker';
+import type { TransitEvent } from '../lib/supabase';
+
+const HOMEPAGE_EVENTS_LIMIT = 3;
 
 const issues = await getRecentIssues();
+const todayDateString = getChicagoDateString();
+const { data: upcomingEventsData, error: upcomingEventsError } = await supabase
+  .from('events')
+  .select('*')
+  .gte('event_date', todayDateString)
+  .order('event_date', { ascending: true })
+  .order('is_curated', { ascending: false })
+  .order('title', { ascending: true })
+  .limit(HOMEPAGE_EVENTS_LIMIT)
+  .returns<TransitEvent[]>();
+
+if (upcomingEventsError) {
+  throw new Error(`Failed to load homepage events: ${upcomingEventsError.message}`);
+}
+
+const upcomingEvents = upcomingEventsData ?? [];
+const firstUpcomingEvent = upcomingEvents[0];
+const upcomingStopsTicker: TickerItem[] = [
+  {
+    label: 'NEXT STOP',
+    text: firstUpcomingEvent
+      ? `${firstUpcomingEvent.title} -- DOORS OPEN ON THE RIGHT`
+      : 'NO SCHEDULED STOPS -- CHECK THE EVENTS BOARD',
+  },
+];
+
+function getChicagoDateString() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}
 ---
 <Layout>
   {/* ---------- Hero ---------- */}
@@ -29,6 +80,74 @@ const issues = await getRecentIssues();
   <div class="max-w-5xl mx-auto px-6">
     <TransitDivider />
   </div>
+
+  {/* ---------- Upcoming Stops ---------- */}
+  <section id="upcoming-stops" class="scroll-mt-24 py-16 md:scroll-mt-0 md:py-24">
+    <div class="max-w-5xl mx-auto">
+      <div class="upcoming-stops-led mb-10 md:mb-12">
+        <Marquee items={upcomingStopsTicker} durationSeconds={18} visualRepeat={4} />
+      </div>
+
+      <div class="px-4 sm:px-6">
+        <div class="mb-10 md:mb-14 md:pl-16">
+          <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
+            Board here
+          </p>
+          <h2 class="font-sans tracking-tight font-extrabold text-darkWalnut text-4xl md:text-6xl leading-none">
+            Upcoming Stops
+          </h2>
+        </div>
+
+        {upcomingEvents.length > 0 ? (
+          <div class="relative">
+            <div
+              class="absolute left-3 top-3 bottom-3 w-2 rounded-full bg-[#62361B] md:left-7"
+              aria-hidden="true"
+            ></div>
+
+            <ol class="relative space-y-9 md:space-y-12">
+              {upcomingEvents.map((event) => (
+                <li class="relative pl-12 md:pl-20">
+                  <div
+                    class="absolute left-4 top-6 z-10 h-7 w-7 -translate-x-1/2 rounded-full border-[5px] border-[#62361B] bg-white shadow-[0_0_0_4px_#FAF1EC] md:left-8 md:h-8 md:w-8"
+                    aria-hidden="true"
+                  ></div>
+
+                  <div class="mb-3 flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] md:text-xs">
+                    <span class="border-2 border-[#62361B] bg-seashell px-2 py-1">
+                      {event.display_date}
+                    </span>
+                    <span class="text-darkWalnut/55">Brown Line Stop</span>
+                  </div>
+
+                  <EventCard event={event} />
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : (
+          <div class="border-[3px] border-[#62361B] bg-[#FDFBF7] px-6 py-8 shadow-retro md:ml-16 md:px-8">
+            <p class="font-mono text-xs font-bold uppercase tracking-[0.22em] text-[#62361B]">
+              Route status
+            </p>
+            <p class="mt-3 font-sans text-2xl font-extrabold tracking-tight text-darkWalnut md:text-3xl">
+              No scheduled stops right now.
+            </p>
+            <a
+              href={`${import.meta.env.BASE_URL}events`}
+              class="link-transit mt-5 inline-flex font-body text-sm font-bold uppercase tracking-widest text-darkWalnut"
+            >
+              Check the events board &nearr;
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 mt-16 md:mt-20">
+      <TransitDivider />
+    </div>
+  </section>
 
   {/* ---------- Recent Rides ---------- */}
   <section id="archive" class="px-6 py-20 md:py-28">
@@ -82,4 +201,36 @@ const issues = await getRecentIssues();
       </a>
     </div>
   </section>
+
+  <style>
+    :global(.upcoming-stops-led .marquee) {
+      background: #642713;
+      border-color: #FFBC29;
+      color: #FFBC29;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+    }
+
+    :global(.upcoming-stops-led .marquee::before) {
+      background: linear-gradient(to right, #642713 0%, rgba(100, 39, 19, 0) 100%);
+    }
+
+    :global(.upcoming-stops-led .marquee::after) {
+      background: linear-gradient(to left, #642713 0%, rgba(100, 39, 19, 0) 100%);
+    }
+
+    :global(.upcoming-stops-led .marquee-label) {
+      color: #FAF1EC;
+    }
+
+    :global(.upcoming-stops-led .marquee-separator),
+    :global(.upcoming-stops-led .marquee-toggle) {
+      color: #FFBC29;
+    }
+
+    :global(.upcoming-stops-led .marquee-grip) {
+      background-image: radial-gradient(circle, #FAF1EC 1.4px, transparent 1.6px);
+    }
+  </style>
 </Layout>

@@ -84,7 +84,7 @@ The desktop primary nav mirrors the mobile transit-stop language as a compact ho
 Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
 
 ### LED Marquee (`Marquee.astro`)
-Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. Duration is calculated from total character count and clamped between 70 and 180 seconds.
+Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. Duration is calculated from total visual character count and clamped between 70 and 180 seconds unless a caller passes `durationSeconds`. Callers can pass `visualRepeat` to duplicate short visual item sets without duplicating the screen-reader text.
 
 Interaction details:
 - The marquee auto-scrolls with `requestAnimationFrame`, not CSS keyframes, so dragging and pause/resume stay in sync.
@@ -116,6 +116,18 @@ The public events page is a static Supabase-powered route board. It should feel 
 - Stop colors rotate Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
 - The default client-side start date is today's America/Chicago date. Past events can still be reached by moving the start date backward, and render dimmed/grayscale.
 - The no-results state is a bordered Seashell panel reading "Try a different route."
+
+### Homepage Upcoming Stops (`index.astro`)
+The homepage includes an `Upcoming Stops` section between the hero divider and Recent Rides. It adapts the events route-map language into a compact Transit Route Timeline:
+- The homepage queries Supabase `public.events` at build time for the next three rows where `event_date` is on or after the current America/Chicago date. No local placeholder events are rendered.
+- A local `Marquee` sits directly above the timeline and reads `NEXT STOP: [first event] -- DOORS OPEN ON THE RIGHT`. It passes `durationSeconds={18}` and `visualRepeat={4}` so the short inside-train LED line visibly repeats and scrolls on wide viewports.
+- The section-specific marquee wrapper overrides `Marquee.astro` to an accessible inside-train LED style: Dark Walnut background, Amber body text, Seashell label text, monospace type, and tighter tracking than the global ticker.
+- Header copy uses plain sans-serif utility styling (`font-sans tracking-tight font-extrabold`) instead of JT Modernism.
+- The timeline track is a thick vertical `bg-[#62361B]` line, matching CTA Brown. It sits close to the left edge on mobile and gains more left padding at `md+`.
+- Each stop marker is a white circular node with a thick `border-[#62361B]`, centered over the track.
+- Event content is rendered by the shared `EventCard.astro` component, with a small monospace date label above each card.
+- If Supabase returns zero upcoming events, the section shows a "Route status" empty state instead of dummy content.
+- A `TransitDivider` closes the section before Recent Rides.
 
 ### Floating Event Controls (`/events`)
 When the main route controls scroll out of view, a compact fixed filter panel appears near the bottom edge.
@@ -199,7 +211,7 @@ Components live in `src/components/`:
 - `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy, including `/events` as `EVENTS`). The audio toggle uses base-aware `/audio/` asset URLs and a 7s sequence watchdog at both the audio-engine and splash-overlay levels so stalled media events cannot strand visitors on the splash.
 
 Pages live in `src/pages/`:
-- `index.astro`: hero, RSS-powered recent rides grid, about teaser.
+- `index.astro`: hero, Supabase-powered Transit Route Timeline-style Upcoming Stops section, RSS-powered recent rides grid, about teaser.
 - `about.astro`: founder portrait and bio, affiliations, outlet description, values strip, subscribe CTA.
 - `events.astro`: Supabase-powered public events route board with static build data and client-side filtering.
 - `admin/events.astro`: internal events admin portal for single-event and CSV inserts. Minimal, noindexed, and protected by Supabase RLS on insert.
@@ -322,6 +334,7 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-01 (homepage upcoming stops):** Added an `Upcoming Stops` Transit Route Timeline to the homepage using Supabase `public.events` data, a section-specific high-contrast monospace `Marquee` with a faster 18s repeated loop, CTA Brown `#62361B` track and stop nodes, shared `EventCard` rendering, a real empty state, and a closing `TransitDivider`.
 - **2026-05-31 (mobile app icons):** Added a web app manifest, Apple touch icon metadata, and generated iOS and Android home-screen PNGs from `public/logos/logo.png` with Seashell backing and launcher-safe padding.
 - **2026-05-31 (splash audio reliability):** Made `TrainSplash.jsx` resolve audio files through Astro `BASE_URL` for subpath deployments, added guarded audio/splash fallbacks so enabling sound still exits to the page if media playback rejects, stalls, or misses completion events, and fixed route detection so `/events/` displays `EVENTS` instead of `HOME PLATFORM`.
 - **2026-05-30 (documentation practice):** Added `AGENTS.md` with a project-wide instruction to update `design.md` and the ignored `PRIVATE_README.md` whenever future changes make those docs relevant. Documented the convention here so it is visible in the design system itself.
