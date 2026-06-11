@@ -13,6 +13,8 @@ export interface TransitEvent {
   id: string;
   event_date: string;
   display_date: string;
+  /** Postgres `time` (e.g. "18:30:00"); null when no confirmed start time. */
+  start_time: string | null;
   title: string;
   description: string | null;
   venue: string;

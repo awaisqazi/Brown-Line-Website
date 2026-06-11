@@ -63,11 +63,21 @@ function splitGiveawayDescription(description: string | null) {
   };
 }
 
+function formatStartTime(value: string | null) {
+  if (!value) return '';
+  const [hours, minutes] = value.split(':').map(Number);
+  if (Number.isNaN(hours)) return '';
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return minutes ? `${hour12}:${String(minutes).padStart(2, '0')} ${period}` : `${hour12} ${period}`;
+}
+
+const startTime = formatStartTime(event.start_time);
 const giveawayDescription = splitGiveawayDescription(event.description);
 const giveawayRules =
   giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
-const hasMeta = event.organizer || event.cost_info;
-const hasCuratedMeta = Boolean(event.organizer);
+const hasMeta = startTime || event.organizer || event.cost_info;
+const hasCuratedMeta = Boolean(startTime || event.organizer);
 ---
 
 {isGiveaway ? (
@@ -127,6 +137,7 @@ const hasCuratedMeta = Boolean(event.organizer);
 
     {hasMeta && (
       <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
+        {startTime && <span>{startTime}</span>}
         {event.organizer && <span>{event.organizer}</span>}
         {event.cost_info && <span>{event.cost_info}</span>}
       </div>
@@ -186,6 +197,7 @@ const hasCuratedMeta = Boolean(event.organizer);
 
     {hasCuratedMeta && (
       <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
+        {startTime && <span>{startTime}</span>}
         {event.organizer && <span>{event.organizer}</span>}
       </div>
     )}
@@ -211,6 +223,7 @@ const hasCuratedMeta = Boolean(event.organizer);
           )}
         </div>
         <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-body text-xs md:text-sm text-darkWalnut/65">
+          {startTime && <span class="font-bold">{startTime}</span>}
           <span class="font-bold">{event.venue}</span>
           {event.organizer && <span>{event.organizer}</span>}
           {event.cost_info && <span>{event.cost_info}</span>}
