@@ -12,7 +12,6 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey);
 export interface TransitEvent {
   id: string;
   event_date: string;
-  display_date: string;
   /** Postgres `time` (e.g. "18:30:00"); null when no confirmed start time. */
   start_time: string | null;
   title: string;
@@ -25,5 +24,7 @@ export interface TransitEvent {
   is_giveaway: boolean;
   emoji: string | null;
   tags: string[] | null;
+  /** Chicago neighborhood (free text); null when not yet assigned. */
+  neighborhood: string | null;
   author_note: string | null;
 }

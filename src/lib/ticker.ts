@@ -1,4 +1,5 @@
 import { getRecentIssues } from './issues';
+import { formatStopDate } from './dates';
 import type { TransitEvent } from './supabase';
 
 export interface TickerItem {
@@ -6,7 +7,7 @@ export interface TickerItem {
   text: string;
 }
 
-type TickerEvent = Pick<TransitEvent, 'event_date' | 'display_date' | 'title' | 'venue' | 'event_url'>;
+type TickerEvent = Pick<TransitEvent, 'event_date' | 'title' | 'venue' | 'event_url'>;
 
 const EVENT_WINDOW_DAYS = 7;
 const SITE_TIME_ZONE = 'America/Chicago';
@@ -63,7 +64,7 @@ async function getUpcomingEvents() {
     const { supabase } = await import('./supabase');
     const { data, error } = await supabase
       .from('events')
-      .select('event_date,display_date,title,venue,event_url')
+      .select('event_date,title,venue,event_url')
       .gte('event_date', today)
       .lte('event_date', windowEnd)
       .order('event_date', { ascending: true })
@@ -82,7 +83,7 @@ function groupEventsByDate(events: TickerEvent[]) {
   const groups = new Map<string, TickerEvent[]>();
 
   events.forEach((event) => {
-    const date = event.display_date?.trim() || formatDateString(event.event_date);
+    const date = formatStopDate(event.event_date);
     groups.set(date, [...(groups.get(date) ?? []), event]);
   });
 
@@ -116,16 +117,4 @@ function getSiteDateString() {
 function addDaysToDateString(dateString: string, days: number) {
   const [year, month, day] = dateString.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
-}
-
-function formatDateString(dateString: string) {
-  const [year, month, day] = dateString.split('-').map(Number);
-
-  if (!year || !month || !day) return dateString;
-
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 }

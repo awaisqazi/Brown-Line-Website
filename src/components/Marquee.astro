@@ -3,7 +3,7 @@ import type { TickerItem } from '../lib/ticker';
 
 interface Props {
   items?: TickerItem[];
-  durationSeconds?: number;
+  pixelsPerSecond?: number;
   visualRepeat?: number;
 }
 
@@ -16,7 +16,7 @@ const fallbackItems: TickerItem[] = [
 
 const {
   items: providedItems = [],
-  durationSeconds: providedDurationSeconds,
+  pixelsPerSecond: providedPixelsPerSecond,
   visualRepeat: providedVisualRepeat = 1,
 } = Astro.props;
 const items = providedItems.length > 0 ? providedItems : fallbackItems;
@@ -25,14 +25,18 @@ const visualItems = Array.from({ length: visualRepeat }, () => items).flat();
 const screenReaderText = items
   .map((item) => (item.text ? `${item.label}: ${item.text}` : item.label))
   .join('. ');
-const tickerCharacterCount = visualItems.reduce((total, item) => total + item.label.length + item.text.length, 0);
-const defaultDurationSeconds = Math.min(180, Math.max(70, Math.ceil(tickerCharacterCount / 8)));
-const durationSeconds = providedDurationSeconds ?? defaultDurationSeconds;
+// Scroll at a constant pace (pixels per second) rather than a fixed loop
+// duration. With a fixed duration, a wider track (longer event title) has to
+// cover more distance in the same time, so it scrolls faster. Pinning the
+// speed keeps the pace identical no matter how long the current copy is — the
+// loop simply takes proportionally longer when there's more text to show.
+const DEFAULT_PIXELS_PER_SECOND = 90;
+const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_PER_SECOND);
 ---
 <div
   class="marquee"
   data-marquee
-  data-marquee-duration={durationSeconds}
+  data-marquee-speed={pixelsPerSecond}
   role="group"
   aria-label="Latest issue and upcoming events ticker"
 >
@@ -265,7 +269,7 @@ const durationSeconds = providedDurationSeconds ?? defaultDurationSeconds;
 
     root.dataset.marqueeReady = 'true';
 
-    const durationMs = (Number(root.dataset.marqueeDuration) || 30) * 1000;
+    const pixelsPerSecond = Number(root.dataset.marqueeSpeed) || 90;
     const dragThreshold = 5;
     let loopWidth = 0;
     let offset = 0;
@@ -342,7 +346,8 @@ const durationSeconds = providedDurationSeconds ?? defaultDurationSeconds;
       lastFrame = frameTime;
 
       if (!userPaused && !isInteracting && !reduceMotionQuery.matches && loopWidth > viewport.clientWidth) {
-        offset = normalizeOffset(offset + (loopWidth / durationMs) * frameDelta);
+        // Constant speed: distance = px/s * elapsed seconds, independent of loop width.
+        offset = normalizeOffset(offset + pixelsPerSecond * (frameDelta / 1000));
         render();
       }
 

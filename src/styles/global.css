@@ -164,3 +164,96 @@ html:not(.splash-done) body.splash-active {
   background-color: #5BC3FF;
   color: #642713;
 }
+
+/* ---------- Events date-picker day cells ----------
+   These buttons are injected at runtime by the events page script, so they
+   live outside Astro's scoped styles and must be defined globally. */
+.bl-cal-day {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  border: 2px solid transparent;
+  background: transparent;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #642713;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.bl-cal-day:hover {
+  border-color: #642713;
+}
+
+/* Days with no scheduled events read as muted. */
+.bl-cal-day:not(.has-event) {
+  color: rgba(100, 39, 19, 0.4);
+}
+
+/* Event days get a brand-blue marker dot. */
+.bl-cal-day.has-event::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #5BC3FF;
+}
+
+.bl-cal-day.is-today {
+  color: #F35A0F;
+  border-color: rgba(243, 90, 15, 0.5);
+}
+
+.bl-cal-day.is-selected {
+  background: #642713;
+  border-color: #642713;
+  color: #FAF1EC;
+}
+
+.bl-cal-day.is-selected.has-event::after {
+  background: #FAF1EC;
+}
+
+/* ---------- Themed filter dropdown options ----------
+   Option buttons are injected at runtime into the desktop themed <select>
+   replacement, so they must be styled globally (outside Astro scoping). */
+.bl-themed-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.625rem;
+  border: 2px solid transparent;
+  background: transparent;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #642713;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.bl-themed-option:hover {
+  background: rgba(100, 39, 19, 0.08);
+  border-color: #642713;
+}
+
+.bl-themed-option:focus,
+.bl-themed-option:focus-visible {
+  outline: none;
+  background: rgba(100, 39, 19, 0.08);
+  border-color: #642713;
+  box-shadow: inset 0 0 0 1px #5BC3FF;
+}
+
+.bl-themed-option.is-active {
+  background: #642713;
+  border-color: #642713;
+  color: #FAF1EC;
+}

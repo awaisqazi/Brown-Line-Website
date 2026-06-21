@@ -7,10 +7,14 @@ import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
 import { supabase } from '../lib/supabase';
+import { formatStopDate } from '../lib/dates';
 import type { TickerItem } from '../lib/ticker';
 import type { TransitEvent } from '../lib/supabase';
 
 const HOMEPAGE_EVENTS_LIMIT = 3;
+// Cycle the brand palette across stops so the homepage route reads like the
+// colorful line on the full events board (src/pages/events.astro).
+const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 
 const issues = await getRecentIssues();
 const todayDateString = getChicagoDateString();
@@ -60,32 +64,36 @@ function getChicagoDateString() {
 ---
 <Layout>
   {/* ---------- Hero ---------- */}
-  <section id="subscribe" class="px-6 py-16 md:py-24 lg:py-28">
+  <section id="subscribe" class="px-6 pt-12 pb-6 md:pt-16 md:pb-6 lg:pt-20">
     <div class="max-w-4xl mx-auto text-center">
       <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
         A Chicago cultural newsletter
       </p>
 
-      <h1 class="font-heading text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance">
+      <h1 class="font-heading text-darkWalnut text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-balance">
         Chicago&rsquo;s go-to guide for <em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community events.
       </h1>
 
       <div class="mt-8 md:mt-10 flex justify-center">
         <SubscribeForm caption="" />
       </div>
+
+      <a
+        href="#upcoming-stops"
+        class="scroll-cue-link group mt-10 md:mt-12 inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/55 transition-colors hover:text-cayenne focus-visible:text-cayenne"
+        aria-label="Scroll down to upcoming stops"
+      >
+        <span>Upcoming stops</span>
+        <span class="scroll-cue text-cayenne" aria-hidden="true">&darr;</span>
+      </a>
     </div>
   </section>
 
-  {/* ---------- Transit Stripe section divider ---------- */}
-  <div class="max-w-5xl mx-auto px-6">
-    <TransitDivider />
-  </div>
-
   {/* ---------- Upcoming Stops ---------- */}
-  <section id="upcoming-stops" class="scroll-mt-24 py-16 md:scroll-mt-0 md:py-24">
+  <section id="upcoming-stops" class="scroll-mt-24 pt-6 pb-16 md:scroll-mt-0 md:pt-6 md:pb-24">
     <div class="max-w-5xl mx-auto">
       <div class="upcoming-stops-led mb-10 md:mb-12">
-        <Marquee items={upcomingStopsTicker} durationSeconds={18} visualRepeat={4} />
+        <Marquee items={upcomingStopsTicker} visualRepeat={4} />
       </div>
 
       <div class="px-4 sm:px-6">
@@ -100,22 +108,20 @@ function getChicagoDateString() {
 
         {upcomingEvents.length > 0 ? (
           <div class="relative">
-            <div
-              class="absolute left-3 top-3 bottom-3 w-2 rounded-full bg-[#62361B] md:left-7"
-              aria-hidden="true"
-            ></div>
-
-            <ol class="relative space-y-9 md:space-y-12">
-              {upcomingEvents.map((event) => (
+            <ol class="upcoming-route relative space-y-9 md:space-y-12">
+              {upcomingEvents.map((event, index) => (
                 <li class="relative pl-12 md:pl-20">
-                  <div
-                    class="absolute left-4 top-6 z-10 h-7 w-7 -translate-x-1/2 rounded-full border-[5px] border-[#62361B] bg-white shadow-[0_0_0_4px_#FAF1EC] md:left-8 md:h-8 md:w-8"
+                  <span
+                    class:list={[
+                      'absolute left-4 top-6 z-10 h-7 w-7 -translate-x-1/2 rounded-full border-2 border-darkWalnut shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8',
+                      stopColors[index % stopColors.length],
+                    ]}
                     aria-hidden="true"
-                  ></div>
+                  ></span>
 
                   <div class="mb-3 flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] md:text-xs">
                     <span class="border-2 border-[#62361B] bg-seashell px-2 py-1">
-                      {event.display_date}
+                      {formatStopDate(event.event_date)}
                     </span>
                     <span class="text-darkWalnut/55">Brown Line Stop</span>
                   </div>
@@ -124,6 +130,29 @@ function getChicagoDateString() {
                 </li>
               ))}
             </ol>
+
+            {/* Terminus — the line keeps running to the full events board.
+               The dot center sits a fixed 0.85rem below this block's top and
+               2.5rem (mt-10) below the list, so the .upcoming-route rail can
+               extend a fixed distance down to meet it regardless of wrapping. */}
+            <div class="relative mt-10 pl-12 md:pl-20">
+              <span
+                class="absolute left-4 top-[0.85rem] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-darkWalnut bg-amber shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8"
+                aria-hidden="true"
+              >
+                <span class="block h-2.5 w-2.5 rounded-full bg-darkWalnut md:h-3 md:w-3"></span>
+              </span>
+              <a
+                href={`${import.meta.env.BASE_URL}events`}
+                class="see-more group inline-flex items-center gap-3 font-heading leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
+              >
+                <span>Stay on board for every stop</span>
+                <span class="see-more-arrow text-cayenne" aria-hidden="true">&rarr;</span>
+              </a>
+              <p class="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-darkWalnut/55 md:text-xs">
+                End of the line &mdash; ride to the full events board
+              </p>
+            </div>
           </div>
         ) : (
           <div class="border-[3px] border-[#62361B] bg-[#FDFBF7] px-6 py-8 shadow-retro md:ml-16 md:px-8">
@@ -203,6 +232,60 @@ function getChicagoDateString() {
   </section>
 
   <style>
+    /* Hero scroll cue — gently bouncing arrow that signals more content below. */
+    .scroll-cue {
+      display: inline-block;
+      font-size: 1.35rem;
+      line-height: 1;
+      animation: scroll-cue-bounce 1.6s ease-in-out infinite;
+    }
+
+    @keyframes scroll-cue-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(7px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .scroll-cue { animation: none; }
+    }
+
+    /* Upcoming Stops rail — a single brown line behind the colorful stop dots.
+       Anchored to the list (stable height) and extended a fixed 3.35rem below
+       it so the line ends exactly on the terminus dot — which sits mt-10 (2.5rem)
+       below the list plus 0.85rem into the terminus block. This stays aligned no
+       matter how the terminus link/caption wrap. */
+    .upcoming-route::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 0.75rem;
+      bottom: -3.35rem;
+      width: 8px;
+      border-radius: 9999px;
+      background: #62361B;
+    }
+
+    @media (min-width: 768px) {
+      .upcoming-route::before {
+        left: 28px;
+      }
+    }
+
+    /* "See more" terminus — arrow eases forward on hover, like a train pulling away. */
+    .see-more-arrow {
+      display: inline-block;
+      transition: transform 150ms ease;
+    }
+
+    .see-more:hover .see-more-arrow,
+    .see-more:focus-visible .see-more-arrow {
+      transform: translateX(6px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .see-more-arrow { transition: none; }
+    }
+
     :global(.upcoming-stops-led .marquee) {
       background: #642713;
       border-color: #FFBC29;

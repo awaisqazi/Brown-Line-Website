@@ -2,8 +2,11 @@
 import Layout from '../layouts/Layout.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import EventCard from '../components/EventCard.astro';
+import EventDatePicker from '../components/EventDatePicker.astro';
+import EventSelect from '../components/EventSelect.astro';
 import { supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
+import { formatStopDate } from '../lib/dates';
 
 const { data, error } = await supabase
   .from('events')
@@ -20,35 +23,56 @@ if (error) {
 const events = data ?? [];
 
 const groupedEvents = events.reduce<Record<string, TransitEvent[]>>((groups, event) => {
-  const label = event.display_date || event.event_date;
-  groups[label] ??= [];
-  groups[label].push(event);
+  const key = event.event_date;
+  (groups[key] ??= []).push(event);
   return groups;
 }, {});
 
-const groupedEventEntries = Object.entries(groupedEvents);
-const dateStops = groupedEventEntries.map(([displayDate, dayEvents]) => ({
-  displayDate,
-  eventDate: dayEvents[0]?.event_date ?? '',
-}));
-const todayDateString = getChicagoDateString();
-const dateFilterStopsByDate = new Map(
-  dateStops
-    .filter((dateStop) => dateStop.eventDate)
-    .map((dateStop) => [dateStop.eventDate, dateStop])
-);
-if (todayDateString && !dateFilterStopsByDate.has(todayDateString)) {
-  dateFilterStopsByDate.set(todayDateString, {
-    displayDate: formatLongDate(todayDateString),
-    eventDate: todayDateString,
-  });
-}
-const dateFilterStops = Array.from(dateFilterStopsByDate.values()).sort((a, b) =>
-  a.eventDate.localeCompare(b.eventDate)
-);
-const tags = Array.from(new Set(events.flatMap((event) => event.tags ?? []))).sort((a, b) =>
-  a.localeCompare(b)
-);
+// Group by the canonical event_date and derive the heading label from it, so a
+// single day is always one segment regardless of how it was originally typed.
+const groupedEventEntries = Object.entries(groupedEvents)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([eventDate, dayEvents]) => ({
+    eventDate,
+    label: formatStopDate(eventDate),
+    dayEvents,
+  }));
+
+const eventDates = Array.from(
+  new Set(events.map((event) => event.event_date).filter(Boolean))
+).sort();
+
+// Canonical order for the diaspora community tags; anything else falls to the end.
+const CATEGORY_ORDER = [
+  'South Asian',
+  'SWANA',
+  'East Asian',
+  'Southeast Asian',
+  'Black Diaspora',
+  'Latine',
+  'Afro-Latine',
+  'Indigenous',
+  'Cross-cultural',
+];
+const categories = Array.from(new Set(events.flatMap((event) => event.tags ?? []))).sort((a, b) => {
+  const ia = CATEGORY_ORDER.indexOf(a);
+  const ib = CATEGORY_ORDER.indexOf(b);
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return a.localeCompare(b);
+});
+const neighborhoods = Array.from(
+  new Set(
+    events
+      .map((event) => event.neighborhood)
+      .filter((value): value is string => Boolean(value && value.trim()))
+  )
+).sort((a, b) => a.localeCompare(b));
+const controlsGridClass =
+  neighborhoods.length > 0
+    ? 'lg:grid-cols-[minmax(0,1.6fr)_repeat(3,minmax(0,1fr))]'
+    : 'lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))]';
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 const pageDescription =
   'A static, Supabase-powered guide to Chicago arts, culture, and community events from The Brown Line.';
@@ -66,37 +90,12 @@ function getEventSearchText(event: TransitEvent) {
     event.venue,
     event.organizer,
     event.cost_info,
-    event.display_date,
+    event.neighborhood,
     ...(event.tags ?? []),
   ]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
-}
-
-function getChicagoDateString() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-
-  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${byType.year}-${byType.month}-${byType.day}`;
-}
-
-function formatLongDate(dateString: string) {
-  const [year, month, day] = dateString.split('-').map(Number);
-
-  if (!year || !month || !day) return dateString;
-
-  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  });
 }
 ---
 <Layout
@@ -130,7 +129,8 @@ function formatLongDate(dateString: string) {
     <section class="px-4 pt-8 sm:px-6 md:pt-20">
       <div
         data-event-controls
-        class="max-w-5xl mx-auto overflow-hidden border-2 border-darkWalnut bg-[#FDFBF7] p-4 shadow-[3px_3px_0_#642713] md:p-5 md:shadow-retro"
+        data-event-dates={JSON.stringify(eventDates)}
+        class="max-w-5xl mx-auto border-2 border-darkWalnut bg-[#FDFBF7] p-4 shadow-[3px_3px_0_#642713] md:p-5 md:shadow-retro"
       >
         <div class="flex items-start justify-between gap-3 md:items-center">
           <div class="min-w-0">
@@ -154,13 +154,12 @@ function formatLongDate(dateString: string) {
           </button>
         </div>
 
-        <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_repeat(2,minmax(0,0.85fr))]">
-          <label class="block min-w-0 sm:col-span-2 md:col-span-1">
+        <div class:list={['mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5', controlsGridClass]}>
+          <label class="block min-w-0 sm:col-span-2 lg:col-span-1">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
               Search
             </span>
             <input
-              data-event-search
               data-event-search-input
               type="search"
               placeholder="Title, venue, organizer"
@@ -168,122 +167,29 @@ function formatLongDate(dateString: string) {
             />
           </label>
 
-          <label class="block min-w-0 sm:col-span-2 md:col-span-1">
+          <div class="block min-w-0">
             <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              Jump
+              Date
             </span>
-            <select
-              data-date-jump
-              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
-            >
-              <option value="">Choose date</option>
-              {dateStops.map((dateStop) => (
-                <option value={dateStop.displayDate}>{dateStop.displayDate}</option>
-              ))}
-            </select>
-          </label>
-
-          <label class="block min-w-0">
-            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              From
-            </span>
-            <select
-              data-start-date
-              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
-            >
-              <option value="">All dates</option>
-              {dateFilterStops.map((dateStop) => (
-                <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
-              ))}
-            </select>
-          </label>
-
-          <label class="block min-w-0">
-            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              To
-            </span>
-            <select
-              data-end-date
-              class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
-            >
-              <option value="">No end date</option>
-              {dateFilterStops.map((dateStop) => (
-                <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div class="mt-4 grid grid-cols-1 gap-4 md:mt-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <fieldset>
-            <legend class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              Line type
-            </legend>
-            <div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { value: 'all', label: 'All' },
-                { value: 'curated', label: 'Picks' },
-                { value: 'giveaway', label: 'Giveaways' },
-                { value: 'regular', label: 'Transfers' },
-              ].map((option) => (
-                <label class="cursor-pointer">
-                  <input
-                    class="peer sr-only"
-                    type="radio"
-                    name="event-kind"
-                    value={option.value}
-                    checked={option.value === 'all'}
-                    data-kind-filter
-                  />
-                  <span class="block border-2 border-darkWalnut bg-seashell px-2 py-2 text-center font-body text-[10px] font-bold uppercase tracking-[0.16em] text-darkWalnut transition-colors peer-checked:bg-darkWalnut peer-checked:text-seashell peer-focus-visible:ring-2 peer-focus-visible:ring-mayaBlue sm:text-[11px] sm:tracking-widest">
-                    {option.label}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div>
-            <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              Extras
-            </p>
-            <label class="mt-2 inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut sm:text-[11px]">
-              <input
-                data-linked-filter
-                type="checkbox"
-                class="h-4 w-4 accent-cayenne"
-              />
-              Has link
-            </label>
+            <EventDatePicker />
           </div>
-        </div>
 
-        {tags.length > 0 && (
-          <div class="mt-5">
-            <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
-              Tags
-            </p>
-            <div class="mt-2 flex flex-nowrap gap-2 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible md:pb-0">
-              <button
-                type="button"
-                data-clear-tags
-                class="shrink-0 font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-darkWalnut border-2 border-darkWalnut px-3 py-2"
-              >
-                Any tag
-              </button>
-              {tags.map((tag) => (
-                <button
-                  type="button"
-                  data-tag-filter={tag}
-                  aria-pressed="false"
-                  class="shrink-0 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/70 bg-seashell border-2 border-dashed border-darkWalnut/35 px-3 py-2 transition-colors hover:border-darkWalnut focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
+          <div class="block min-w-0">
+            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+              Category
+            </span>
+            <EventSelect field="category-filter" label="Category" placeholder="All categories" options={categories} />
           </div>
-        )}
+
+          {neighborhoods.length > 0 && (
+            <div class="block min-w-0">
+              <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+                Neighborhood
+              </span>
+              <EventSelect field="neighborhood-filter" label="Neighborhood" placeholder="All neighborhoods" options={neighborhoods} />
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )}
@@ -356,78 +262,32 @@ function formatLongDate(dateString: string) {
             hidden
             class="mt-3 border-t-2 border-dashed border-darkWalnut/35 pt-3"
           >
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label class="block min-w-0">
+            <div class="grid grid-cols-1 gap-3">
+              <div class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  Jump
+                  Date
                 </span>
-                <select
-                  data-date-jump
-                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
-                >
-                  <option value="">Choose date</option>
-                  {dateStops.map((dateStop) => (
-                    <option value={dateStop.displayDate}>{dateStop.displayDate}</option>
-                  ))}
-                </select>
-              </label>
+                <EventDatePicker inline />
+              </div>
 
-              <label class="block min-w-0">
+              <div class="block min-w-0">
                 <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  Line type
+                  Category
                 </span>
-                <select
-                  data-kind-select
-                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
-                >
-                  <option value="all">All</option>
-                  <option value="curated">Picks</option>
-                  <option value="giveaway">Giveaways</option>
-                  <option value="regular">Transfers</option>
-                </select>
-              </label>
+                <EventSelect field="category-filter" label="Category" placeholder="All categories" options={categories} inline />
+              </div>
 
-              <label class="block min-w-0">
-                <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  From
-                </span>
-                <select
-                  data-start-date
-                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
-                >
-                  <option value="">All dates</option>
-                  {dateFilterStops.map((dateStop) => (
-                    <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label class="block min-w-0">
-                <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  To
-                </span>
-                <select
-                  data-end-date
-                  class="mt-1 w-full min-w-0 border-2 border-darkWalnut bg-seashell px-2 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:px-3 md:text-sm"
-                >
-                  <option value="">No end date</option>
-                  {dateFilterStops.map((dateStop) => (
-                    <option value={dateStop.eventDate}>{dateStop.displayDate}</option>
-                  ))}
-                </select>
-              </label>
+              {neighborhoods.length > 0 && (
+                <div class="block min-w-0">
+                  <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
+                    Neighborhood
+                  </span>
+                  <EventSelect field="neighborhood-filter" label="Neighborhood" placeholder="All neighborhoods" options={neighborhoods} inline />
+                </div>
+              )}
             </div>
 
             <div class="mt-3 flex flex-wrap items-center gap-2">
-              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut">
-                <input
-                  data-linked-filter
-                  type="checkbox"
-                  class="h-4 w-4 accent-cayenne"
-                />
-                Has link
-              </label>
-
               <button
                 type="button"
                 data-reset-filters
@@ -436,33 +296,6 @@ function formatLongDate(dateString: string) {
                 Reset
               </button>
             </div>
-
-            {tags.length > 0 && (
-              <div class="mt-3">
-                <p class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  Tags
-                </p>
-                <div class="mt-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto pr-1">
-                  <button
-                    type="button"
-                    data-clear-tags
-                    class="font-body text-[9px] font-bold uppercase tracking-widest text-seashell bg-darkWalnut border-2 border-darkWalnut px-2.5 py-1.5"
-                  >
-                    Any tag
-                  </button>
-                  {tags.map((tag) => (
-                    <button
-                      type="button"
-                      data-tag-filter={tag}
-                      aria-pressed="false"
-                      class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/70 bg-seashell border-2 border-dashed border-darkWalnut/35 px-2.5 py-1.5 transition-colors hover:border-darkWalnut focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -507,11 +340,10 @@ function formatLongDate(dateString: string) {
           </div>
 
           <div data-events-board class="space-y-14 md:space-y-16">
-            {groupedEventEntries.map(([displayDate, dayEvents]) => (
+            {groupedEventEntries.map(({ eventDate, label, dayEvents }) => (
             <section
               data-event-day-section
-              data-display-date={displayDate}
-              data-event-date={dayEvents[0]?.event_date ?? ''}
+              data-event-date={eventDate}
               class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] gap-8 md:gap-10"
             >
               <div>
@@ -519,7 +351,7 @@ function formatLongDate(dateString: string) {
                   Platform
                 </p>
                 <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none">
-                  {displayDate}
+                  {label}
                 </h2>
               </div>
 
@@ -532,6 +364,7 @@ function formatLongDate(dateString: string) {
                     data-event-curated={event.is_curated ? 'true' : 'false'}
                     data-event-giveaway={event.is_giveaway ? 'true' : 'false'}
                     data-event-tags={(event.tags ?? []).join('|')}
+                    data-event-neighborhood={event.neighborhood ?? ''}
                     data-event-search={getEventSearchText(event)}
                     data-has-link={event.event_url ? 'true' : 'false'}
                     class="relative pl-12 md:pl-14"
@@ -664,16 +497,11 @@ function formatLongDate(dateString: string) {
     const getControlFields = (selector) =>
       controlScopes.flatMap((scope) => Array.from(scope.querySelectorAll(selector)));
     const searchInputs = getControlFields('[data-event-search-input]');
-    const jumpSelects = getControlFields('[data-date-jump]');
-    const startDateInputs = getControlFields('[data-start-date]');
-    const endDateInputs = getControlFields('[data-end-date]');
-    const kindInputs = getControlFields('[data-kind-filter]');
-    const kindSelects = getControlFields('[data-kind-select]');
-    const linkedInputs = getControlFields('[data-linked-filter]');
+    const categorySelects = getControlFields('[data-category-filter]');
+    const neighborhoodSelects = getControlFields('[data-neighborhood-filter]');
     const resetButtons = getControlFields('[data-reset-filters]');
-    const clearTagsButtons = getControlFields('[data-clear-tags]');
-    const tagButtons = getControlFields('[data-tag-filter]');
     const resultCounts = getControlFields('[data-event-result-count]');
+    const calendarRoots = getControlFields('[data-calendar]');
     const floatingToggle = floatingControls?.querySelector('[data-floating-filter-toggle]');
     const floatingMinimize = floatingControls?.querySelector('[data-floating-minimize]');
     const floatingRestore = floatingControls?.querySelector('[data-floating-restore]');
@@ -684,12 +512,22 @@ function formatLongDate(dateString: string) {
     const eventCards = Array.from(document.querySelectorAll('[data-event-card]'));
     const daySections = Array.from(document.querySelectorAll('[data-event-day-section]'));
     const noMatches = document.querySelector('[data-no-event-matches]');
-    const selectedTags = new Set();
-    let selectedKind = kindInputs.find((input) => input.checked)?.value ?? kindSelects[0]?.value ?? 'all';
+
+    let eventDates = [];
+    try {
+      eventDates = JSON.parse(controls?.dataset.eventDates ?? '[]');
+    } catch (_) {
+      eventDates = [];
+    }
+    const eventDateSet = new Set(eventDates);
+
+    let selectedDate = '';
+    let pendingScrollDate = null;
     let controlsAreOutOfView = false;
     let floatingIsMinimized = false;
 
     const normalize = (value) => value.toString().trim().toLowerCase();
+    const pad = (value) => String(value).padStart(2, '0');
 
     function getSyncedValue(inputs) {
       return inputs.find((input) => input.value)?.value ?? '';
@@ -701,22 +539,344 @@ function formatLongDate(dateString: string) {
       });
     }
 
-    function setLinkedChecked(checked, source = null) {
-      linkedInputs.forEach((input) => {
-        if (input !== source) input.checked = checked;
+    function getChicagoDateString() {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).formatToParts(new Date());
+
+      const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return `${byType.year}-${byType.month}-${byType.day}`;
+    }
+
+    const today = getChicagoDateString();
+
+    function formatDateLabel(dateString) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      if (!year || !month || !day) return 'Any date';
+      return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'UTC',
       });
     }
 
-    function setSelectedKind(value) {
-      selectedKind = value || 'all';
-      kindInputs.forEach((input) => {
-        input.checked = input.value === selectedKind;
-      });
-      kindSelects.forEach((select) => {
-        select.value = selectedKind;
+    function formatMonthTitle(year, month) {
+      return new Date(Date.UTC(year, month, 1)).toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'UTC',
       });
     }
 
+    /* ---------- Calendar widgets ---------- */
+    const calendars = [];
+
+    function closeAllCalendars(except = null) {
+      calendars.forEach((calendar) => {
+        if (calendar.root !== except) calendar.close();
+      });
+    }
+
+    function setSelectedDate(date) {
+      selectedDate = date || '';
+      // Choosing a date is a JUMP, not a hard filter: scroll to that day while
+      // keeping the surrounding events visible. Clearing it scrolls nowhere.
+      pendingScrollDate = selectedDate || null;
+      calendars.forEach((calendar) => {
+        calendar.syncLabel();
+        if (calendar.isOpen()) {
+          // Move the (possibly always-open inline) calendar to the selected
+          // month so the new selection is rendered and highlighted.
+          calendar.syncView();
+          calendar.renderGrid();
+        }
+      });
+      renderFilters();
+    }
+
+    function createCalendar(root) {
+      const inline = root.dataset.calendarInline === 'true';
+      const trigger = root.querySelector('[data-calendar-trigger]');
+      const label = root.querySelector('[data-calendar-label]');
+      const popover = root.querySelector('[data-calendar-popover]');
+      const title = root.querySelector('[data-calendar-title]');
+      const grid = root.querySelector('[data-calendar-grid]');
+      const prevButton = root.querySelector('[data-calendar-prev]');
+      const nextButton = root.querySelector('[data-calendar-next]');
+      const clearButton = root.querySelector('[data-calendar-clear]');
+
+      const base = (selectedDate || today).split('-').map(Number);
+      let viewYear = base[0];
+      let viewMonth = base[1] - 1;
+
+      function renderGrid() {
+        if (!grid || !title) return;
+        title.textContent = formatMonthTitle(viewYear, viewMonth);
+        const firstWeekday = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay();
+        const daysInMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+
+        let html = '';
+        for (let i = 0; i < firstWeekday; i += 1) {
+          html += '<span aria-hidden="true"></span>';
+        }
+        for (let day = 1; day <= daysInMonth; day += 1) {
+          const dateString = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`;
+          const classes = ['bl-cal-day'];
+          if (eventDateSet.has(dateString)) classes.push('has-event');
+          if (dateString === today) classes.push('is-today');
+          const isSelected = dateString === selectedDate;
+          if (isSelected) classes.push('is-selected');
+          html += `<button type="button" class="${classes.join(' ')}" data-calendar-day="${dateString}"${
+            isSelected ? ' aria-pressed="true"' : ''
+          }>${day}</button>`;
+        }
+        grid.innerHTML = html;
+      }
+
+      function syncView() {
+        const next = (selectedDate || today).split('-').map(Number);
+        viewYear = next[0];
+        viewMonth = next[1] - 1;
+      }
+
+      function open() {
+        if (inline || !popover) return;
+        closeAllThemed();
+        syncView();
+        renderGrid();
+        popover.hidden = false;
+        trigger?.setAttribute('aria-expanded', 'true');
+        // Move focus into the popover (selected day, else today, else first day).
+        const focusTarget =
+          grid?.querySelector('.bl-cal-day.is-selected') ||
+          grid?.querySelector('.bl-cal-day.is-today') ||
+          grid?.querySelector('.bl-cal-day');
+        focusTarget?.focus({ preventScroll: true });
+      }
+
+      function close(returnFocus = false) {
+        if (inline || !popover) return;
+        popover.hidden = true;
+        trigger?.setAttribute('aria-expanded', 'false');
+        if (returnFocus) trigger?.focus();
+      }
+
+      function isOpen() {
+        return inline || (popover ? !popover.hidden : false);
+      }
+
+      function syncLabel() {
+        if (!label) return;
+        label.textContent = selectedDate ? formatDateLabel(selectedDate) : 'Any date';
+        label.classList.toggle('text-cayenne', Boolean(selectedDate));
+      }
+
+      trigger?.addEventListener('click', () => {
+        if (popover && popover.hidden) {
+          closeAllCalendars(root);
+          open();
+        } else {
+          close();
+        }
+      });
+
+      prevButton?.addEventListener('click', () => {
+        viewMonth -= 1;
+        if (viewMonth < 0) {
+          viewMonth = 11;
+          viewYear -= 1;
+        }
+        renderGrid();
+      });
+
+      nextButton?.addEventListener('click', () => {
+        viewMonth += 1;
+        if (viewMonth > 11) {
+          viewMonth = 0;
+          viewYear += 1;
+        }
+        renderGrid();
+      });
+
+      grid?.addEventListener('click', (event) => {
+        const dayButton = event.target.closest('[data-calendar-day]');
+        if (!dayButton) return;
+        setSelectedDate(dayButton.dataset.calendarDay);
+        close();
+      });
+
+      clearButton?.addEventListener('click', () => {
+        setSelectedDate('');
+        close();
+      });
+
+      popover?.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !inline) {
+          event.preventDefault();
+          close(true);
+        }
+      });
+
+      const api = { root, isOpen, open, close, renderGrid, syncLabel, syncView };
+      if (inline) renderGrid();
+      syncLabel();
+      calendars.push(api);
+      return api;
+    }
+
+    /* ---------- Themed dropdowns (desktop) ---------- */
+    const themedSelects = [];
+
+    function closeAllThemed(except = null) {
+      themedSelects.forEach((select) => {
+        if (select.root !== except) select.close();
+      });
+    }
+
+    function refreshThemed() {
+      themedSelects.forEach((select) => select.sync());
+    }
+
+    function initThemedSelect(root) {
+      const native = root.querySelector('[data-themed-native]');
+      const trigger = root.querySelector('[data-themed-trigger]');
+      const label = root.querySelector('[data-themed-label]');
+      const popover = root.querySelector('[data-themed-popover]');
+      if (!native || !trigger || !label || !popover) return;
+
+      const placeholder = native.options[0]?.textContent ?? '';
+      const optionEls = () => Array.from(popover.querySelectorAll('[data-themed-option]'));
+
+      function buildOptions() {
+        popover.innerHTML = '';
+        Array.from(native.options).forEach((option) => {
+          // role="option" elements (not buttons) so they don't each become a tab
+          // stop; keyboard navigation is handled by the listbox below.
+          const el = document.createElement('div');
+          el.setAttribute('role', 'option');
+          el.tabIndex = -1;
+          el.className = 'bl-themed-option';
+          el.dataset.themedOption = option.value;
+          el.textContent = option.textContent;
+          popover.appendChild(el);
+        });
+      }
+
+      function sync() {
+        const selected = native.options[native.selectedIndex];
+        label.textContent = selected ? selected.textContent : placeholder;
+        label.classList.toggle('text-cayenne', Boolean(native.value));
+        optionEls().forEach((el) => {
+          const active = el.dataset.themedOption === native.value;
+          el.setAttribute('aria-selected', active ? 'true' : 'false');
+          el.classList.toggle('is-active', active);
+        });
+      }
+
+      function selectValue(value) {
+        native.value = value;
+        native.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function focusOption(index) {
+        const els = optionEls();
+        if (!els.length) return;
+        els[Math.max(0, Math.min(index, els.length - 1))].focus();
+      }
+
+      function open() {
+        closeAllThemed(root);
+        closeAllCalendars();
+        popover.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        sync();
+        const els = optionEls();
+        const activeIndex = els.findIndex((el) => el.dataset.themedOption === native.value);
+        focusOption(activeIndex >= 0 ? activeIndex : 0);
+      }
+
+      function close(returnFocus = false) {
+        if (popover.hidden) return;
+        popover.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        if (returnFocus) trigger.focus();
+      }
+
+      function isOpen() {
+        return !popover.hidden;
+      }
+
+      trigger.addEventListener('click', () => {
+        if (isOpen()) close();
+        else open();
+      });
+
+      trigger.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          if (!isOpen()) open();
+        }
+      });
+
+      popover.addEventListener('click', (event) => {
+        const el = event.target.closest('[data-themed-option]');
+        if (!el) return;
+        selectValue(el.dataset.themedOption);
+        close(true);
+      });
+
+      popover.addEventListener('keydown', (event) => {
+        const els = optionEls();
+        const current = els.indexOf(document.activeElement);
+        switch (event.key) {
+          case 'ArrowDown':
+            event.preventDefault();
+            focusOption(current + 1);
+            break;
+          case 'ArrowUp':
+            event.preventDefault();
+            focusOption(current - 1);
+            break;
+          case 'Home':
+            event.preventDefault();
+            focusOption(0);
+            break;
+          case 'End':
+            event.preventDefault();
+            focusOption(els.length - 1);
+            break;
+          case 'Enter':
+          case ' ':
+            event.preventDefault();
+            if (document.activeElement?.dataset?.themedOption !== undefined) {
+              selectValue(document.activeElement.dataset.themedOption);
+              close(true);
+            }
+            break;
+          case 'Escape':
+            event.preventDefault();
+            close(true);
+            break;
+          case 'Tab':
+            close();
+            break;
+          default:
+            break;
+        }
+      });
+
+      native.addEventListener('change', sync);
+
+      buildOptions();
+      sync();
+      themedSelects.push({ root, close, isOpen, sync });
+    }
+
+    /* ---------- Floating panel ---------- */
     function setFloatingExpanded(isExpanded) {
       if (!floatingPanel || !floatingToggle) return;
       floatingPanel.hidden = !isExpanded;
@@ -755,34 +915,12 @@ function formatLongDate(dateString: string) {
       syncFloatingVisibility();
     }
 
-    function getChicagoDateString() {
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Chicago',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).formatToParts(new Date());
-
-      const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-      return `${byType.year}-${byType.month}-${byType.day}`;
-    }
-
-    const today = getChicagoDateString();
-
-    function getDefaultStartDate() {
-      return today;
-    }
-
     function hasActiveFilters() {
-      const defaultStartDate = getDefaultStartDate();
       return Boolean(
         getSyncedValue(searchInputs) ||
-        getSyncedValue(jumpSelects) ||
-        (getSyncedValue(startDateInputs) && getSyncedValue(startDateInputs) !== defaultStartDate) ||
-        getSyncedValue(endDateInputs) ||
-        selectedKind !== 'all' ||
-        linkedInputs.some((input) => input.checked) ||
-        selectedTags.size > 0
+        selectedDate ||
+        getSyncedValue(categorySelects) ||
+        getSyncedValue(neighborhoodSelects)
       );
     }
 
@@ -799,41 +937,25 @@ function formatLongDate(dateString: string) {
       setFloatingVisible(controlsAreOutOfView || shouldPinFloatingControls());
     }
 
-    function updateTagButtons() {
-      tagButtons.forEach((button) => {
-        const isSelected = selectedTags.has(button.dataset.tagFilter);
-        button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-        button.classList.toggle('bg-darkWalnut', isSelected);
-        button.classList.toggle('text-seashell', isSelected);
-        button.classList.toggle('border-darkWalnut', isSelected);
-        button.classList.toggle('bg-seashell', !isSelected);
-        button.classList.toggle('text-darkWalnut/70', !isSelected);
-        button.classList.toggle('border-darkWalnut/35', !isSelected);
-      });
-    }
-
+    /* ---------- Filtering ---------- */
     function eventMatches(card) {
       const query = normalize(getSyncedValue(searchInputs));
-      const kind = selectedKind;
-      const startDate = getSyncedValue(startDateInputs);
-      const endDate = getSyncedValue(endDateInputs);
+      const category = getSyncedValue(categorySelects);
+      const neighborhood = getSyncedValue(neighborhoodSelects);
       const cardDate = card.dataset.eventDate ?? '';
-      const isCurated = card.dataset.eventCurated === 'true';
-      const isGiveaway = card.dataset.eventGiveaway === 'true';
       const cardTags = (card.dataset.eventTags ?? '').split('|').filter(Boolean);
+      const cardNeighborhood = card.dataset.eventNeighborhood ?? '';
 
       if (query && !(card.dataset.eventSearch ?? '').includes(query)) return false;
-      if (kind === 'curated' && !isCurated) return false;
-      if (kind === 'giveaway' && !isGiveaway) return false;
-      if (kind === 'regular' && (isCurated || isGiveaway)) return false;
-      if (startDate && cardDate < startDate) return false;
-      if (endDate && cardDate > endDate) return false;
-      if (linkedInputs.some((input) => input.checked) && card.dataset.hasLink !== 'true') return false;
 
-      if (selectedTags.size > 0) {
-        const hasMatchingTag = cardTags.some((tag) => selectedTags.has(tag));
-        if (!hasMatchingTag) return false;
-      }
+      // Default to upcoming events (today onward). Picking a date only LOWERS the
+      // floor when it's in the past, so a past pick reveals events from there on;
+      // a future pick keeps everything visible and simply scrolls to that day.
+      const floor = selectedDate && selectedDate < today ? selectedDate : today;
+      if (cardDate && cardDate < floor) return false;
+
+      if (category && !cardTags.includes(category)) return false;
+      if (neighborhood && cardNeighborhood !== neighborhood) return false;
 
       return true;
     }
@@ -869,10 +991,21 @@ function formatLongDate(dateString: string) {
         noMatches.hidden = visibleCount > 0;
       }
 
-      updateTagButtons();
       syncFloatingVisibility();
 
-      if (shouldPreserveScroll) {
+      if (pendingScrollDate) {
+        // Jump to the chosen day (or the first stop on/after it) without hiding
+        // the rest of the route. This wins over scroll preservation.
+        const targetDate = pendingScrollDate;
+        pendingScrollDate = null;
+        window.requestAnimationFrame(() => {
+          const target = daySections.find(
+            (section) => !section.hidden && (section.dataset.eventDate ?? '') >= targetDate
+          );
+          target?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          syncFloatingVisibility();
+        });
+      } else if (shouldPreserveScroll) {
         window.requestAnimationFrame(() => {
           const maxScrollY = Math.max(
             0,
@@ -886,34 +1019,13 @@ function formatLongDate(dateString: string) {
 
     function resetFilters() {
       setSyncedValue(searchInputs, '');
-      setSyncedValue(jumpSelects, '');
-      setSyncedValue(startDateInputs, getDefaultStartDate());
-      setSyncedValue(endDateInputs, '');
-      setLinkedChecked(false);
-      setSelectedKind('all');
-      selectedTags.clear();
-      renderFilters();
+      setSyncedValue(categorySelects, '');
+      setSyncedValue(neighborhoodSelects, '');
+      refreshThemed();
+      setSelectedDate('');
     }
 
-    function handleJumpChange(selectedDate, source = null) {
-      setSyncedValue(jumpSelects, selectedDate, source);
-      if (!selectedDate) {
-        renderFilters();
-        return;
-      }
-
-      const section = daySections.find((daySection) => daySection.dataset.displayDate === selectedDate);
-      const sectionDate = section?.dataset.eventDate ?? '';
-      const currentStartDate = getSyncedValue(startDateInputs) || today;
-
-      if (sectionDate && sectionDate < currentStartDate) {
-        setSyncedValue(startDateInputs, sectionDate);
-      }
-
-      renderFilters();
-      section?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    }
-
+    /* ---------- Wiring ---------- */
     searchInputs.forEach((input) => {
       input.addEventListener('input', () => {
         setSyncedValue(searchInputs, input.value, input);
@@ -921,77 +1033,38 @@ function formatLongDate(dateString: string) {
       });
     });
 
-    startDateInputs.forEach((input) => {
-      input.addEventListener('input', () => {
-        setSyncedValue(startDateInputs, input.value, input);
-        renderFilters();
-      });
-      input.addEventListener('change', () => {
-        setSyncedValue(startDateInputs, input.value, input);
-        renderFilters();
-      });
-    });
-
-    endDateInputs.forEach((input) => {
-      input.addEventListener('input', () => {
-        setSyncedValue(endDateInputs, input.value, input);
-        renderFilters();
-      });
-      input.addEventListener('change', () => {
-        setSyncedValue(endDateInputs, input.value, input);
-        renderFilters();
-      });
-    });
-
-    linkedInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        setLinkedChecked(input.checked, input);
-        renderFilters();
-      });
-    });
-
-    kindInputs.forEach((input) => {
-      input.addEventListener('change', () => {
-        if (!input.checked) return;
-        setSelectedKind(input.value);
-        renderFilters();
-      });
-    });
-
-    kindSelects.forEach((select) => {
+    categorySelects.forEach((select) => {
       select.addEventListener('change', () => {
-        setSelectedKind(select.value);
+        setSyncedValue(categorySelects, select.value, select);
+        refreshThemed();
         renderFilters();
       });
     });
 
-    jumpSelects.forEach((select) => {
+    neighborhoodSelects.forEach((select) => {
       select.addEventListener('change', () => {
-        handleJumpChange(select.value, select);
-      });
-    });
-
-    tagButtons.forEach((button) => {
-      button.addEventListener('click', () => {
-        const tag = button.dataset.tagFilter;
-        if (!tag) return;
-
-        if (selectedTags.has(tag)) {
-          selectedTags.delete(tag);
-        } else {
-          selectedTags.add(tag);
-        }
-
+        setSyncedValue(neighborhoodSelects, select.value, select);
+        refreshThemed();
         renderFilters();
       });
     });
-
-    clearTagsButtons.forEach((button) => button.addEventListener('click', () => {
-      selectedTags.clear();
-      renderFilters();
-    }));
 
     resetButtons.forEach((button) => button.addEventListener('click', resetFilters));
+
+    calendarRoots.forEach((root) => createCalendar(root));
+    getControlFields('[data-themed-select]').forEach((root) => initThemedSelect(root));
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('[data-calendar]')) closeAllCalendars();
+      if (!event.target.closest('[data-themed-select]')) closeAllThemed();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeAllCalendars();
+        closeAllThemed();
+      }
+    });
+
     floatingToggle?.addEventListener('click', () => {
       setFloatingExpanded(floatingToggle.getAttribute('aria-expanded') !== 'true');
       syncFloatingVisibility();
@@ -1007,16 +1080,14 @@ function formatLongDate(dateString: string) {
     floatingControls?.addEventListener('focusout', () => {
       window.setTimeout(syncFloatingVisibility, 0);
     });
+
     eventCards.forEach((card) => {
       card.classList.toggle('is-past-event', (card.dataset.eventDate ?? '') < today);
     });
 
-    setSelectedKind(selectedKind);
     setSyncedValue(searchInputs, getSyncedValue(searchInputs));
-    setSyncedValue(jumpSelects, getSyncedValue(jumpSelects));
-    setSyncedValue(startDateInputs, getSyncedValue(startDateInputs) || getDefaultStartDate());
-    setSyncedValue(endDateInputs, getSyncedValue(endDateInputs));
-    setLinkedChecked(linkedInputs.some((input) => input.checked));
+    setSyncedValue(categorySelects, getSyncedValue(categorySelects));
+    setSyncedValue(neighborhoodSelects, getSyncedValue(neighborhoodSelects));
     setFloatingExpanded(false);
 
     if (floatingControls && controls && 'IntersectionObserver' in window) {

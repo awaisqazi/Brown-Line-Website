@@ -1,0 +1,68 @@
+---
+// A filter dropdown that is themed to the site on desktop (custom listbox popover)
+// and falls back to the native OS dropdown on mobile/touch. The native <select> is
+// always the canonical value holder; the desktop listbox just drives it.
+//   inline: render the desktop popover in-flow instead of absolutely positioned,
+//           so it can't be clipped inside the scrollable floating panel.
+interface Props {
+  field: string; // data attribute key, e.g. "category-filter" -> data-category-filter
+  placeholder: string; // shown when nothing is selected, e.g. "All categories"
+  label: string; // accessible name for the control, e.g. "Category"
+  options: string[];
+  inline?: boolean;
+}
+
+const { field, placeholder, label, options, inline = false } = Astro.props;
+const selectAttrs = { [`data-${field}`]: '' };
+---
+
+<div class="relative mt-1" data-themed-select>
+  {/* Mobile / canonical value: standard OS dropdown */}
+  <select
+    {...selectAttrs}
+    data-themed-native
+    aria-label={label}
+    class="w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:hidden md:text-sm"
+  >
+    <option value="">{placeholder}</option>
+    {options.map((opt) => <option value={opt}>{opt}</option>)}
+  </select>
+
+  {/* Desktop: themed listbox */}
+  <div class="hidden md:block" data-themed-desktop>
+    <button
+      type="button"
+      data-themed-trigger
+      aria-haspopup="listbox"
+      aria-expanded="false"
+      class="flex w-full min-w-0 items-center justify-between gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm font-bold text-darkWalnut transition-colors focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+    >
+      <span class="truncate"><span class="sr-only">{label}: </span><span data-themed-label>{placeholder}</span></span>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        class="h-4 w-4 shrink-0"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </button>
+    <div
+      data-themed-popover
+      role="listbox"
+      aria-label={label}
+      tabindex="-1"
+      hidden
+      class:list={[
+        inline
+          ? 'mt-2 max-h-72 w-full overflow-auto border-2 border-darkWalnut bg-[#FDFBF7] p-1.5'
+          : 'absolute left-0 z-50 mt-2 max-h-72 w-full min-w-[12rem] overflow-auto border-2 border-darkWalnut bg-[#FDFBF7] p-1.5 shadow-retro',
+      ]}
+    >
+    </div>
+  </div>
+</div>

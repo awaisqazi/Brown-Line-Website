@@ -20,9 +20,9 @@ const secondaryButtonClass =
 const fieldMarkerClass = 'ml-2 text-[9px] tracking-widest';
 const csvHeaders = [
   'event_date',
-  'display_date',
   'title',
   'venue',
+  'neighborhood',
   'description',
   'organizer',
   'cost_info',
@@ -128,16 +128,16 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <input id="event-date" name="event_date" type="date" class={inputClass} required />
             </label>
 
-            <label class={labelClass} for="event-display-date">
-              Display date
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
-              <input id="event-display-date" name="display_date" type="text" placeholder="Fri. May 29" class={inputClass} required />
-            </label>
-
             <label class={labelClass} for="event-venue">
               Venue
               <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
               <input id="event-venue" name="venue" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="event-neighborhood">
+              Neighborhood
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-neighborhood" name="neighborhood" type="text" placeholder="Pilsen, Hyde Park" class={inputClass} />
             </label>
 
             <label class={labelClass} for="event-organizer">
@@ -229,7 +229,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Required columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                event_date, display_date, title, venue
+                event_date, title, venue
               </p>
             </div>
 
@@ -238,7 +238,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Optional columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                description, organizer, cost_info, event_url, author_note, emoji, tags, is_curated, is_giveaway
+                neighborhood, description, organizer, cost_info, event_url, author_note, emoji, tags, is_curated, is_giveaway
               </p>
             </div>
           </div>
@@ -289,9 +289,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
   type AdminEventRecord = {
     event_date: string;
-    display_date: string;
     title: string;
     venue: string;
+    neighborhood: string | null;
     description: string | null;
     organizer: string | null;
     cost_info: string | null;
@@ -411,8 +411,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return {
         title: requiredText(getFormValue(formData, 'title'), 'title'),
         event_date: requiredDate(getFormValue(formData, 'event_date')),
-        display_date: requiredText(getFormValue(formData, 'display_date'), 'display_date'),
         venue: requiredText(getFormValue(formData, 'venue'), 'venue'),
+        neighborhood: nullableText(getFormValue(formData, 'neighborhood')),
         organizer: nullableText(getFormValue(formData, 'organizer')),
         cost_info: nullableText(getFormValue(formData, 'cost_info')),
         event_url: normalizeUrl(getFormValue(formData, 'event_url')),
@@ -429,9 +429,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       try {
         return {
           event_date: requiredDate(row.event_date),
-          display_date: requiredText(row.display_date, 'display_date'),
           title: requiredText(row.title, 'title'),
           venue: requiredText(row.venue, 'venue'),
+          neighborhood: nullableText(row.neighborhood),
           description: nullableText(row.description),
           organizer: nullableText(row.organizer),
           cost_info: nullableText(row.cost_info),
