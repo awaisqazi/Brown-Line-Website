@@ -2,8 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- JT Modernism (retired from headings — kept defined for optional
-   one-off wordmark use; no selector currently references it) ---------- */
+/* ---------- JT Modernism (brand logo wordmark ONLY — `font-wordmark`).
+   Not used for headings or body; see design.md § 3. ---------- */
 @font-face {
   font-family: 'JT Modernism';
   src: url('/fonts/JT%20Modernism%20-%20Header/JtModernism-Regular.ttf') format('truetype');

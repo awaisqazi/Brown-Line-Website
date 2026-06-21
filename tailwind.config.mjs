@@ -13,11 +13,12 @@ export default {
         babyPink:   '#F79CD0',
       },
       fontFamily: {
-        // Headings now use Montserrat (ExtraBold) for legibility; the former
-        // JT Modernism display face is retired from headers but still defined
-        // in global.css if a one-off wordmark treatment ever needs it.
-        heading: ['Montserrat', 'system-ui', 'sans-serif'],
-        body:    ['Montserrat', 'system-ui', 'sans-serif'],
+        // Montserrat is the typeface for body AND headings (legibility).
+        // JT Modernism is reserved EXCLUSIVELY for the brand logo wordmark
+        // ("the Brown Line") via `font-wordmark`. See design.md § 3.
+        heading:  ['Montserrat', 'system-ui', 'sans-serif'],
+        body:     ['Montserrat', 'system-ui', 'sans-serif'],
+        wordmark: ['"JT Modernism"', 'Georgia', 'serif'],
       },
       boxShadow: {
         retro:           '4px 4px 0px #642713',

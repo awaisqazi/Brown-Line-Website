@@ -44,7 +44,13 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
    */
   .beehiiv-embed-wrapper {
     width: 100%;
-    max-width: 36rem;   /* max-w-xl */
+    /*
+     * Beehiiv's embedded form has a fixed natural width (~440px) and
+     * left-aligns itself inside any iframe that's wider than that, which
+     * left-shifts the field on the page. Constrain the embed to that width
+     * so the centered iframe hugs the form and the field stays centered.
+     */
+    max-width: 27.5rem;  /* 440px — matches the Beehiiv form's natural width */
     margin: 0 auto;
   }
 

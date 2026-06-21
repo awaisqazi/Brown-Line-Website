@@ -22,26 +22,33 @@ Tailwind token names (camelCase, from `tailwind.config.mjs`): `seashell`, `darkW
 
 ## 3. Typography
 
-Montserrat is the single brand typeface — body, UI, and headings. It is clean and legible at every size, and headings earn their presence through weight, size, and tracking rather than a separate display face. (The retro JT Modernism display face was retired from headings because it read poorly at a glance. Its `.ttf` files are still bundled and defined via `@font-face` in `global.css`, but no selector references it by default — it is available only if a one-off wordmark treatment ever calls for it.)
+Montserrat is the brand typeface for everything readable — body, UI, and all headings. JT Modernism (the retro display face) is reserved **exclusively for the brand logo wordmark** ("the Brown Line"). It is never used for headings, body, numerals, or any other text, because it reads poorly at a glance. The rule moving forward: **if it isn't the logo, it's Montserrat.**
 
-### Display headings (Montserrat ExtraBold)
-Tailwind family: `font-heading` (now resolves to Montserrat). The `.font-heading` utility carries `font-weight: 800` so display type has weight without an explicit weight class.
+### Logo wordmark (JT Modernism) — the only use of the display face
+Web: the `font-wordmark` Tailwind family (`'JT Modernism', Georgia, serif`), defined in `global.css` via `@font-face`. App: `Font.Brand.wordmark(_:)`.
+
+Use **only** for the "the Brown Line" logo lockups:
+- The nav and footer wordmark on the website.
+- The home-feed masthead in the app.
+
+Do **not** use `font-wordmark` for page headings, section titles, display numerals, eyebrows, or the `@thebrownline` handle — those are all Montserrat. If you reach for the display face anywhere but the logo, stop and use `font-heading`.
+
+### Headings (Montserrat ExtraBold)
+Tailwind family: `font-heading` (resolves to Montserrat). The `.font-heading` utility carries `font-weight: 800` so display type has weight without an explicit weight class.
 
 Use for:
-- The brand wordmark (logo as text).
 - H1s on every page.
 - Large section H2s (`text-4xl` and above).
 - Large display numerals (e.g. the values strip `01 / 02 / 03`).
 - Hero eyebrows and accent moments where a short line of display type sets the tone.
+- The `@thebrownline` handle on `/links` (`font-heading`, `text-3xl md:text-5xl`) — a page header sized to fit a `max-w-md` mobile column.
 
 Styling: Dark Walnut color, used large, unapologetic, tightly tracked.
-
-**`@thebrownline` handle on `/links`:** rendered with `font-heading` at `text-3xl md:text-5xl` — a Link-in-Bio wordmark moment sized to fit a `max-w-md` mobile column.
 
 ### Montserrat (Body, UI, and headings)
 Custom local font, served from `public/fonts/Montserrat - Body/`. Tailwind family: `font-body`. Weights: 400 (Regular), 600 (SemiBold), 700 (Bold), 800 (ExtraBold).
 
-Use for everything:
+Use for everything except the logo wordmark:
 - All paragraphs and lead text.
 - H3 titles (issue card titles, values labels, sidebar headings).
 - Buttons, form inputs, labels, tags, captions, eyebrows.
@@ -195,7 +202,7 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 - **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
   - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold,ExtraBold}.ttf` — the brand typeface for body **and** headings.
-  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf` — retired display face; files retained and `@font-face`-defined but not referenced by any selector (see § 3).
+  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf` — display face used **only** for the logo wordmark (`font-wordmark`); see § 3.
   - Loaded via `@font-face` in `src/styles/global.css` with URL-encoded paths (`%20` for the spaces in the folder names).
 
 ## 9. Component & Page Inventory
@@ -335,6 +342,7 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-21 (JT Modernism → logo wordmark only):** Brought JT Modernism back for the brand logo wordmark exclusively. Added a `font-wordmark` Tailwind family (`'JT Modernism', Georgia, serif`) and the app's `Font.Brand.wordmark(_:)`; pointed the nav/footer "the Brown Line" lockups and the app home masthead at it. Everything else (headings, the `@thebrownline` handle, numerals) stays Montserrat. Codified the "if it isn't the logo, it's Montserrat" rule in § 3.
 - **2026-06-21 (headings → Montserrat):** Retired JT Modernism from headings because it read poorly at a glance. `font-heading` now resolves to Montserrat, and the `.font-heading` utility carries `font-weight: 800` (ExtraBold) so display type keeps its presence. Added a Montserrat ExtraBold `@font-face` (800). Repointed the `h1–h6`/`.font-heading` rule and the `TrainSplash.jsx` inline label font stacks. JT Modernism `.ttf` files and `@font-face` blocks are retained but unreferenced. Rewrote § 3 Typography to match.
 - **2026-06-21 (custom domain configuration):** Configured custom domain deployment to GitHub Pages by creating a `CNAME` file in the `public/` directory and updating `PUBLIC_SITE_URL` to `https://thebrownlinechi.com` in the deploy workflow.
 - **2026-06-01 (homepage upcoming stops):** Added an `Upcoming Stops` Transit Route Timeline to the homepage using Supabase `public.events` data, a section-specific high-contrast monospace `Marquee` with a faster 18s repeated loop, CTA Brown `#62361B` track and stop nodes, shared `EventCard` rendering, a real empty state, and a closing `TransitDivider`.
