@@ -13,7 +13,10 @@ export default {
         babyPink:   '#F79CD0',
       },
       fontFamily: {
-        heading: ['"JT Modernism"', 'Georgia', 'serif'],
+        // Headings now use Montserrat (ExtraBold) for legibility; the former
+        // JT Modernism display face is retired from headers but still defined
+        // in global.css if a one-off wordmark treatment ever needs it.
+        heading: ['Montserrat', 'system-ui', 'sans-serif'],
         body:    ['Montserrat', 'system-ui', 'sans-serif'],
       },
       boxShadow: {

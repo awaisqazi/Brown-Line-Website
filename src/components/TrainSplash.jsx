@@ -697,7 +697,7 @@ const TrainSplash = () => {
           className={`flex items-center gap-2.5 transition-opacity duration-300 self-center sm:self-start ${phase === 'idle' ? 'opacity-100' : 'opacity-0'
             }`}
           style={{
-            fontFamily: "'JT Modernism', 'Montserrat', sans-serif"
+            fontFamily: "'Montserrat', sans-serif"
           }}
           aria-hidden="true"
         >
@@ -997,7 +997,7 @@ const TrainSplash = () => {
         className="absolute left-1/2 -translate-x-1/2 z-30 font-bold text-xs uppercase tracking-widest text-[#FAF1EC] bg-[#642713] border-3 border-[#642713] hover:bg-[#FAF1EC] hover:text-[#642713] active:translate-y-[2px] shadow-[4px_4px_0px_#2B120A] hover:shadow-[2px_2px_0px_#2B120A] active:shadow-[0px_0px_0px_#2B120A] px-5 py-3 rounded-lg min-h-[46px] flex items-center gap-3 transition-all duration-150 select-none cursor-pointer"
         style={{
           bottom: 'max(1.8rem, env(safe-area-inset-bottom))',
-          fontFamily: "'JT Modernism', 'Montserrat', sans-serif"
+          fontFamily: "'Montserrat', sans-serif"
         }}
       >
         <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#FAF1EC] text-[#642713] font-black text-[10px] tracking-normal">

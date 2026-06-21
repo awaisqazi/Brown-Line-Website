@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- JT Modernism (Headings, Logo) ---------- */
+/* ---------- JT Modernism (retired from headings — kept defined for optional
+   one-off wordmark use; no selector currently references it) ---------- */
 @font-face {
   font-family: 'JT Modernism';
   src: url('/fonts/JT%20Modernism%20-%20Header/JtModernism-Regular.ttf') format('truetype');
@@ -47,6 +48,13 @@
   font-style: normal;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat%20-%20Body/Montserrat-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ---------- Base ---------- */
 html,
@@ -64,7 +72,13 @@ body {
 
 h1, h2, h3, h4, h5, h6,
 .font-heading {
-  font-family: 'JT Modernism', Georgia, serif;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Display headings (the former JT Modernism "showpiece" role) lean on
+   Montserrat ExtraBold for presence and legibility. */
+.font-heading {
+  font-weight: 800;
 }
 
 /* ---------- Utilities from design.md ---------- */

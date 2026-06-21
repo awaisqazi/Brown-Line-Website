@@ -22,33 +22,33 @@ Tailwind token names (camelCase, from `tailwind.config.mjs`): `seashell`, `darkW
 
 ## 3. Typography
 
-Montserrat is the workhorse. JT Modernism is the showpiece. When in doubt, reach for Montserrat. The retro display face is reserved for editorial moments where the brand voice needs to shout.
+Montserrat is the single brand typeface — body, UI, and headings. It is clean and legible at every size, and headings earn their presence through weight, size, and tracking rather than a separate display face. (The retro JT Modernism display face was retired from headings because it read poorly at a glance. Its `.ttf` files are still bundled and defined via `@font-face` in `global.css`, but no selector references it by default — it is available only if a one-off wordmark treatment ever calls for it.)
 
-### JT Modernism (Display only)
-Custom local font, served from `public/fonts/JT Modernism - Header/`. Tailwind family: `font-heading`.
+### Display headings (Montserrat ExtraBold)
+Tailwind family: `font-heading` (now resolves to Montserrat). The `.font-heading` utility carries `font-weight: 800` so display type has weight without an explicit weight class.
 
-Use **only** for:
+Use for:
 - The brand wordmark (logo as text).
 - H1s on every page.
 - Large section H2s (`text-4xl` and above).
 - Large display numerals (e.g. the values strip `01 / 02 / 03`).
 - Hero eyebrows and accent moments where a short line of display type sets the tone.
 
-Styling: Dark Walnut color, used large, unapologetic, tightly tracked. Avoid JT Modernism at any size below `text-4xl`. It is built for impact, not for sustained reading.
+Styling: Dark Walnut color, used large, unapologetic, tightly tracked.
 
-**Sanctioned exception:** the `@thebrownline` handle on `/links` is rendered at `text-3xl` JT Modernism. This is the one acknowledged exception to the `text-4xl`+ floor, justified because a Link-in-Bio handle is a wordmark moment that needs to fit a `max-w-md` mobile column. Do not generalize this exception to other pages.
+**`@thebrownline` handle on `/links`:** rendered with `font-heading` at `text-3xl md:text-5xl` — a Link-in-Bio wordmark moment sized to fit a `max-w-md` mobile column.
 
-### Montserrat (Body, UI, and small headings)
-Custom local font, served from `public/fonts/Montserrat - Body/`. Tailwind family: `font-body`. Weights: 400 (Regular), 600 (SemiBold), 700 (Bold). Extrabold via numeric `font-extrabold`.
+### Montserrat (Body, UI, and headings)
+Custom local font, served from `public/fonts/Montserrat - Body/`. Tailwind family: `font-body`. Weights: 400 (Regular), 600 (SemiBold), 700 (Bold), 800 (ExtraBold).
 
-Use for everything else:
+Use for everything:
 - All paragraphs and lead text.
 - H3 titles (issue card titles, values labels, sidebar headings).
 - Buttons, form inputs, labels, tags, captions, eyebrows.
 - Pull quotes (use `italic font-medium` at `text-2xl` or larger for editorial weight).
-- Any inline emphasis inside a paragraph (use `font-bold` plus an accent color rather than switching to `font-heading`).
+- Any inline emphasis inside a paragraph (use `font-bold` plus an accent color).
 
-Styling: clean, generous line-height for readability. For small headings that need visual weight, use `font-extrabold` plus `uppercase tracking-widest` instead of switching to JT Modernism.
+Styling: clean, generous line-height for readability. Small headings that need visual weight use `font-extrabold` plus `uppercase tracking-widest`.
 
 ## 4. UI Component Styling Rules
 - **Tactile Borders & Shadows:** Use sharp `2px solid #642713` (Dark Walnut) borders for input fields, cards, and buttons.
@@ -194,8 +194,8 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 - **Founder portrait:** `public/images/ghazala.jpeg`. Used on the About page and as that page's Open Graph share image.
 - **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
-  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf`
-  - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold}.ttf`
+  - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold,ExtraBold}.ttf` — the brand typeface for body **and** headings.
+  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf` — retired display face; files retained and `@font-face`-defined but not referenced by any selector (see § 3).
   - Loaded via `@font-face` in `src/styles/global.css` with URL-encoded paths (`%20` for the spaces in the folder names).
 
 ## 9. Component & Page Inventory
@@ -231,7 +231,7 @@ Recipes for building new pages. Match the template that matches the intent.
 
 ### Home (`/`)
 1. Eyebrow (Cayenne, uppercase, tracked-out).
-2. JT Modernism H1 with one `<em class="not-italic text-cayenne">` accent phrase.
+2. `font-heading` H1 (Montserrat ExtraBold) with one `<em class="not-italic text-cayenne">` accent phrase.
 3. Lead paragraph (Montserrat, `text-darkWalnut/75`, `max-w-2xl`).
 4. `<SubscribeForm />`.
 5. `<TransitDivider />` constrained to `max-w-5xl`.
@@ -239,7 +239,7 @@ Recipes for building new pages. Match the template that matches the intent.
 7. About teaser section with `border-2 border-darkWalnut` CTA button using the retro hover.
 
 ### About (`/about`)
-Founder portrait, bio, affiliations strip, values strip (numbered with JT Modernism numerals), repeat of `<SubscribeForm />`.
+Founder portrait, bio, affiliations strip, values strip (numbered with `font-heading` numerals), repeat of `<SubscribeForm />`.
 
 ### Standards (`/standards`)
 Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy keeps em dashes per the founder's voice; this is an existing, documented exception to § 7's no-em-dash rule.
@@ -247,7 +247,7 @@ Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy ke
 ### Links (`/links`)
 Mobile-first Link-in-Bio destination served at IG / TikTok in-app browsers, designed to read just as intentionally on desktop. Uses `<Layout minimal>` so no `Nav`, `Footer`, `TrainSplash`, or top divider renders. Container: `max-w-md md:max-w-lg mx-auto min-h-[calc(100vh-6px)] px-6 md:px-10 pt-8 md:pt-16 pb-12 md:pb-16 flex flex-col`. Structure top to bottom:
 1. Full-bleed `<TransitDivider />` (matches the drawer's opening stripe).
-2. Profile header: circular `logos/4.png` avatar (`w-28 md:w-36`, walnut border) with a Cayenne disc offset 1px behind for a retro hard-shadow nod, pulsing Cayenne "Now boarding" eyebrow, handle H1 (`@thebrownline`, JT Modernism, `text-3xl md:text-5xl`, see § 3 sanctioned exception for the mobile size), bio line (`text-sm md:text-base`).
+2. Profile header: circular `logos/4.png` avatar (`w-28 md:w-36`, walnut border) with a Cayenne disc offset 1px behind for a retro hard-shadow nod, pulsing Cayenne "Now boarding" eyebrow, handle H1 (`@thebrownline`, `font-heading`, `text-3xl md:text-5xl`, see § 3), bio line (`text-sm md:text-base`).
 3. "Get the newsletter" eyebrow + `<SubscribeForm />` (capture the email before they click out).
 4. `<TransitDivider />`.
 5. "Next stops" eyebrow + the Platform Map link list (see § 5 Platform Map pattern). Instagram is one of the stops, so there is no redundant Follow row at the bottom.
@@ -310,7 +310,8 @@ The site deploys through `.github/workflows/deploy.yml`.
 - Manual dispatch is available for urgent event updates.
 - Build Node is pinned to 24 because the current Supabase client path initializes Realtime during static rendering and expects native WebSocket support. Node 20 fails during route generation.
 - `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` is set at workflow level to opt GitHub Actions into the Node 24 action runtime.
-- `PUBLIC_SITE_URL` is hardcoded to the GitHub Pages URL in the workflow.
+- `PUBLIC_SITE_URL` is hardcoded to the custom domain (`https://thebrownlinechi.com`) in the workflow.
+- A `CNAME` file in `public/CNAME` configures the custom domain for the GitHub Pages deployment.
 - `PUBLIC_BEEHIIV_URL` is read from GitHub repository variables.
 - Supabase URL and publishable key are supplied at build time.
 
@@ -334,6 +335,8 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-21 (headings → Montserrat):** Retired JT Modernism from headings because it read poorly at a glance. `font-heading` now resolves to Montserrat, and the `.font-heading` utility carries `font-weight: 800` (ExtraBold) so display type keeps its presence. Added a Montserrat ExtraBold `@font-face` (800). Repointed the `h1–h6`/`.font-heading` rule and the `TrainSplash.jsx` inline label font stacks. JT Modernism `.ttf` files and `@font-face` blocks are retained but unreferenced. Rewrote § 3 Typography to match.
+- **2026-06-21 (custom domain configuration):** Configured custom domain deployment to GitHub Pages by creating a `CNAME` file in the `public/` directory and updating `PUBLIC_SITE_URL` to `https://thebrownlinechi.com` in the deploy workflow.
 - **2026-06-01 (homepage upcoming stops):** Added an `Upcoming Stops` Transit Route Timeline to the homepage using Supabase `public.events` data, a section-specific high-contrast monospace `Marquee` with a faster 18s repeated loop, CTA Brown `#62361B` track and stop nodes, shared `EventCard` rendering, a real empty state, and a closing `TransitDivider`.
 - **2026-05-31 (mobile app icons):** Added a web app manifest, Apple touch icon metadata, and generated iOS and Android home-screen PNGs from `public/logos/logo.png` with Seashell backing and launcher-safe padding.
 - **2026-05-31 (splash audio reliability):** Made `TrainSplash.jsx` resolve audio files through Astro `BASE_URL` for subpath deployments, added guarded audio/splash fallbacks so enabling sound still exits to the page if media playback rejects, stalls, or misses completion events, and fixed route detection so `/events/` displays `EVENTS` instead of `HOME PLATFORM`.

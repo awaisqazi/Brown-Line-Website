@@ -36,7 +36,7 @@ jobs:
           node-version: 24
         env:
           PUBLIC_BEEHIIV_URL: ${{ vars.PUBLIC_BEEHIIV_URL }}
-          PUBLIC_SITE_URL: https://awaisqazi.github.io/Brown-Line-Website
+          PUBLIC_SITE_URL: https://thebrownlinechi.com
           SUPABASE_URL: https://xuursvzrlbqiwcevzhao.supabase.co
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_aqwn4tleOVrkkFS1NUJLxw_xW2NExGD
 
