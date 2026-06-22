@@ -91,7 +91,7 @@ The desktop primary nav mirrors the mobile transit-stop language as a compact ho
 Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
 
 ### LED Marquee (`Marquee.astro`)
-Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. Duration is calculated from total visual character count and clamped between 70 and 180 seconds unless a caller passes `durationSeconds`. Callers can pass `visualRepeat` to duplicate short visual item sets without duplicating the screen-reader text.
+Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. The track scrolls at a constant speed in pixels per second (default 90) rather than a fixed loop duration, so the pace stays even no matter how long the current copy is; callers can override with `pixelsPerSecond`. Callers can pass `visualRepeat` to duplicate short visual item sets without duplicating the screen-reader text.
 
 Interaction details:
 - The marquee auto-scrolls with `requestAnimationFrame`, not CSS keyframes, so dragging and pause/resume stay in sync.
@@ -117,17 +117,18 @@ The Link-in-Bio page reuses the Mobile Drawer Route Map pattern as its primary a
 
 ### Events Route Board (`/events`)
 The public events page is a static Supabase-powered route board. It should feel like a transit guide, not a generic card directory.
-- Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl`.
-- Main controls: bordered Seashell panel with result count, search, date jump, start/end dates, line type segmented radios, "Has link", tag pills, and Reset.
-- Event groups: events are grouped by `display_date`; each date block is a "Platform" with a vertical Dark Walnut route line and colored stop dots.
+- Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl`, plus an Amber "Submit an event" button linking to `/submit-event`.
+- Main controls: bordered Seashell panel with result count, a search box, a single-date calendar, a themed Category dropdown, a Neighborhood dropdown (rendered only when some events have neighborhoods), and Reset. The older line-type radios, "Has link" toggle, and start/end date selects were removed in favor of this simpler bar.
+- Event groups: events are grouped by `event_date` and the day heading is derived from it via `formatStopDate` (`src/lib/dates.ts`, e.g. "Sun. Jun 28"), so a single day is always one segment. Each date block is a "Platform" with a vertical Dark Walnut route line and colored stop dots.
 - Stop colors rotate Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
-- The default client-side start date is today's America/Chicago date. Past events can still be reached by moving the start date backward, and render dimmed/grayscale.
+- The board shows events from today's America/Chicago date onward by default; past days render dimmed/grayscale. Picking a date in the calendar is a jump: it scrolls to that day and keeps the surrounding events visible rather than filtering to a single day (a past pick lowers the floor so those events become reachable). Days with events are marked with a dot in the calendar; today is ringed.
+- The Category dropdown is themed on desktop (a custom listbox built in the page script) and falls back to the native OS `<select>` on mobile; both drive the same hidden native select.
 - The no-results state is a bordered Seashell panel reading "Try a different route."
 
 ### Homepage Upcoming Stops (`index.astro`)
 The homepage includes an `Upcoming Stops` section between the hero divider and Recent Rides. It adapts the events route-map language into a compact Transit Route Timeline:
 - The homepage queries Supabase `public.events` at build time for the next three rows where `event_date` is on or after the current America/Chicago date. No local placeholder events are rendered.
-- A local `Marquee` sits directly above the timeline and reads `NEXT STOP: [first event] -- DOORS OPEN ON THE RIGHT`. It passes `durationSeconds={18}` and `visualRepeat={4}` so the short inside-train LED line visibly repeats and scrolls on wide viewports.
+- A local `Marquee` sits directly above the timeline and reads `NEXT STOP: [first event] -- DOORS OPEN ON THE RIGHT`. It passes `visualRepeat={4}` so the short inside-train LED line visibly repeats and scrolls on wide viewports (it uses the default constant scroll speed).
 - The section-specific marquee wrapper overrides `Marquee.astro` to an accessible inside-train LED style: Dark Walnut background, Amber body text, Seashell label text, monospace type, and tighter tracking than the global ticker.
 - Header copy uses plain sans-serif utility styling (`font-sans tracking-tight font-extrabold`) instead of JT Modernism.
 - The timeline track is a thick vertical `bg-[#62361B]` line, matching CTA Brown. It sits close to the left edge on mobile and gains more left padding at `md+`.
@@ -139,7 +140,7 @@ The homepage includes an `Upcoming Stops` section between the hero divider and R
 ### Floating Event Controls (`/events`)
 When the main route controls scroll out of view, a compact fixed filter panel appears near the bottom edge.
 - Uses `IntersectionObserver` with a top root margin so it appears after the full controls have left the viewport.
-- Mirrors all real controls through shared `data-*` selectors: search, date jump, date range, line type, link filter, tags, and reset.
+- Mirrors the controls through shared `data-*` selectors: search, the date calendar (rendered inline here so its popover cannot be clipped by the panel), the Category dropdown, the Neighborhood dropdown, and reset.
 - Collapsed by default with a plus button; expanded state uses `aria-expanded`, `aria-controls`, and a hidden panel.
 - Search and select fields use 16px mobile text to avoid iOS focus zoom.
 - Stays pinned while focused or while filters are active, preserving scroll position when filtering from the floating panel.
@@ -151,6 +152,7 @@ When the main route controls scroll out of view, a compact fixed filter panel ap
 - Giveaway: ticket-stub card, dashed 3px border, Amber badge, optional "Conductor's Pick" badge, dashed giveaway rules section, and side punch-outs via pseudo-elements.
 - Curated: large bordered feature card with Cayenne "Conductor's Pick" badge, optional Celadon cost chip, optional author note with Maya Blue rule.
 - Regular: compact transfer row with dashed bottom border, small metadata, and dashed tag chips.
+- All variants surface `neighborhood` in the metadata row when it is set, and a confirmed `start_time` renders as a 12-hour label.
 - If `event_url` is a valid `http` or `https` URL, the root becomes an external `<a>` with `target="_blank"` and `rel="noopener noreferrer"`. Invalid or missing URLs render as `<article>`.
 
 ### Events Admin Portal (`/admin/events`)
@@ -158,12 +160,13 @@ The admin portal is intentionally utilitarian but still brand-native.
 - Uses `<Layout minimal noindex>` so there is no global nav/footer/splash and search engines receive `noindex, nofollow, noarchive`.
 - Starts with a staff-only password panel. The UI unlocks locally; the real write authorization happens in Supabase RLS when an insert request is made.
 - The typed password is attached as the `x-admin-password` header on the Supabase client. It is held in memory only.
-- Two work surfaces: "Single stop" for one event and "Spreadsheet transfer" for CSV imports.
+- Three work surfaces: "Single stop" for one event, "Spreadsheet transfer" for CSV imports, and "Review submissions" for public requests.
 - CSV template is generated as a `data:text/csv` download with the canonical column list.
-- Required fields are `event_date`, `display_date`, `title`, and `venue`. Optional fields match the `public.events` nullable columns.
+- Required fields are `event_date`, `title`, and `venue`. Optional fields match the `public.events` nullable columns.
 - CSV booleans accept `true`, `1`, `yes`, `y`, or `x`.
 - Tags accept JSON arrays, comma-separated strings, or pipe-separated strings.
 - `event_url` validation requires `http://` or `https://`.
+- Review submissions: on unlock the portal loads pending rows from `public.event_submissions` (gated by the admin password header) and renders each as an editable card with the event fields plus the editorial flags (emoji, author note, Conductor's pick, Giveaway). "Approve & publish" inserts the edited record into `public.events` and marks the submission `approved` (linking `approved_event_id`); "Reject" marks it `rejected`. Submission text is filled into the card via DOM properties, never `innerHTML`, so untrusted input cannot inject markup.
 
 ## 6. Layout & Integration
 - **Spacing:** Generous padding (e.g., `py-24`). Content should be constrained to readable max-widths (e.g., `max-w-3xl` for text, `max-w-5xl` for grids, `max-w-md` for the Link-in-Bio page).
@@ -210,25 +213,30 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 Components live in `src/components/`:
 - `Nav.astro`: header with logo and five primary links. Desktop = horizontal route-map nav. Mobile = hamburger that opens the sliding route-map drawer (see § 5). Sticky on mobile, static on desktop.
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
-- `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, and dynamic data from `src/lib/ticker.ts`.
-- `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts an optional `class` prop for width tuning.
+- `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, constant pixels-per-second scroll, and dynamic data from `src/lib/ticker.ts`.
+- `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts optional `caption` and `class` props.
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
 - `EventCard.astro`: Supabase event renderer with giveaway, curated, and regular variants.
+- `EventDatePicker.astro`: brand-styled single-date calendar used by the events filter. Renders as a popover by default (main controls) or open-in-place with the `inline` prop (floating panel); the events page script drives both instances.
+- `EventSelect.astro`: themed filter dropdown. Renders a native `<select>` on mobile and a custom listbox on desktop (`md+`), both backed by the same hidden native select. Used for the Category and Neighborhood filters. Props: `field`, `label`, `placeholder`, `options`, `inline`.
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
 - `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy, including `/events` as `EVENTS`). The audio toggle uses base-aware `/audio/` asset URLs and a 7s sequence watchdog at both the audio-engine and splash-overlay levels so stalled media events cannot strand visitors on the splash.
 
 Pages live in `src/pages/`:
 - `index.astro`: hero, Supabase-powered Transit Route Timeline-style Upcoming Stops section, RSS-powered recent rides grid, about teaser.
 - `about.astro`: founder portrait and bio, affiliations, outlet description, values strip, subscribe CTA.
-- `events.astro`: Supabase-powered public events route board with static build data and client-side filtering.
-- `admin/events.astro`: internal events admin portal for single-event and CSV inserts. Minimal, noindexed, and protected by Supabase RLS on insert.
+- `events.astro`: Supabase-powered public events route board with static build data and client-side filtering by search, a single-date calendar (jump), Category (diaspora tag), and Neighborhood.
+- `submit-event.astro`: public "submit an event" request form. Conditional location fields (Chicago neighborhood / suburb), Cloudflare Turnstile captcha, and a honeypot. Posts to the `submit-event` edge function, which queues the request in `public.event_submissions` for review.
+- `admin/events.astro`: internal events admin portal for single-event inserts, CSV imports, and a review queue for public submissions (edit, approve into `public.events`, or reject). Minimal, noindexed, and protected by Supabase RLS.
 - `standards.astro`: editorial Standards & Ethics page. Linked from the footer.
 - `links.astro`: Link-in-Bio destination optimized for IG / TikTok in-app browser traffic. Uses `<Layout minimal>` so no site chrome (no Nav, Footer, top TransitDivider, or splash) renders. The noise overlay and ::selection still apply.
 
 Library modules live in `src/lib/`:
 - `issues.ts`: fetches and parses Beehiiv RSS, formats dates, alternates issue card accents, and falls back to a static issue list.
-- `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface.
-- `ticker.ts`: composes ticker items from the latest issue and the next 7 days of Supabase events.
+- `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface (which includes `neighborhood` and `start_time`; the free-text `display_date` column was removed).
+- `ticker.ts`: composes ticker items from the latest issue and the next 7 days of Supabase events; derives its date labels from `event_date` via `dates.ts`.
+- `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped.
+- `locations.ts`: dropdown data for the submit form (the diaspora `DIASPORA_TAGS`, the four `LOCATION_TYPES`, the 77 Chicago `NEIGHBORHOOD_GROUPS` by side, and `SUBURBS`).
 
 The `Layout` component accepts optional `minimal?: boolean` (default `false`) and `noindex?: boolean` (default `false`) props. Set `minimal` when a page should render standalone without the global Nav, top TransitDivider, Footer, Marquee, or TrainSplash. Set `noindex` for internal or utility surfaces.
 
@@ -271,19 +279,17 @@ Stop colors on `/links` lead with Cayenne (the latest issue, primary CTA token) 
 Public events page with full site chrome. Structure:
 1. Hero with `Now boarding` eyebrow, H1, and Supabase rebuild explanation.
 2. `<TransitDivider />`.
-3. Route controls panel when events exist.
+3. Route controls panel when events exist (search, date calendar, Category, Neighborhood, Reset).
 4. Floating controls panel, hidden until the main controls scroll away.
-5. Events board grouped by `display_date`, each group rendered as a platform with route-line stop dots.
+5. Events board grouped by `event_date`, each group rendered as a platform with route-line stop dots and a `formatStopDate` heading.
 6. Empty state if Supabase returns zero events.
 
 Client-side filter behavior:
-- Search indexes title, description, venue, organizer, cost, display date, and tags.
-- Line type filters: All, Picks, Giveaways, Transfers. Transfers means neither curated nor giveaway.
-- Start date defaults to today's America/Chicago date.
-- Start and end date filters are select controls populated from event dates plus today's Chicago date, avoiding clipped native date inputs on narrow mobile screens.
-- Date jump scrolls to the selected date and expands the start date backward if needed.
-- Tags are multi-select. "Any tag" clears tag selection only.
-- Result counts update in both the main and floating controls.
+- Search indexes title, description, venue, organizer, cost, neighborhood, and tags.
+- Date is a single-date calendar. By default the board shows events from today (America/Chicago) onward. Picking a date scrolls to that day and keeps the surrounding events visible (it does not collapse to a single day); a past pick lowers the floor so those events appear.
+- Category filters by a single diaspora tag, chosen from a themed dropdown (custom listbox on desktop, native select on mobile). Options are derived from the tags present in the data and ordered by the canonical diaspora taxonomy.
+- Neighborhood filters by exact match; the control only appears once some events have a neighborhood.
+- Result counts update in both the main and floating controls, and the main and floating instances of each control stay in sync.
 
 ### Events Admin (`/admin/events`)
 Internal page using `<Layout minimal noindex>`. Structure:
@@ -292,6 +298,7 @@ Internal page using `<Layout minimal noindex>`. Structure:
 3. Transit divider.
 4. Two-column admin workspace at `lg+`: single event form and CSV upload panel.
 5. CSV template download, required/optional column reference cards, and importer notes.
+6. "Review submissions" section below the workspace: editable cards for each pending `public.event_submissions` row, with Approve and Reject actions.
 
 The page is not a full auth system. It is a static admin tool backed by RLS. Do not put passwords or hashes in tracked files; use the ignored `PRIVATE_README.md` for recovery details.
 
@@ -302,7 +309,14 @@ Production project ref: `xuursvzrlbqiwcevzhao`. Public API URL: `https://xuursvz
 
 Tables:
 - `public.events`: source of public event data. RLS enabled. Public `SELECT` allowed. `INSERT` allowed only when the RLS check confirms the admin password header and required fields.
-- `private.events_admin_credentials`: one-row private table containing the admin password salt/hash. RLS enabled. Direct access denied to public client roles.
+- `public.event_submissions`: queue of public "submit an event" requests. Mirrors the `events` columns plus submitter contact (`submitter_name`, `submitter_email`), raw spec location fields (`location_type`, `chicago_neighborhood`, `suburb`, `address`), and review metadata (`status` pending/approved/rejected, `reviewed_at`, `approved_event_id`). RLS enabled with NO public insert; the public can only write through the `submit-event` edge function (service role). Admin SELECT/UPDATE/DELETE are gated by the same `private.events_admin_password_matches()` helper used for events inserts.
+- `private.events_admin_credentials`: one-row private table containing the admin password salt/hash. RLS enabled. Direct access denied to public client roles. The password is checked by `private.events_admin_password_matches()`, which SHA-256 hashes the `x-admin-password` request header plus the stored salt and compares to the stored hash.
+
+Tag taxonomy: `public.events.tags` uses a fixed set of nine diaspora community tags: South Asian, SWANA, East Asian, Southeast Asian, Black Diaspora, Latine, Afro-Latine, Indigenous, Cross-cultural. These power the events Category filter and are the only values the submit form and admin should use ("Cross-cultural" is labelled "Multi-diaspora / Cross-cultural" in the submit dropdown).
+
+Edge Functions:
+- `submit-event` (`verify_jwt: false`): the only writer to `public.event_submissions`. Verifies a Cloudflare Turnstile token server-side, drops honeypot hits, validates required/conditional fields, then inserts with the service role. Public form posts JSON here instead of touching the database directly.
+- Turnstile is configured for production: a Cloudflare Turnstile widget ("The Brown Line", Managed mode, hostnames `thebrownlinechi.com` and `www.thebrownlinechi.com`) provides the keys. The secret key is set as the `TURNSTILE_SECRET` Edge Function secret in Supabase, and the public site key is set as the `PUBLIC_TURNSTILE_SITE_KEY` GitHub repo variable (consumed in `deploy.yml`). For local development, when those are unset the function and form both fall back to Cloudflare's public TEST keys, so the flow works locally but accepts any token. Real keys live in Cloudflare; rotate there if needed.
 
 Important policy shape:
 - Public reads are intentional because the events page is public.
@@ -319,7 +333,7 @@ The site deploys through `.github/workflows/deploy.yml`.
 - `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` is set at workflow level to opt GitHub Actions into the Node 24 action runtime.
 - `PUBLIC_SITE_URL` is hardcoded to the custom domain (`https://thebrownlinechi.com`) in the workflow.
 - A `CNAME` file in `public/CNAME` configures the custom domain for the GitHub Pages deployment.
-- `PUBLIC_BEEHIIV_URL` is read from GitHub repository variables.
+- `PUBLIC_BEEHIIV_URL` and `PUBLIC_TURNSTILE_SITE_KEY` are read from GitHub repository variables.
 - Supabase URL and publishable key are supplied at build time.
 
 ### Data Freshness
@@ -342,6 +356,9 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-22 (Turnstile configured + admin access):** Created the Cloudflare Turnstile widget ("The Brown Line", Managed) and wired its keys: the public site key as the `PUBLIC_TURNSTILE_SITE_KEY` GitHub repo variable and the secret as the `TURNSTILE_SECRET` Supabase Edge Function secret, so the public submit form is bot-protected in production. Reset the admin portal credential after confirming the stored hash no longer matched the expected password (the value is recorded in the ignored `PRIVATE_README.md`, not here).
+- **2026-06-21 (events filter and data model):** Rebuilt the `/events` filter as a streamlined bar: a single-date calendar that jumps to a day (keeping surrounding events visible), a themed Category dropdown (custom listbox on desktop, native select on mobile), and a Neighborhood filter; removed the line-type radios, "Has link" toggle, and the jump/from/to selects. Added a `neighborhood` column to `public.events`. Dropped the free-text `display_date` column and now derive every day label from `event_date` via `formatStopDate` (`src/lib/dates.ts`), grouping by `event_date` so a day is always one segment. Narrowed event tags to the nine-tag diaspora taxonomy and migrated all rows (prior tags backed up in `public.events_taxonomy_backup`). Switched the marquee to constant pixels-per-second scrolling. Removed em dashes across the site, code comments, and this doc, and retired the Standards founder-voice exception.
+- **2026-06-21 (public event submissions):** Added a public `/submit-event` request form (per the Events DB Spec: required title, date, venue, community tag, location type, and description; conditional Chicago neighborhood and suburb fields; optional time, address, organizer, cost, and URL; plus a required submitter name and optional email). Submissions are guarded by a Cloudflare Turnstile captcha and a honeypot, verified server-side by the new `submit-event` edge function, and queued in `public.event_submissions` (RLS: no public insert; admin-only review). The admin portal gained a review queue to edit, approve into `public.events`, or reject each submission. Set `TURNSTILE_SECRET` (edge function secret) and `PUBLIC_TURNSTILE_SITE_KEY` (repo variable) for production; the build falls back to Cloudflare TEST keys until then.
 - **2026-06-21 (JT Modernism → logo wordmark only):** Brought JT Modernism back for the brand logo wordmark exclusively. Added a `font-wordmark` Tailwind family (`'JT Modernism', Georgia, serif`) and the app's `Font.Brand.wordmark(_:)`; pointed the nav/footer "the Brown Line" lockups and the app home masthead at it. Everything else (headings, the `@thebrownline` handle, numerals) stays Montserrat. Codified the "if it isn't the logo, it's Montserrat" rule in § 3.
 - **2026-06-21 (headings → Montserrat):** Retired JT Modernism from headings because it read poorly at a glance. `font-heading` now resolves to Montserrat, and the `.font-heading` utility carries `font-weight: 800` (ExtraBold) so display type keeps its presence. Added a Montserrat ExtraBold `@font-face` (800). Repointed the `h1–h6`/`.font-heading` rule and the `TrainSplash.jsx` inline label font stacks. JT Modernism `.ttf` files and `@font-face` blocks are retained but unreferenced. Rewrote § 3 Typography to match.
 - **2026-06-21 (custom domain configuration):** Configured custom domain deployment to GitHub Pages by creating a `CNAME` file in the `public/` directory and updating `PUBLIC_SITE_URL` to `https://thebrownlinechi.com` in the deploy workflow.

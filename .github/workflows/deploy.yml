@@ -39,6 +39,9 @@ jobs:
           PUBLIC_SITE_URL: https://thebrownlinechi.com
           SUPABASE_URL: https://xuursvzrlbqiwcevzhao.supabase.co
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_aqwn4tleOVrkkFS1NUJLxw_xW2NExGD
+          # Cloudflare Turnstile site key for the public submit-event form. When the
+          # repo variable is unset the build falls back to Cloudflare's TEST key.
+          PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
 
   deploy:
     needs: build

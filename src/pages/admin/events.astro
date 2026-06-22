@@ -59,7 +59,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             Events admin portal
           </h1>
           <p class="mt-5 max-w-2xl font-body text-base leading-relaxed text-darkWalnut/75 md:text-lg">
-            Add single events or import a spreadsheet. The public events page refreshes automatically every 4 hours, so saved events should show up on the next refresh.
+            Add single events, import a spreadsheet, or review community submissions. The public events page refreshes automatically every 4 hours, so approved events should show up on the next refresh.
           </p>
         </div>
 
@@ -273,6 +273,135 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           </form>
         </div>
       </section>
+
+      <section data-submissions-section hidden class="mt-12 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+              Community inbox
+            </p>
+            <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+              Review submissions
+              <span data-submissions-count class="ml-2 align-middle font-body text-base font-bold text-darkWalnut/60"></span>
+            </h2>
+          </div>
+          <button type="button" data-refresh-submissions class={secondaryButtonClass}>Refresh</button>
+        </div>
+
+        <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+          Public requests from the submit form land here. Edit anything, set the editorial flags, then
+          Approve to publish into the live events table, or Reject to dismiss.
+        </p>
+
+        <p data-submissions-status class="mt-5 font-body text-sm font-bold text-darkWalnut/70" role="status" aria-live="polite"></p>
+
+        <div data-submissions-list class="mt-6 space-y-8"></div>
+      </section>
+
+      <template data-submission-template>
+        <article data-submission-card class="border-2 border-darkWalnut bg-seashell p-5 shadow-[3px_3px_0_#642713] md:p-6">
+          <div class="flex flex-wrap items-start justify-between gap-3 border-b-2 border-dashed border-darkWalnut/35 pb-4">
+            <div class="min-w-0">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenne">
+                From <span data-display="submitter_name"></span>
+              </p>
+              <p class="mt-1 font-body text-xs text-darkWalnut/70">
+                <span data-display="submitter_email"></span>
+                <span data-display="created_at" class="ml-2 text-darkWalnut/45"></span>
+              </p>
+            </div>
+            <div class="border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut">
+              <span data-display="location_type"></span>
+            </div>
+          </div>
+
+          <div data-raw-location class="mt-3 font-body text-xs leading-relaxed text-darkWalnut/65" hidden>
+            <span class="font-bold uppercase tracking-widest text-darkWalnut/45">Submitted location</span>
+            <span data-display="raw_location" class="ml-2"></span>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class={`${labelClass} md:col-span-2`}>
+              Title<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="title" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Event date<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="event_date" type="date" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Start time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="start_time" type="time" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Venue<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="venue" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Neighborhood<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="neighborhood" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Organizer<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="organizer" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Cost info<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="cost_info" type="text" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Event URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="event_url" type="url" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Emoji<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="emoji" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Tags<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="tags" type="text" placeholder="Latine, Workshop" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Description<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea data-field="description" rows="4" class={inputClass}></textarea>
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Author note<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea data-field="author_note" rows="2" class={inputClass}></textarea>
+            </label>
+
+            <div class="flex flex-wrap gap-3 md:col-span-2">
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input data-field="is_curated" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Conductor's pick
+              </label>
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input data-field="is_giveaway" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Giveaway
+              </label>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-wrap items-center gap-3 border-t-2 border-dashed border-darkWalnut/35 pt-4">
+            <button type="button" data-approve class={buttonClass}>Approve &amp; publish</button>
+            <button type="button" data-reject class="border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
+              Reject
+            </button>
+            <p data-card-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+          </div>
+        </article>
+      </template>
     </div>
   </section>
 </Layout>
@@ -319,11 +448,25 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     const singleEventForm = app.querySelector('[data-single-event-form]') as HTMLFormElement | null;
     const csvForm = app.querySelector('[data-csv-form]') as HTMLFormElement | null;
     const csvFileInput = app.querySelector('[data-csv-file]') as HTMLInputElement | null;
+    const submissionsSection = app.querySelector('[data-submissions-section]') as HTMLElement | null;
+    const submissionsList = app.querySelector('[data-submissions-list]') as HTMLElement | null;
+    const submissionsStatus = app.querySelector('[data-submissions-status]') as HTMLElement | null;
+    const submissionsCount = app.querySelector('[data-submissions-count]') as HTMLElement | null;
+    const refreshSubmissionsButton = app.querySelector('[data-refresh-submissions]') as HTMLButtonElement | null;
+    const submissionTemplate = app.querySelector('[data-submission-template]') as HTMLTemplateElement | null;
 
     function setUnlocked(isUnlocked: boolean) {
       if (loginPanel) loginPanel.hidden = isUnlocked;
       if (portal) portal.hidden = !isUnlocked;
       if (logoutButton) logoutButton.hidden = !isUnlocked;
+      if (submissionsSection) submissionsSection.hidden = !isUnlocked;
+      if (isUnlocked) {
+        void loadSubmissions();
+      } else if (submissionsList) {
+        submissionsList.innerHTML = '';
+        if (submissionsCount) submissionsCount.textContent = '';
+        if (submissionsStatus) submissionsStatus.textContent = '';
+      }
     }
 
     function createAdminClient(password: string) {
@@ -460,6 +603,216 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       const { error } = await adminSupabase.from('events').insert(records);
       if (error) throw new Error(error.message);
     }
+
+    /* ---------- Community submissions review ---------- */
+    type SubmissionRow = Record<string, any>;
+
+    function setSubmissionsStatus(message: string) {
+      if (submissionsStatus) submissionsStatus.textContent = message;
+    }
+
+    function updateSubmissionsCount() {
+      if (!submissionsCount || !submissionsList) return;
+      const count = submissionsList.querySelectorAll('[data-submission-card]').length;
+      submissionsCount.textContent = count > 0 ? `(${count} pending)` : '';
+    }
+
+    function cardField(card: HTMLElement, name: string) {
+      return card.querySelector(`[data-field="${name}"]`) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+    }
+
+    function cardFieldValue(card: HTMLElement, name: string) {
+      return cardField(card, name)?.value ?? '';
+    }
+
+    function cardFieldChecked(card: HTMLElement, name: string) {
+      const el = card.querySelector(`[data-field="${name}"]`) as HTMLInputElement | null;
+      return Boolean(el?.checked);
+    }
+
+    function setDisplay(card: HTMLElement, name: string, value: string) {
+      const el = card.querySelector(`[data-display="${name}"]`);
+      if (el) el.textContent = value;
+    }
+
+    function setFieldValue(card: HTMLElement, name: string, value: string) {
+      const el = cardField(card, name);
+      if (el) el.value = value;
+    }
+
+    function setFieldChecked(card: HTMLElement, name: string, checked: boolean) {
+      const el = card.querySelector(`[data-field="${name}"]`) as HTMLInputElement | null;
+      if (el) el.checked = checked;
+    }
+
+    function formatSubmittedAt(value: unknown) {
+      const raw = cleanText(value);
+      if (!raw) return '';
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) return '';
+      return `Submitted ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    function eventRecordFromCard(card: HTMLElement) {
+      return {
+        title: requiredText(cardFieldValue(card, 'title'), 'title'),
+        event_date: requiredDate(cardFieldValue(card, 'event_date')),
+        venue: requiredText(cardFieldValue(card, 'venue'), 'venue'),
+        start_time: nullableText(cardFieldValue(card, 'start_time')),
+        neighborhood: nullableText(cardFieldValue(card, 'neighborhood')),
+        organizer: nullableText(cardFieldValue(card, 'organizer')),
+        cost_info: nullableText(cardFieldValue(card, 'cost_info')),
+        event_url: normalizeUrl(cardFieldValue(card, 'event_url')),
+        description: nullableText(cardFieldValue(card, 'description')),
+        author_note: nullableText(cardFieldValue(card, 'author_note')),
+        emoji: nullableText(cardFieldValue(card, 'emoji')),
+        tags: parseTags(cardFieldValue(card, 'tags')),
+        is_curated: cardFieldChecked(card, 'is_curated'),
+        is_giveaway: cardFieldChecked(card, 'is_giveaway'),
+      };
+    }
+
+    function removeCard(card: HTMLElement) {
+      card.remove();
+      updateSubmissionsCount();
+      if (
+        submissionsList &&
+        submissionsList.querySelectorAll('[data-submission-card]').length === 0
+      ) {
+        setSubmissionsStatus('No pending submissions right now.');
+      }
+    }
+
+    async function approveSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
+      if (!adminSupabase) return;
+      try {
+        if (statusEl) statusEl.textContent = 'Publishing...';
+        const record = eventRecordFromCard(card);
+        const { data, error } = await adminSupabase
+          .from('events')
+          .insert(record)
+          .select('id')
+          .single();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Could not read the new event id.');
+
+        const { error: updateError } = await adminSupabase
+          .from('event_submissions')
+          .update({
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            approved_event_id: data.id,
+          })
+          .eq('id', id);
+
+        if (updateError) {
+          if (statusEl) {
+            statusEl.textContent =
+              'Event published, but marking the submission approved failed. Reject it manually.';
+          }
+          return;
+        }
+        removeCard(card);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not approve this submission.';
+        if (statusEl) statusEl.textContent = message;
+      }
+    }
+
+    async function rejectSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
+      if (!adminSupabase) return;
+      if (!window.confirm('Reject this submission? It will not be published.')) return;
+      try {
+        if (statusEl) statusEl.textContent = 'Rejecting...';
+        const { error } = await adminSupabase
+          .from('event_submissions')
+          .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw new Error(error.message);
+        removeCard(card);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not reject this submission.';
+        if (statusEl) statusEl.textContent = message;
+      }
+    }
+
+    function buildSubmissionCard(submission: SubmissionRow) {
+      if (!submissionTemplate) return null;
+      const fragment = submissionTemplate.content.cloneNode(true) as DocumentFragment;
+      const card = fragment.querySelector('[data-submission-card]') as HTMLElement | null;
+      if (!card) return null;
+
+      setDisplay(card, 'submitter_name', cleanText(submission.submitter_name) || 'Anonymous');
+      setDisplay(card, 'submitter_email', cleanText(submission.submitter_email) || 'No email provided');
+      setDisplay(card, 'created_at', formatSubmittedAt(submission.created_at));
+      setDisplay(card, 'location_type', cleanText(submission.location_type));
+
+      const rawParts = [submission.address, submission.chicago_neighborhood, submission.suburb]
+        .map((value) => cleanText(value))
+        .filter(Boolean);
+      const rawWrap = card.querySelector('[data-raw-location]') as HTMLElement | null;
+      if (rawWrap && rawParts.length > 0) {
+        rawWrap.hidden = false;
+        setDisplay(card, 'raw_location', rawParts.join(' · '));
+      }
+
+      setFieldValue(card, 'title', cleanText(submission.title));
+      setFieldValue(card, 'event_date', cleanText(submission.event_date));
+      setFieldValue(card, 'start_time', cleanText(submission.start_time).slice(0, 5));
+      setFieldValue(card, 'venue', cleanText(submission.venue));
+      setFieldValue(card, 'neighborhood', cleanText(submission.neighborhood));
+      setFieldValue(card, 'organizer', cleanText(submission.organizer));
+      setFieldValue(card, 'cost_info', cleanText(submission.cost_info));
+      setFieldValue(card, 'event_url', cleanText(submission.event_url));
+      setFieldValue(card, 'emoji', cleanText(submission.emoji));
+      setFieldValue(card, 'tags', Array.isArray(submission.tags) ? submission.tags.join(', ') : '');
+      setFieldValue(card, 'description', cleanText(submission.description));
+      setFieldValue(card, 'author_note', cleanText(submission.author_note));
+      setFieldChecked(card, 'is_curated', Boolean(submission.is_curated));
+      setFieldChecked(card, 'is_giveaway', Boolean(submission.is_giveaway));
+
+      const cardStatus = card.querySelector('[data-card-status]') as HTMLElement | null;
+      card.querySelector('[data-approve]')?.addEventListener('click', () => {
+        void approveSubmission(card, String(submission.id), cardStatus);
+      });
+      card.querySelector('[data-reject]')?.addEventListener('click', () => {
+        void rejectSubmission(card, String(submission.id), cardStatus);
+      });
+
+      return card;
+    }
+
+    async function loadSubmissions() {
+      if (!adminSupabase || !submissionsList) return;
+      setSubmissionsStatus('Loading submissions...');
+      submissionsList.innerHTML = '';
+      try {
+        const { data, error } = await adminSupabase
+          .from('event_submissions')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true });
+        if (error) throw new Error(error.message);
+
+        const rows = (data ?? []) as SubmissionRow[];
+        rows.forEach((submission) => {
+          const card = buildSubmissionCard(submission);
+          if (card) submissionsList.appendChild(card);
+        });
+        updateSubmissionsCount();
+        setSubmissionsStatus(rows.length === 0 ? 'No pending submissions right now.' : '');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Could not load submissions.';
+        setSubmissionsStatus(message);
+      }
+    }
+
+    refreshSubmissionsButton?.addEventListener('click', () => {
+      void loadSubmissions();
+    });
 
     passwordForm?.addEventListener('submit', (event) => {
       event.preventDefault();

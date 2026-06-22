@@ -1,0 +1,369 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+import { LOCATION_TYPES, DIASPORA_TAGS, NEIGHBORHOOD_GROUPS, SUBURBS } from '../lib/locations';
+
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+if (!supabaseUrl) {
+  throw new Error('Missing Supabase environment variables.');
+}
+const functionUrl = `${supabaseUrl}/functions/v1/submit-event`;
+// Cloudflare Turnstile site key. Defaults to Cloudflare's public TEST key (always
+// passes) so the form works before a real key is set. Provide the real key via
+// PUBLIC_TURNSTILE_SITE_KEY (and the matching secret in the edge function) for prod.
+const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+
+const inputClass =
+  'mt-2 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm';
+const labelClass = 'block font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65';
+const buttonClass =
+  'border-2 border-darkWalnut bg-cayenne px-5 py-3 font-body text-xs font-bold uppercase tracking-widest text-seashell shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0';
+const reqClass = 'ml-2 text-[9px] tracking-widest text-cayenne';
+const optClass = 'ml-2 text-[9px] tracking-widest text-darkWalnut/45';
+
+const pageDescription =
+  'Submit a Chicago arts, culture, or community event for The Brown Line to review and feature.';
+---
+
+<Layout title="Submit an event | The Brown Line" description={pageDescription}>
+  <section class="px-6 py-16 md:py-24">
+    <div class="mx-auto max-w-3xl">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
+        Flag a stop
+      </p>
+      <h1 class="font-heading text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl leading-[1.02] text-balance">
+        Submit an <em class="not-italic text-cayenne">event</em>.
+      </h1>
+      <p class="mt-6 font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed max-w-2xl">
+        Know a Chicago event that centers Global South diaspora communities? Send it our way. Every
+        submission is reviewed by a human before it ever shows up on the board, so share what you
+        know and we will take it from there.
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-3xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  <section class="px-6 py-12 md:py-16">
+    <div
+      data-submit-app
+      data-function-url={functionUrl}
+      class="mx-auto max-w-3xl border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-8"
+    >
+      <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+        Event request
+      </p>
+      <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+        Tell us about the stop
+      </h2>
+      <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+        Fields marked Required keep the form moving. Everything else is optional, so leave it blank
+        if you are not sure.
+      </p>
+
+      <form data-submit-form class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2" novalidate>
+        <label class={labelClass} for="submitter-name">
+          Your name<span class={reqClass}>Required</span>
+          <input id="submitter-name" name="submitter_name" type="text" autocomplete="name" class={inputClass} required />
+        </label>
+
+        <label class={labelClass} for="submitter-email">
+          Your email<span class={optClass}>Optional</span>
+          <input id="submitter-email" name="submitter_email" type="email" autocomplete="email" placeholder="So we can follow up" class={inputClass} />
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`} for="event-title">
+          Event title<span class={reqClass}>Required</span>
+          <input id="event-title" name="title" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass} for="event-date">
+          Event date<span class={reqClass}>Required</span>
+          <input id="event-date" name="event_date" type="date" class={inputClass} required />
+        </label>
+
+        <label class={labelClass} for="event-time">
+          Event time<span class={optClass}>Optional</span>
+          <input id="event-time" name="event_time" type="time" class={inputClass} />
+        </label>
+
+        <label class={labelClass} for="event-venue">
+          Venue name<span class={reqClass}>Required</span>
+          <input id="event-venue" name="venue" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass} for="event-address">
+          Address<span class={optClass}>Optional</span>
+          <input id="event-address" name="address" type="text" placeholder="Street address" class={inputClass} />
+        </label>
+
+        <label class={labelClass} for="event-tag">
+          Community tag<span class={reqClass}>Required</span>
+          <select id="event-tag" name="diaspora_tag" class={inputClass} required>
+            <option value="" selected disabled>Choose one</option>
+            {DIASPORA_TAGS.map((tag) => (
+              <option value={tag.value}>{tag.label}</option>
+            ))}
+          </select>
+        </label>
+
+        <label class={labelClass} for="location-type">
+          Location type<span class={reqClass}>Required</span>
+          <select id="location-type" name="location_type" data-location-type class={inputClass} required>
+            <option value="" selected disabled>Choose one</option>
+            {LOCATION_TYPES.map((type) => (
+              <option value={type}>{type}</option>
+            ))}
+          </select>
+        </label>
+
+        <label class={labelClass} for="chicago-neighborhood" data-when-location="Chicago" hidden>
+          Chicago neighborhood<span class={reqClass}>Required</span>
+          <select id="chicago-neighborhood" name="chicago_neighborhood" class={inputClass} disabled>
+            <option value="" selected disabled>Choose a community area</option>
+            {NEIGHBORHOOD_GROUPS.map((group) => (
+              <optgroup label={group.side}>
+                {group.names.map((name) => (
+                  <option value={name}>{name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+
+        <div class="md:col-span-2" data-when-location="Suburb" hidden>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class={labelClass} for="suburb">
+              Suburb<span class={reqClass}>Required</span>
+              <select id="suburb" name="suburb" data-suburb-select class={inputClass} disabled>
+                <option value="" selected disabled>Choose a suburb</option>
+                {SUBURBS.map((suburb) => (
+                  <option value={suburb}>{suburb}</option>
+                ))}
+              </select>
+            </label>
+
+            <label class={labelClass} for="suburb-other" data-suburb-other hidden>
+              Which suburb?<span class={reqClass}>Required</span>
+              <input id="suburb-other" name="suburb_other" type="text" placeholder="Type the suburb" class={inputClass} disabled />
+            </label>
+          </div>
+        </div>
+
+        <label class={labelClass} for="event-organizer">
+          Organizer<span class={optClass}>Optional</span>
+          <input id="event-organizer" name="organizer" type="text" placeholder="Host or group" class={inputClass} />
+        </label>
+
+        <label class={labelClass} for="event-cost">
+          Cost<span class={optClass}>Optional</span>
+          <input id="event-cost" name="cost" type="text" placeholder="Free, $10, sliding scale" class={inputClass} />
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`} for="event-url">
+          Event URL / RSVP link<span class={optClass}>Optional</span>
+          <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`} for="event-description">
+          Event description<span class={reqClass}>Required</span>
+          <textarea id="event-description" name="description" rows="5" class={inputClass} required></textarea>
+        </label>
+
+        {/* Honeypot: hidden from people, tempting to bots. Leave it empty. */}
+        <div class="submit-honeypot" aria-hidden="true">
+          <label>
+            Company
+            <input name="company" type="text" tabindex="-1" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="md:col-span-2">
+          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light"></div>
+        </div>
+
+        <div class="md:col-span-2 flex flex-wrap items-center gap-4">
+          <button type="submit" data-submit-button class={buttonClass}>Submit for review</button>
+          <p data-form-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+
+      <div data-submit-success hidden class="mt-2 border-2 border-darkWalnut bg-seashell p-6 shadow-retro md:p-8">
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          On the platform
+        </p>
+        <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+          Thanks, it is in the queue.
+        </h2>
+        <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+          A human reviews every submission before it goes live, so it will not appear on the events
+          board right away. We appreciate you helping map the city.
+        </p>
+        <button type="button" data-submit-another class={`${buttonClass} mt-6`}>Submit another</button>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script is:inline async defer src="https://challenges.cloudflare.com/turnstile/api.js"></script>
+
+<style>
+  [data-submit-app] [hidden] {
+    display: none !important;
+  }
+  .submit-honeypot {
+    position: absolute;
+    left: -5000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+</style>
+
+<script>
+  const app = document.querySelector('[data-submit-app]') as HTMLElement | null;
+
+  if (app) {
+    const functionUrl = app.dataset.functionUrl ?? '';
+    const form = app.querySelector('[data-submit-form]') as HTMLFormElement | null;
+    const statusEl = app.querySelector('[data-form-status]') as HTMLElement | null;
+    const submitButton = app.querySelector('[data-submit-button]') as HTMLButtonElement | null;
+    const successPanel = app.querySelector('[data-submit-success]') as HTMLElement | null;
+    const submitAnother = app.querySelector('[data-submit-another]') as HTMLButtonElement | null;
+    const locationSelect = app.querySelector('[data-location-type]') as HTMLSelectElement | null;
+    const suburbSelect = app.querySelector('[data-suburb-select]') as HTMLSelectElement | null;
+    const suburbOtherField = app.querySelector('[data-suburb-other]') as HTMLElement | null;
+
+    const conditionalFields = Array.from(
+      app.querySelectorAll('[data-when-location]')
+    ) as HTMLElement[];
+
+    function fieldControl(field: HTMLElement) {
+      return field.querySelector('select, input') as HTMLInputElement | HTMLSelectElement | null;
+    }
+
+    function setStatus(message: string, isError: boolean) {
+      if (!statusEl) return;
+      statusEl.textContent = message;
+      statusEl.classList.toggle('text-cayenne', isError);
+      statusEl.classList.toggle('text-darkWalnut', !isError);
+    }
+
+    function syncSuburbOther() {
+      if (!suburbSelect || !suburbOtherField) return;
+      const showOther = !suburbSelect.disabled && suburbSelect.value === 'Other';
+      suburbOtherField.hidden = !showOther;
+      const otherInput = fieldControl(suburbOtherField);
+      if (otherInput) {
+        otherInput.disabled = !showOther;
+        otherInput.required = showOther;
+        if (!showOther) otherInput.value = '';
+      }
+    }
+
+    function syncConditionalFields() {
+      const selected = locationSelect?.value ?? '';
+      conditionalFields.forEach((field) => {
+        const show = field.dataset.whenLocation === selected;
+        field.hidden = !show;
+        const control = fieldControl(field);
+        if (control) {
+          control.disabled = !show;
+          // Both conditional location fields are required when visible.
+          control.required = show;
+          if (!show && 'value' in control) control.value = '';
+        }
+      });
+      syncSuburbOther();
+    }
+
+    locationSelect?.addEventListener('change', syncConditionalFields);
+    suburbSelect?.addEventListener('change', syncSuburbOther);
+
+    function getTurnstileToken() {
+      const input = form?.querySelector(
+        '[name="cf-turnstile-response"]'
+      ) as HTMLInputElement | null;
+      return input?.value ?? '';
+    }
+
+    form?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
+
+      const token = getTurnstileToken();
+      if (!token) {
+        setStatus('Please complete the captcha below.', true);
+        return;
+      }
+
+      const data = new FormData(form);
+      const suburbValue =
+        suburbSelect && !suburbSelect.disabled && suburbSelect.value === 'Other'
+          ? String(data.get('suburb_other') ?? '')
+          : String(data.get('suburb') ?? '');
+
+      const payload = {
+        token,
+        company: String(data.get('company') ?? ''),
+        submitter_name: String(data.get('submitter_name') ?? ''),
+        submitter_email: String(data.get('submitter_email') ?? ''),
+        title: String(data.get('title') ?? ''),
+        event_date: String(data.get('event_date') ?? ''),
+        event_time: String(data.get('event_time') ?? ''),
+        venue: String(data.get('venue') ?? ''),
+        address: String(data.get('address') ?? ''),
+        organizer: String(data.get('organizer') ?? ''),
+        diaspora_tag: String(data.get('diaspora_tag') ?? ''),
+        location_type: String(data.get('location_type') ?? ''),
+        chicago_neighborhood: String(data.get('chicago_neighborhood') ?? ''),
+        suburb: suburbValue,
+        cost: String(data.get('cost') ?? ''),
+        event_url: String(data.get('event_url') ?? ''),
+        description: String(data.get('description') ?? ''),
+      };
+
+      void (async () => {
+        if (submitButton) submitButton.disabled = true;
+        setStatus('Sending your submission...', false);
+
+        try {
+          const res = await fetch(functionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const result = await res.json().catch(() => ({}));
+
+          if (!res.ok || !result.ok) {
+            throw new Error(result.error || 'Something went wrong. Please try again.');
+          }
+
+          form.reset();
+          syncConditionalFields();
+          (window as any).turnstile?.reset();
+          setStatus('', false);
+          form.hidden = true;
+          if (successPanel) successPanel.hidden = false;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Something went wrong.';
+          setStatus(message, true);
+          (window as any).turnstile?.reset();
+        } finally {
+          if (submitButton) submitButton.disabled = false;
+        }
+      })();
+    });
+
+    submitAnother?.addEventListener('click', () => {
+      if (successPanel) successPanel.hidden = true;
+      if (form) form.hidden = false;
+      syncConditionalFields();
+      form?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+
+    syncConditionalFields();
+  }
+</script>

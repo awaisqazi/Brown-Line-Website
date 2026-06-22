@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
 import { formatStopDate } from '../lib/dates';
 
+const base = import.meta.env.BASE_URL;
+
 const { data, error } = await supabase
   .from('events')
   .select('*')
@@ -114,9 +116,18 @@ function getEventSearchText(event: TransitEvent) {
             Chicago events, mapped like a <em class="not-italic text-cayenne">CTA ride</em>.
           </h1>
         </div>
-        <p class="font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed max-w-xl">
-          Curated community stops, fundraisers, workshops, comedy nights, and neighborhood gatherings pulled from Supabase every time the site rebuilds.
-        </p>
+        <div class="max-w-xl">
+          <p class="font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed">
+            Curated community stops, fundraisers, workshops, comedy nights, and neighborhood gatherings pulled from Supabase every time the site rebuilds.
+          </p>
+          <a
+            href={`${base}submit-event`}
+            class="mt-6 inline-flex items-center gap-2 border-2 border-darkWalnut bg-amber px-4 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Submit an event
+            <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
       </div>
     </div>
   </section>
