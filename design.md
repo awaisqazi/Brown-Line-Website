@@ -22,16 +22,16 @@ Tailwind token names (camelCase, from `tailwind.config.mjs`): `seashell`, `darkW
 
 ## 3. Typography
 
-Montserrat is the brand typeface for everything readable — body, UI, and all headings. JT Modernism (the retro display face) is reserved **exclusively for the brand logo wordmark** ("the Brown Line"). It is never used for headings, body, numerals, or any other text, because it reads poorly at a glance. The rule moving forward: **if it isn't the logo, it's Montserrat.**
+Montserrat is the brand typeface for everything readable: body, UI, and all headings. JT Modernism (the retro display face) is reserved **exclusively for the brand logo wordmark** ("the Brown Line"). It is never used for headings, body, numerals, or any other text, because it reads poorly at a glance. The rule moving forward: **if it isn't the logo, it's Montserrat.**
 
-### Logo wordmark (JT Modernism) — the only use of the display face
+### Logo wordmark (JT Modernism): the only use of the display face
 Web: the `font-wordmark` Tailwind family (`'JT Modernism', Georgia, serif`), defined in `global.css` via `@font-face`. App: `Font.Brand.wordmark(_:)`.
 
 Use **only** for the "the Brown Line" logo lockups:
 - The nav and footer wordmark on the website.
 - The home-feed masthead in the app.
 
-Do **not** use `font-wordmark` for page headings, section titles, display numerals, eyebrows, or the `@thebrownline` handle — those are all Montserrat. If you reach for the display face anywhere but the logo, stop and use `font-heading`.
+Do **not** use `font-wordmark` for page headings, section titles, display numerals, eyebrows, or the `@thebrownline` handle; those are all Montserrat. If you reach for the display face anywhere but the logo, stop and use `font-heading`.
 
 ### Headings (Montserrat ExtraBold)
 Tailwind family: `font-heading` (resolves to Montserrat). The `.font-heading` utility carries `font-weight: 800` so display type has weight without an explicit weight class.
@@ -41,7 +41,7 @@ Use for:
 - Large section H2s (`text-4xl` and above).
 - Large display numerals (e.g. the values strip `01 / 02 / 03`).
 - Hero eyebrows and accent moments where a short line of display type sets the tone.
-- The `@thebrownline` handle on `/links` (`font-heading`, `text-3xl md:text-5xl`) — a page header sized to fit a `max-w-md` mobile column.
+- The `@thebrownline` handle on `/links` (`font-heading`, `text-3xl md:text-5xl`): a page header sized to fit a `max-w-md` mobile column.
 
 Styling: Dark Walnut color, used large, unapologetic, tightly tracked.
 
@@ -201,8 +201,8 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 - **Founder portrait:** `public/images/ghazala.jpeg`. Used on the About page and as that page's Open Graph share image.
 - **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
-  - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold,ExtraBold}.ttf` — the brand typeface for body **and** headings.
-  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf` — display face used **only** for the logo wordmark (`font-wordmark`); see § 3.
+  - `public/fonts/Montserrat - Body/Montserrat-{Regular,SemiBold,Bold,ExtraBold}.ttf`: the brand typeface for body **and** headings.
+  - `public/fonts/JT Modernism - Header/JtModernism-{Regular,Bold,Black}.ttf`: display face used **only** for the logo wordmark (`font-wordmark`); see § 3.
   - Loaded via `@font-face` in `src/styles/global.css` with URL-encoded paths (`%20` for the spaces in the folder names).
 
 ## 9. Component & Page Inventory
@@ -249,7 +249,7 @@ Recipes for building new pages. Match the template that matches the intent.
 Founder portrait, bio, affiliations strip, values strip (numbered with `font-heading` numerals), repeat of `<SubscribeForm />`.
 
 ### Standards (`/standards`)
-Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy keeps em dashes per the founder's voice; this is an existing, documented exception to § 7's no-em-dash rule.
+Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy follows the same no-em-dash rule as the rest of the site (§ 7); the earlier founder-voice exception was removed on 2026-06-21.
 
 ### Links (`/links`)
 Mobile-first Link-in-Bio destination served at IG / TikTok in-app browsers, designed to read just as intentionally on desktop. Uses `<Layout minimal>` so no `Nav`, `Footer`, `TrainSplash`, or top divider renders. Container: `max-w-md md:max-w-lg mx-auto min-h-[calc(100vh-6px)] px-6 md:px-10 pt-8 md:pt-16 pb-12 md:pb-16 flex flex-col`. Structure top to bottom:

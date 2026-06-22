@@ -18,7 +18,7 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
   which handles email capture and subscription natively.
 -->
 <div class:list={['subscribe-wrapper w-full max-w-xl', className]}>
-  <!-- Beehiiv embed form — the V3 loader injects an iframe here -->
+  <!-- Beehiiv embed form; the V3 loader injects an iframe here -->
   <div id="beehiiv-form-container" class="beehiiv-embed-wrapper">
     <script
       async
@@ -50,7 +50,7 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
      * left-shifts the field on the page. Constrain the embed to that width
      * so the centered iframe hugs the form and the field stays centered.
      */
-    max-width: 27.5rem;  /* 440px — matches the Beehiiv form's natural width */
+    max-width: 27.5rem;  /* 440px, matches the Beehiiv form's natural width */
     margin: 0 auto;
   }
 

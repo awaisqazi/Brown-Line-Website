@@ -28,7 +28,7 @@ const screenReaderText = items
 // Scroll at a constant pace (pixels per second) rather than a fixed loop
 // duration. With a fixed duration, a wider track (longer event title) has to
 // cover more distance in the same time, so it scrolls faster. Pinning the
-// speed keeps the pace identical no matter how long the current copy is — the
+// speed keeps the pace identical no matter how long the current copy is. The
 // loop simply takes proportionally longer when there's more text to show.
 const DEFAULT_PIXELS_PER_SECOND = 90;
 const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_PER_SECOND);

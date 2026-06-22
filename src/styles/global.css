@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---------- JT Modernism (brand logo wordmark ONLY — `font-wordmark`).
+/* ---------- JT Modernism (brand logo wordmark ONLY, via `font-wordmark`).
    Not used for headings or body; see design.md § 3. ---------- */
 @font-face {
   font-family: 'JT Modernism';
