@@ -34,11 +34,16 @@ Use **only** for the "the Brown Line" logo lockups:
 Do **not** use `font-wordmark` for page headings, section titles, display numerals, eyebrows, or the `@thebrownline` handle; those are all Montserrat. If you reach for the display face anywhere but the logo, stop and use `font-heading`.
 
 ### Headings (Montserrat ExtraBold)
-Tailwind family: `font-heading` (resolves to Montserrat). The `.font-heading` utility carries `font-weight: 800` so display type has weight without an explicit weight class.
+Tailwind family: `font-heading` (resolves to Montserrat). The `.font-heading` rule carries `font-weight: 800` and lives in `@layer base` (`global.css`), so it provides a heavy default **but** Tailwind weight utilities (`font-semibold`, `font-extrabold`) reliably override it. (Before it was unlayered, which beat the utility classes and flattened every heading to 800.)
 
-Use for:
+**Weight contrast (the hierarchy rule).** Keep the eye able to rank importance:
+- Heavy (800, the `font-heading` default): hero H1s and the closing brand statement.
+- Semibold (`font-heading font-semibold`, ~600): section heads ("Upcoming Stops", "Recent dispatches", events day headings) and event-card titles.
+- Section heads sit at ~40px desktop (`md:text-[2.5rem]`), not hero scale; card titles at ~26-28px (`text-2xl md:text-[1.75rem]`).
+
+Use `font-heading` for:
 - H1s on every page.
-- Large section H2s (`text-4xl` and above).
+- Large section H2s (with `font-semibold` for section-head scale).
 - Large display numerals (e.g. the values strip `01 / 02 / 03`).
 - Hero eyebrows and accent moments where a short line of display type sets the tone.
 - The `@thebrownline` handle on `/links` (`font-heading`, `text-3xl md:text-5xl`): a page header sized to fit a `max-w-md` mobile column.
@@ -101,7 +106,7 @@ Interaction details:
 - Under `prefers-reduced-motion`, the ticker starts paused and leaves the controls visible.
 - The same ticker items render near the top of the site chrome and above the footer. Minimal pages skip ticker data entirely.
 
-Content source: `Layout.astro` calls `getTickerItems()` from `src/lib/ticker.ts`. The ticker combines the latest Beehiiv issue from `src/lib/issues.ts` with Supabase events in the next 7 days.
+Content source: `Layout.astro` calls `getTickerItems()` from `src/lib/ticker.ts`. The ticker combines the latest Beehiiv issue from `src/lib/issues.ts` with a curated set of up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title) drawn from the next 21 days, so it no longer dumps the full multi-week list.
 
 ### Paper-Grain Noise Overlay (`Layout.astro`)
 A single fixed div with an inline SVG noise texture (`feTurbulence` `baseFrequency=0.85`, `numOctaves=3`, `stitchTiles=stitch`) at `opacity: 0.04` with `mix-blend-mode: multiply`. `pointer-events-none`, `aria-hidden="true"`, `z-[999]` so it never blocks clicks and applies texture site-wide (including over the splash and mobile drawer). The result reads as recycled newsprint, not visual noise.
@@ -118,24 +123,28 @@ The Link-in-Bio page reuses the Mobile Drawer Route Map pattern as its primary a
 ### Events Route Board (`/events`)
 The public events page is a static Supabase-powered route board. It should feel like a transit guide, not a generic card directory.
 - Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl`, plus an Amber "Submit an event" button linking to `/submit-event`.
-- Main controls: bordered Seashell panel with result count, a search box, a single-date calendar, a themed Category dropdown, a Neighborhood dropdown (rendered only when some events have neighborhoods), and Reset. The older line-type radios, "Has link" toggle, and start/end date selects were removed in favor of this simpler bar.
-- Event groups: events are grouped by `event_date` and the day heading is derived from it via `formatStopDate` (`src/lib/dates.ts`, e.g. "Sun. Jun 28"), so a single day is always one segment. Each date block is a "Platform" with a vertical Dark Walnut route line and colored stop dots.
+- Main controls: bordered Seashell panel with result count, a row of quick-filter chips, a search box, a single-date calendar, a themed Category dropdown, a Neighborhood dropdown, and Reset. The older line-type radios, "Has link" toggle, and start/end date selects were removed in favor of this simpler bar.
+- **Quick-filter chips:** `This week` (default), `This weekend`, `All upcoming` (mutually exclusive date windows), plus a `Free` toggle (matches `cost_info` containing "free"). `This week` = today through +6 days; `This weekend` = the upcoming Sat/Sun; `All upcoming` = today onward, unbounded. A search query widens the window to all upcoming (search is global). Chips appear in both the main panel and the floating panel and stay synced.
+- **Recurring/multi-day collapse:** identical events (same `title` + `venue`) are collapsed into one card with a date-range label, so a 25-day camp shows once. The card is placed on its first still-relevant date, and filtering uses each card's `[start, end]` range overlapping the active window (so an ongoing series surfaces even if it began before today).
+- Event groups: collapsed events are grouped by their representative date and the day heading is derived via `formatStopDate` (`src/lib/dates.ts`, e.g. "Sun. Jun 28"). The "Platform" eyebrow renders once (above the first day group only). Day headings are `font-semibold` at ~40px (section-head scale, not hero scale).
 - Stop colors rotate Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
-- The board shows events from today's America/Chicago date onward by default; past days render dimmed/grayscale. Picking a date in the calendar is a jump: it scrolls to that day and keeps the surrounding events visible rather than filtering to a single day (a past pick lowers the floor so those events become reachable). Days with events are marked with a dot in the calendar; today is ringed.
+- The board shows events from today's America/Chicago date onward by default; past days render dimmed/grayscale. Picking a date in the calendar is a jump: it switches to `All upcoming`, scrolls to that day, and keeps surrounding events visible (a past pick lowers the floor so those events become reachable). Days with events are marked with a dot in the calendar; today is ringed.
+- **One filter block per breakpoint:** the inline "Route controls" serve desktop; the floating "Line signal" panel is hidden at `lg+` (`min-width: 1024px`) so the two never appear at once.
+- **Neighborhood data:** the `neighborhood` column is backfilled from the trailing `, Neighborhood` segment of each venue (see § 11), so the Neighborhood filter is populated.
 - The Category dropdown is themed on desktop (a custom listbox built in the page script) and falls back to the native OS `<select>` on mobile; both drive the same hidden native select.
 - The no-results state is a bordered Seashell panel reading "Try a different route."
 
 ### Homepage Upcoming Stops (`index.astro`)
-The homepage includes an `Upcoming Stops` section between the hero divider and Recent Rides. It adapts the events route-map language into a compact Transit Route Timeline:
-- The homepage queries Supabase `public.events` at build time for the next three rows where `event_date` is on or after the current America/Chicago date. No local placeholder events are rendered.
-- A local `Marquee` sits directly above the timeline and reads `NEXT STOP: [first event] -- DOORS OPEN ON THE RIGHT`. It passes `visualRepeat={4}` so the short inside-train LED line visibly repeats and scrolls on wide viewports (it uses the default constant scroll speed).
+The homepage includes an `Upcoming Stops` section between the credibility strip and the two-sided Browse/Submit band. It adapts the events route-map language into a compact Transit Route Timeline:
+- The homepage queries Supabase `public.events` at build time for the next three upcoming rows, **ordered Conductor's Picks first** (then soonest date), so the section leads with a strong example rather than the bare next chronological event. No local placeholder events are rendered.
+- A local `Marquee` sits directly above the timeline and leads with the next Conductor's Pick: `NEXT STOP: [pick] · DOORS OPEN ON THE RIGHT` (a `·` separator, not the old `--`). It passes `visualRepeat={4}` so the short inside-train LED line visibly repeats and scrolls on wide viewports (default constant scroll speed).
 - The section-specific marquee wrapper overrides `Marquee.astro` to an accessible inside-train LED style: Dark Walnut background, Amber body text, Seashell label text, monospace type, and tighter tracking than the global ticker.
-- Header copy uses plain sans-serif utility styling (`font-sans tracking-tight font-extrabold`) instead of JT Modernism.
+- The "Upcoming Stops" heading is `font-heading font-semibold` at section-head scale (~40px, `md:text-[2.5rem]`), per the weight-contrast rule in § 3.
 - The timeline track is a thick vertical `bg-[#62361B]` line, matching CTA Brown. It sits close to the left edge on mobile and gains more left padding at `md+`.
 - Each stop marker is a white circular node with a thick `border-[#62361B]`, centered over the track.
-- Event content is rendered by the shared `EventCard.astro` component, with a small monospace date label above each card.
+- Event content is rendered by the shared `EventCard.astro` component, with a small monospace date label above each card. The terminus link reads "See every stop on the line" (one line, no subtext).
 - If Supabase returns zero upcoming events, the section shows a "Route status" empty state instead of dummy content.
-- A `TransitDivider` closes the section before Recent Rides.
+- A `TransitDivider` closes the section.
 
 ### Floating Event Controls (`/events`)
 When the main route controls scroll out of view, a compact fixed filter panel appears near the bottom edge.
@@ -147,13 +156,13 @@ When the main route controls scroll out of view, a compact fixed filter panel ap
 - Includes a hide button that slides the panel aside and leaves an Amber restore tab on the edge.
 - Uses `inert` and `aria-hidden` while invisible so keyboard focus does not land in offscreen controls.
 
-### Event Card Variants (`EventCard.astro`)
-`EventCard` chooses its visual treatment from the Supabase flags:
-- Giveaway: ticket-stub card, dashed 3px border, Amber badge, optional "Conductor's Pick" badge, dashed giveaway rules section, and side punch-outs via pseudo-elements.
-- Curated: large bordered feature card with Cayenne "Conductor's Pick" badge, optional Celadon cost chip, optional author note with Maya Blue rule.
-- Regular: compact transfer row with dashed bottom border, small metadata, and dashed tag chips.
-- All variants surface `neighborhood` in the metadata row when it is set, and a confirmed `start_time` renders as a 12-hour label.
-- If `event_url` is a valid `http` or `https` URL, the root becomes an external `<a>` with `target="_blank"` and `rel="noopener noreferrer"`. Invalid or missing URLs render as `<article>`.
+### Event Card (`EventCard.astro`)
+Every event uses **one** bordered card template (the former "Conductor's Pick" feature card), so the board reads as finished and consistent. There is no longer a separate bare/transfer-row treatment.
+- Standard card: `#FDFBF7` fill, 3px Dark Walnut border, hover lift + hard shadow. Tag row holds (in order) an optional Cayenne `★ Conductor's Pick` badge (driven by `is_curated`, now a badge, not a separate card), the Celadon community tag(s), and an Amber price/status chip (`cost_info` when present). Title is `font-heading font-semibold` at ~26-28px. Then one venue line, an optional mono date-range/time line, the description blurb, an optional Maya Blue author-note pull-quote, and a footer with the organizer plus the `Details / RSVP ↗` link and a `Share` button.
+- Giveaway: keeps the dashed ticket-stub treatment with side punch-outs, the same tag row, meta, and action footer.
+- **Venue once:** when an event has a `neighborhood`, the trailing `, Neighborhood` segment is stripped from the displayed venue and shown as `Venue · Neighborhood`. The organizer is hidden when it equals the venue (fixes the "prints the venue twice" bug).
+- **No whole-card link.** The card is always an `<article>`; `event_url` drives the `Details / RSVP ↗` link in the footer instead of wrapping the whole card (so the `Share` button is valid). `Share` uses the Web Share API, falling back to copy-to-clipboard. One delegated listener handles every card (`window.__brownLineShareWired` guard).
+- Optional `recurrenceLabel` prop renders a mono date-range line (e.g. `Jun 22 – Jul 24`) for collapsed multi-day/recurring events. The en dash here is a true date range, which the no-em-dash rule (§7) permits.
 
 ### Events Admin Portal (`/admin/events`)
 The admin portal is intentionally utilitarian but still brand-native.
@@ -201,6 +210,10 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 
 - **Primary logo (color, transparent BG):** `public/logos/logo.png`. Used in the nav, as the browser favicon, and as the source for the homepage Open Graph share image. Mobile launcher icons in `public/app-icons/` are generated from this logo with a Seashell background and safe padding for iOS and Android home-screen crops.
 - **Logo variants:** Numbered `public/logos/1.png` through `public/logos/11.png` are designer-supplied variations. `4.png` is the circular avatar variant used on the Link-in-Bio page. `5.png` is the dark-background inverse, useful if the footer ever needs a logo on Dark Walnut.
+- **Partner logos (homepage credibility strip):** transparent PNGs in `public/logos/`, shown in bordered `#FDFBF7` tiles (height-normalized to ~32px, `object-contain`):
+  - **Supported by:** `medill.png` (Northwestern Medill), `projectc.png` (Project C), `neighbor.png` (Meet Your Neighbor).
+  - **Featured in:** `creader.png` (Chicago Reader).
+  - Use these exact four only. Do not add other orgs or imply partnership beyond these (per the master doc). Alt text is just the org name. The list is data-driven in `index.astro` (`supportedBy` / `featuredIn` arrays) with per-logo width/height to avoid layout shift.
 - **Founder portrait:** `public/images/ghazala.jpeg`. Used on the About page and as that page's Open Graph share image.
 - **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
@@ -211,30 +224,32 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 ## 9. Component & Page Inventory
 
 Components live in `src/components/`:
-- `Nav.astro`: header with logo and five primary links. Desktop = horizontal route-map nav. Mobile = hamburger that opens the sliding route-map drawer (see § 5). Sticky on mobile, static on desktop.
+- `Nav.astro`: header with logo, five route links (Events, Submit, Archive, About, Standards), and two distinct buttons (Support outline, Subscribe filled) via `.nav-cta`. Desktop = horizontal route-map nav + buttons. Mobile = hamburger that opens the sliding route-map drawer with the same buttons (see § 5). Sticky on mobile, static on desktop. (World Cup nav link intentionally omitted until `/events/world-cup` exists, to avoid a dead link.)
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
 - `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, constant pixels-per-second scroll, and dynamic data from `src/lib/ticker.ts`.
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts optional `caption` and `class` props.
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
-- `EventCard.astro`: Supabase event renderer with giveaway, curated, and regular variants.
+- `EventCard.astro`: Supabase event renderer. One unified bordered card for all events (Conductor's Pick is a badge, not a separate layout) plus a dashed giveaway ticket-stub. Venue-once, organizer dedupe, `Details / RSVP` link + `Share` button, optional `recurrenceLabel` for collapsed series.
 - `EventDatePicker.astro`: brand-styled single-date calendar used by the events filter. Renders as a popover by default (main controls) or open-in-place with the `inline` prop (floating panel); the events page script drives both instances.
 - `EventSelect.astro`: themed filter dropdown. Renders a native `<select>` on mobile and a custom listbox on desktop (`md+`), both backed by the same hidden native select. Used for the Category and Neighborhood filters. Props: `field`, `label`, `placeholder`, `options`, `inline`.
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
 - `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy, including `/events` as `EVENTS`). The audio toggle uses base-aware `/audio/` asset URLs and a 7s sequence watchdog at both the audio-engine and splash-overlay levels so stalled media events cannot strand visitors on the splash.
 
 Pages live in `src/pages/`:
-- `index.astro`: hero, Supabase-powered Transit Route Timeline-style Upcoming Stops section, RSS-powered recent rides grid, about teaser.
-- `about.astro`: founder portrait and bio, affiliations, outlet description, values strip, subscribe CTA.
-- `events.astro`: Supabase-powered public events route board with static build data and client-side filtering by search, a single-date calendar (jump), Category (diaspora tag), and Neighborhood.
+- `index.astro`: hero, credibility strip, Supabase-powered Upcoming Stops (leads with a Conductor's Pick), two-sided Browse/Submit band, optional Testimonials section (renders only when real quotes exist), RSS-powered recent dispatches grid, Support band, closing brand statement.
+- `about.astro`: project-first (what we're building) then the founder section (portrait, bio, affiliations), values strip, business-model pull-quote kept lower, subscribe + support CTA.
+- `events.astro`: Supabase-powered public events route board with static build data and client-side filtering by quick-filter chips (This week / This weekend / All upcoming / Free), search, a single-date calendar (jump), Category (diaspora tag), and Neighborhood. Recurring/multi-day events are collapsed into one card with a date range.
+- `support.astro`: reader-support page. Three one-time "Give once" tiers ($20/$50/$100) wired to Stripe payment links, plus a "Ride monthly" section (free Street Level → Subscribe, and a $9/mo card). See `PRIVATE_README.md` for the confirmed Stripe link mapping.
+- `privacy.astro`: plain-language privacy page (newsletter, submissions, analytics, payments). Fixes the former dead `#privacy` footer anchor.
 - `submit-event.astro`: public "submit an event" request form. Conditional location fields (Chicago neighborhood / suburb), Cloudflare Turnstile captcha, and a honeypot. Posts to the `submit-event` edge function, which queues the request in `public.event_submissions` for review.
 - `admin/events.astro`: internal events admin portal for single-event inserts, CSV imports, and a review queue for public submissions (edit, approve into `public.events`, or reject). Minimal, noindexed, and protected by Supabase RLS.
-- `standards.astro`: editorial Standards & Ethics page. Linked from the footer.
+- `standards.astro`: editorial Standards & Ethics page. Linked from the footer. Event Submissions section links `/submit-event` (email as fallback).
 - `links.astro`: Link-in-Bio destination optimized for IG / TikTok in-app browser traffic. Uses `<Layout minimal>` so no site chrome (no Nav, Footer, top TransitDivider, or splash) renders. The noise overlay and ::selection still apply.
 
 Library modules live in `src/lib/`:
 - `issues.ts`: fetches and parses Beehiiv RSS, formats dates, alternates issue card accents, and falls back to a static issue list.
 - `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface (which includes `neighborhood` and `start_time`; the free-text `display_date` column was removed).
-- `ticker.ts`: composes ticker items from the latest issue and the next 7 days of Supabase events; derives its date labels from `event_date` via `dates.ts`.
+- `ticker.ts`: composes ticker items from the latest issue plus up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title so a recurring series shows once) drawn from the next 21 days; derives its date labels from `event_date` via `dates.ts`.
 - `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped.
 - `locations.ts`: dropdown data for the submit form (the diaspora `DIASPORA_TAGS`, the four `LOCATION_TYPES`, the 77 Chicago `NEIGHBORHOOD_GROUPS` by side, and `SUBURBS`).
 
@@ -245,16 +260,20 @@ The `Layout` component accepts optional `minimal?: boolean` (default `false`) an
 Recipes for building new pages. Match the template that matches the intent.
 
 ### Home (`/`)
-1. Eyebrow (Cayenne, uppercase, tracked-out).
-2. `font-heading` H1 (Montserrat ExtraBold) with one `<em class="not-italic text-cayenne">` accent phrase.
-3. Lead paragraph (Montserrat, `text-darkWalnut/75`, `max-w-2xl`).
-4. `<SubscribeForm />`.
-5. `<TransitDivider />` constrained to `max-w-5xl`.
-6. Recent rides grid: `grid-cols-1 md:grid-cols-2`, top row featured (full width).
-7. About teaser section with `border-2 border-darkWalnut` CTA button using the retro hover.
+Current top-to-bottom structure:
+1. Hero: Cayenne uppercase eyebrow, `font-heading` H1 (heavy) with one `<em class="not-italic text-cayenne">` accent, centered `<SubscribeForm />`, and a scroll cue.
+2. Credibility strip: "Supported by" partner-logo tiles + a "Featured in" tile (see § 8 Brand Assets). Real orgs only.
+3. Upcoming Stops: inside-train LED `Marquee` leading with the next Conductor's Pick, then the route timeline of `EventCard`s (curated-first), terminus link "See every stop on the line", closing `<TransitDivider />`.
+4. Two-sided band: "Feeling social? -> Browse events" (Maya Blue) and "Hosting? -> Submit an event" (Amber), the platform/network story.
+5. Testimonials: renders only when `testimonials` has real entries (empty by default; no fabricated quotes).
+6. Recent dispatches grid: `grid-cols-1 md:grid-cols-2`, top row featured (full width), from Beehiiv RSS.
+7. Support band (Dark Walnut): "Fund the line" with a Support CTA to `/support`.
+8. Closing brand statement: heavy `font-heading` headline, supporting paragraph, "What we're building" CTA to `/about`.
+
+Section heads (Upcoming Stops, Recent dispatches) are `font-semibold` at ~40px; the hero H1 and the closing statement stay heavy (see § 3).
 
 ### About (`/about`)
-Founder portrait, bio, affiliations strip, values strip (numbered with `font-heading` numerals), repeat of `<SubscribeForm />`.
+Project first: open with what The Brown Line is and what it covers, then a "Meet the founder" section (portrait, bio, affiliations strip), values strip (numbered with `font-heading` numerals), the creator-economy pull-quote with the heavier business-model language kept lower, then `<SubscribeForm />` plus a Support link. The top should read public, not pitch-deck.
 
 ### Standards (`/standards`)
 Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy follows the same no-em-dash rule as the rest of the site (§ 7); the earlier founder-voice exception was removed on 2026-06-21.
@@ -314,6 +333,10 @@ Tables:
 
 Tag taxonomy: `public.events.tags` uses a fixed set of nine diaspora community tags: South Asian, SWANA, East Asian, Southeast Asian, Black Diaspora, Latine, Afro-Latine, Indigenous, Cross-cultural. These power the events Category filter and are the only values the submit form and admin should use ("Cross-cultural" is labelled "Multi-diaspora / Cross-cultural" in the submit dropdown).
 
+Neighborhood: `public.events.neighborhood` powers the events Neighborhood filter. Existing rows were backfilled (2026-06-25) from the trailing `, Neighborhood` segment of `venue` (normalized: parentheticals and " branch" stripped, "A / B" reduced to the first, "The Loop" → "Loop"). The card strips that trailing segment for display so the venue shows once. New events should set `neighborhood` directly (the submit form already does). Note: there is **no format-tag taxonomy** (Music/Film/Food/etc.) yet, so those filters are not built.
+
+Display copy hygiene: event `cost_info` must never expose the research process (no "reviewed listing", "not inspected", "reviewed snippet", etc.). The rule (per the master doc §2b): show the price or "Free" if known, else "See organizer for details" or omit the line. The legacy backstage strings were cleaned on 2026-06-25.
+
 Edge Functions:
 - `submit-event` (`verify_jwt: false`): the only writer to `public.event_submissions`. Verifies a Cloudflare Turnstile token server-side, drops honeypot hits, validates required/conditional fields, then inserts with the service role. Public form posts JSON here instead of touching the database directly.
 - Turnstile is configured for production: a Cloudflare Turnstile widget ("The Brown Line", Managed mode, hostnames `thebrownlinechi.com` and `www.thebrownlinechi.com`) provides the keys. The secret key is set as the `TURNSTILE_SECRET` Edge Function secret in Supabase, and the public site key is set as the `PUBLIC_TURNSTILE_SITE_KEY` GitHub repo variable (consumed in `deploy.yml`). For local development, when those are unset the function and form both fall back to Cloudflare's public TEST keys, so the flow works locally but accepts any token. Real keys live in Cloudflare; rotate there if needed.
@@ -335,6 +358,14 @@ The site deploys through `.github/workflows/deploy.yml`.
 - A `CNAME` file in `public/CNAME` configures the custom domain for the GitHub Pages deployment.
 - `PUBLIC_BEEHIIV_URL` and `PUBLIC_TURNSTILE_SITE_KEY` are read from GitHub repository variables.
 - Supabase URL and publishable key are supplied at build time.
+- `PUBLIC_GA_MEASUREMENT_ID` (optional) is read from a GitHub repo variable and passed through; when set, the GA4 script loads.
+
+### Analytics (GA4)
+`Layout.astro` loads Google Analytics 4 only when `PUBLIC_GA_MEASUREMENT_ID` (a `G-XXXXXXXXXX` id) is set, so the site ships no tracker by default.
+- **Consent:** Consent Mode v2 sets `analytics_storage: 'denied'` (and ad storage denied) by default. A minimal bottom consent banner (`#bl-consent`) offers Accept / Decline, stores the choice in `localStorage` (`blAnalyticsConsent`), and on Accept calls `gtag('consent','update',{analytics_storage:'granted'})`. The banner only appears until a choice is made. Links to `/privacy`.
+- **Custom events:** add `data-ga-event="<name>"` (and optional `data-ga-label`) to any element; a delegated click listener in `Layout.astro` fires `gtag('event', name, {label})`. A `change` listener does the same for `select[data-ga-event]` (events Category/Neighborhood filters, via `EventSelect.astro`). Scroll depth fires `scroll_depth` at 25/50/75/90%. Tagged so far: nav Support/Subscribe/Submit, homepage Browse/Submit/Support bands, events Submit + quick-filter chips + Category/Neighborhood, and each event card's Details/RSVP (`rsvp_click`, label = title) and Share (`share_click`). The submit form fires `submit_event_success` on a successful submission.
+- **Note:** the hero email capture is a Beehiiv iframe (cross-origin), so its submit can't be tracked directly; the nav **Subscribe** button click is tracked, and true subscribe conversions live in Beehiiv's own stats. "Most-viewed cards" is approximated by `rsvp_click` counts per event title.
+- To preview locally, set `PUBLIC_GA_MEASUREMENT_ID` in `.env` (commented example included); unset, no analytics or banner render.
 
 ### Data Freshness
 - `/events` is static. New rows do not appear until the next build.
@@ -356,6 +387,15 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-25 (DC pitch pass, from the Website Master Change Doc):** Large consistency + hierarchy pass ahead of the July investor pitch.
+  - **Event card:** unified all events onto the one bordered card (filled tags, venue-once, Conductor's Pick demoted to a badge, `Details / RSVP` + `Share` buttons). The card is now always an `<article>` (no whole-card link), and `Share` uses the Web Share API with clipboard fallback via one delegated listener.
+  - **Events board:** collapse identical recurring/multi-day events into one card with a date range (Imaginarte 25 → 1, etc.); added quick-filter chips (This week default / This weekend / All upcoming / Free); default to This Week with range-overlap filtering; Neighborhood filter now populated (backfill below); "Platform" eyebrow shown once; floating "Line signal" panel hidden at `lg+` so there's one filter block per breakpoint.
+  - **Homepage:** all §2a copy swaps; Upcoming Stops now leads with a Conductor's Pick (query reordered curated-first) and the NEXT STOP banner pulls the next Pick with a `·` separator; added a two-sided Browse/Submit band, a Support band, a credibility strip with partner logos (Supported by Northwestern Medill, Project C, Meet Your Neighbor; Featured in Chicago Reader, in bordered tiles), and a Testimonials section that renders only when real quotes are added.
+  - **Chrome:** Nav gained a Submit link and distinct Support/Subscribe buttons (`.nav-cta`); Footer gained Support, fixed the dead `#privacy` anchor (now `/privacy`), and swapped tagline + copyright; intro gate now remembers dismissal in `localStorage` (`brownLineIntroSeen`) and auto-skips for reduced-motion via an inline `<head>` check that sets `splash-done` before paint; ticker curated to <=5 deduped highlights (Conductor's Picks first) and the marquee given end padding + a solid toggle so text no longer collides with the controls.
+  - **Pages:** About reordered project-first then founder ("amplifying" → "covering"); Standards links the submission form (email as fallback) and bumped to June 2026; new `/support` (confirmed Stripe links: $20/$50/$100 one-time + a $9/mo "Ride monthly" tier, alongside a free Street Level) and `/privacy` pages.
+  - **Type/color:** moved `.font-heading` weight into `@layer base` so weight utilities win; section heads/card titles to semibold; darkened the named secondary-text offenders (venue subtitle, closing paragraph, footer tagline) for WCAG AA.
+  - **Analytics (GA4):** added Google Analytics 4 via `gtag.js`, loaded only when `PUBLIC_GA_MEASUREMENT_ID` is set (no tracker ships otherwise). Consent Mode v2 defaults `analytics_storage` to denied; a minimal on-brand consent banner upgrades to granted and remembers the choice in `localStorage`. Custom events are wired via `data-ga-event` / `data-ga-label` attributes on CTAs (subscribe/support/submit/browse, event RSVP + share, events filters) plus scroll-depth, read by one delegated listener in `Layout.astro`. (Initially scoped as Plausible; switched to GA4 per the owner.)
+  - Em dashes were kept out of all newly authored copy (commas/colons/`·`); date-range labels use an en dash, which §7 permits for true ranges.
 - **2026-06-22 (Turnstile configured + admin access):** Created the Cloudflare Turnstile widget ("The Brown Line", Managed) and wired its keys: the public site key as the `PUBLIC_TURNSTILE_SITE_KEY` GitHub repo variable and the secret as the `TURNSTILE_SECRET` Supabase Edge Function secret, so the public submit form is bot-protected in production. Reset the admin portal credential after confirming the stored hash no longer matched the expected password (the value is recorded in the ignored `PRIVATE_README.md`, not here).
 - **2026-06-21 (events filter and data model):** Rebuilt the `/events` filter as a streamlined bar: a single-date calendar that jumps to a day (keeping surrounding events visible), a themed Category dropdown (custom listbox on desktop, native select on mobile), and a Neighborhood filter; removed the line-type radios, "Has link" toggle, and the jump/from/to selects. Added a `neighborhood` column to `public.events`. Dropped the free-text `display_date` column and now derive every day label from `event_date` via `formatStopDate` (`src/lib/dates.ts`), grouping by `event_date` so a day is always one segment. Narrowed event tags to the nine-tag diaspora taxonomy and migrated all rows (prior tags backed up in `public.events_taxonomy_backup`). Switched the marquee to constant pixels-per-second scrolling. Removed em dashes across the site, code comments, and this doc, and retired the Standards founder-voice exception.
 - **2026-06-21 (public event submissions):** Added a public `/submit-event` request form (per the Events DB Spec: required title, date, venue, community tag, location type, and description; conditional Chicago neighborhood and suburb fields; optional time, address, organizer, cost, and URL; plus a required submitter name and optional email). Submissions are guarded by a Cloudflare Turnstile captcha and a honeypot, verified server-side by the new `submit-event` edge function, and queued in `public.event_submissions` (RLS: no public insert; admin-only review). The admin portal gained a review queue to edit, approve into `public.events`, or reject each submission. Set `TURNSTILE_SECRET` (edge function secret) and `PUBLIC_TURNSTILE_SITE_KEY` (repo variable) for production; the build falls back to Cloudflare TEST keys until then.

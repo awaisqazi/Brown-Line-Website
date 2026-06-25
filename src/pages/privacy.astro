@@ -1,0 +1,90 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+
+const EMAIL = 'hi@thebrownlinechi.com';
+const description =
+  'How The Brown Line handles your data: what we collect, the tools we use, and how to reach us with any request.';
+
+const sections = [
+  {
+    title: 'The short version',
+    body: [
+      "The Brown Line is a small, independent publication. We collect as little as possible, we don't sell your data, and we don't run ad-tracking networks. This page explains what happens when you read the site, subscribe, submit an event, or support us.",
+    ],
+  },
+  {
+    title: 'Newsletter',
+    body: [
+      'When you subscribe, your email address is handled by our newsletter provider, Beehiiv, to send you the newsletter and basic delivery analytics. You can unsubscribe at any time using the link in any issue.',
+    ],
+  },
+  {
+    title: 'Event submissions',
+    body: [
+      'When you submit an event, we collect the details you provide (including your name and, optionally, your email so we can follow up). Submissions are reviewed by a human before anything is published. We use Cloudflare Turnstile to keep spam and bots out of the form.',
+    ],
+  },
+  {
+    title: 'Analytics',
+    body: [
+      'If site analytics are enabled, we use a privacy-friendly tool that measures aggregate traffic (like page views and referrers) without cookies and without tracking you across other sites. We never build advertising profiles.',
+    ],
+  },
+  {
+    title: 'Support payments',
+    body: [
+      'Support payments are processed by Stripe on their own secure pages. We never see or store your card details. Stripe handles payment information under its own privacy policy.',
+    ],
+  },
+  {
+    title: 'Your choices',
+    body: [
+      'You can unsubscribe from the newsletter at any time, and you can ask us what information we hold about you, or ask us to delete it. Just email us and we will take care of it.',
+    ],
+  },
+];
+---
+<Layout title="Privacy · The Brown Line" description={description}>
+  <section class="px-6 pt-16 md:pt-24 pb-12">
+    <div class="max-w-3xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+        The fine print
+      </p>
+      <h1 class="font-heading text-darkWalnut text-5xl md:text-7xl leading-[0.95] tracking-tight">
+        Privacy
+      </h1>
+      <p class="font-body text-darkWalnut/85 text-lg md:text-xl mt-8 leading-relaxed">
+        We collect as little as possible and never sell your data.
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-3xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  {sections.map((section, i) => (
+    <section class:list={['px-6 py-12 md:py-14', i % 2 === 1 ? 'bg-seashell' : '']}>
+      <div class="max-w-3xl mx-auto">
+        <h2 class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm md:text-base mb-5">
+          {section.title}
+        </h2>
+        <div class="font-body text-darkWalnut text-lg leading-relaxed space-y-4">
+          {section.body.map((p) => <p>{p}</p>)}
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <section class="px-6 py-12 md:py-16">
+    <div class="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
+        Last updated: June 2026
+      </p>
+      <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
+        Questions? <a href={`mailto:${EMAIL}`} class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne normal-case tracking-normal">{EMAIL}</a>
+      </p>
+    </div>
+  </section>
+</Layout>

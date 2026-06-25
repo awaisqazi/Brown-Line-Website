@@ -3,27 +3,41 @@ import type { TransitEvent } from '../lib/supabase';
 
 interface Props {
   event: TransitEvent;
+  /**
+   * Optional date-range label for collapsed recurring / multi-day events
+   * (e.g. "Jun 22 – Jul 24"). Rendered as a mono line in the card meta.
+   */
+  recurrenceLabel?: string;
 }
 
-const { event } = Astro.props;
+const { event, recurrenceLabel = '' } = Astro.props;
 
 const isGiveaway = event.is_giveaway;
 const isCurated = event.is_curated;
 const tags = event.tags ?? [];
 const eventUrl = event.event_url?.trim() ?? '';
 const safeEventUrl = /^https?:\/\//i.test(eventUrl) ? eventUrl : '';
-const CardRoot = safeEventUrl ? 'a' : 'article';
-const cardLinkAttributes = safeEventUrl
-  ? {
-      href: safeEventUrl,
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      'aria-label': `Open event details for ${event.title}`,
-    }
-  : {};
-const linkedCardClass = safeEventUrl
-  ? 'block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue focus-visible:ring-offset-4 focus-visible:ring-offset-seashell'
-  : '';
+
+// Venue, once. The neighborhood is often baked into the venue text as a trailing
+// ", Neighborhood" segment (that's where the `neighborhood` column was derived
+// from), so when a neighborhood exists we drop that trailing segment and show it
+// as a separate "· Neighborhood" instead of printing the area twice.
+const displayVenue =
+  event.neighborhood && event.venue.includes(',')
+    ? event.venue.slice(0, event.venue.lastIndexOf(',')).trim()
+    : event.venue;
+const venueLine = event.neighborhood ? `${displayVenue} · ${event.neighborhood}` : displayVenue;
+
+// Organizer, once. Many listings repeat the venue as the organizer (e.g. a museum
+// hosting its own program), which printed the same name twice. Only surface the
+// organizer when it adds new information.
+const organizerDisplay =
+  event.organizer && event.organizer !== event.venue && event.organizer !== displayVenue
+    ? event.organizer
+    : '';
+
+const priceLabel = event.cost_info?.trim() ?? '';
+const shareUrl = safeEventUrl || '';
 
 const sentencePattern = /[^.!?]+[.!?]+|[^.!?]+$/g;
 
@@ -76,32 +90,30 @@ const startTime = formatStartTime(event.start_time);
 const giveawayDescription = splitGiveawayDescription(event.description);
 const giveawayRules =
   giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
-const hasMeta = startTime || event.organizer || event.cost_info || event.neighborhood;
-const hasCuratedMeta = Boolean(startTime || event.organizer || event.neighborhood);
+
+// Shared button styling for the card action row.
+const detailsBtnClass =
+  'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-amber px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const shareBtnClass =
+  'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
 ---
 
 {isGiveaway ? (
-  <CardRoot
-    {...cardLinkAttributes}
-    class:list={[
-      'ticket-stub relative overflow-visible bg-[#FFF4D8] border-[3px] border-dashed border-darkWalnut p-5 md:p-6 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro',
-      linkedCardClass,
-    ]}
-  >
+  <article class="ticket-stub relative overflow-visible bg-[#FFF4D8] border-[3px] border-dashed border-darkWalnut p-5 md:p-6 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
     <div class="flex flex-wrap items-center gap-2">
       {isCurated && (
-        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-[#FDFBF7] border-2 border-darkWalnut px-2 py-1">
-          ⭐ Conductor's Pick
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-1">
+          ★ Conductor's Pick
         </span>
       )}
       <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-amber border-2 border-darkWalnut px-2 py-1">
         Ticket Giveaway
       </span>
-      {safeEventUrl && (
-        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-darkWalnut px-2 py-1">
-          Details ↗
+      {tags.map((tag) => (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-celadon border-2 border-darkWalnut px-2 py-1">
+          {tag}
         </span>
-      )}
+      ))}
     </div>
 
     <div class="mt-4 flex items-start gap-3 md:gap-4">
@@ -111,17 +123,24 @@ const hasCuratedMeta = Boolean(startTime || event.organizer || event.neighborhoo
         </span>
       )}
       <div class="min-w-0">
-        <h3 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95]">
+        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.05]">
           {event.title}
         </h3>
-        <p class="font-body text-sm md:text-base text-darkWalnut/75 font-bold mt-3">
-          {event.venue}
+        <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
+          {venueLine}
         </p>
       </div>
     </div>
 
+    {(startTime || recurrenceLabel) && (
+      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#62361B]">
+        {recurrenceLabel && <span>{recurrenceLabel}</span>}
+        {startTime && <span>{startTime}</span>}
+      </div>
+    )}
+
     {giveawayDescription.body && (
-      <p class="font-body text-darkWalnut/85 text-sm md:text-base leading-relaxed mt-5">
+      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4">
         {giveawayDescription.body}
       </p>
     )}
@@ -135,115 +154,98 @@ const hasCuratedMeta = Boolean(startTime || event.organizer || event.neighborhoo
       </p>
     </div>
 
-    {hasMeta && (
-      <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
-        {startTime && <span>{startTime}</span>}
-        {event.neighborhood && <span>{event.neighborhood}</span>}
-        {event.organizer && <span>{event.organizer}</span>}
-        {event.cost_info && <span>{event.cost_info}</span>}
+    <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+      {(priceLabel || organizerDisplay) && (
+        <div class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
+          {priceLabel && <span>{priceLabel}</span>}
+          {organizerDisplay && <span>{organizerDisplay}</span>}
+        </div>
+      )}
+      <div class="flex flex-wrap items-center gap-2">
+        {safeEventUrl && (
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${event.title}`} data-ga-event="rsvp_click" data-ga-label={event.title}>
+            Details / RSVP <span aria-hidden="true">↗</span>
+          </a>
+        )}
+        <button type="button" class={shareBtnClass} data-share-button data-share-title={event.title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={event.title}>
+          Share
+        </button>
       </div>
-    )}
-  </CardRoot>
-) : isCurated ? (
-  <CardRoot
-    {...cardLinkAttributes}
-    class:list={[
-      'bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro',
-      linkedCardClass,
-    ]}
-  >
+    </div>
+  </article>
+) : (
+  <article class="event-card bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne px-2 py-1">
-        ⭐ Conductor's Pick
-      </span>
-      {event.cost_info && (
-        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-celadon border-2 border-darkWalnut px-2 py-0.5">
-          {event.cost_info}
+      {isCurated && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-1">
+          ★ Conductor's Pick
         </span>
       )}
-      {safeEventUrl && (
-        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-darkWalnut px-2 py-1">
-          Details ↗
+      {tags.map((tag) => (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-celadon border-2 border-darkWalnut px-2 py-1">
+          {tag}
+        </span>
+      ))}
+      {priceLabel && (
+        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-amber border-2 border-darkWalnut px-2 py-1">
+          {priceLabel}
         </span>
       )}
     </div>
 
     <div class="mt-4 flex items-start gap-3 md:gap-4">
       {event.emoji && (
-        <span class="text-3xl md:text-4xl leading-none" aria-hidden="true">
+        <span class="text-2xl md:text-3xl leading-none" aria-hidden="true">
           {event.emoji}
         </span>
       )}
       <div class="min-w-0">
-        <h3 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95]">
+        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.1]">
           {event.title}
         </h3>
-        <p class="font-body text-sm md:text-base text-darkWalnut/75 font-bold mt-3">
-          {event.venue}
+        <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
+          {venueLine}
         </p>
       </div>
     </div>
 
+    {(startTime || recurrenceLabel) && (
+      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#62361B]">
+        {recurrenceLabel && <span>{recurrenceLabel}</span>}
+        {startTime && <span>{startTime}</span>}
+      </div>
+    )}
+
     {event.description && (
-      <p class="font-body text-darkWalnut/85 text-sm md:text-base leading-relaxed mt-5">
+      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4">
         {event.description}
       </p>
     )}
 
     {event.author_note && (
-      <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-5 border-l-4 border-mayaBlue pl-4">
+      <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-4 border-l-4 border-mayaBlue pl-4">
         {event.author_note}
       </p>
     )}
 
-    {hasCuratedMeta && (
-      <div class="mt-5 flex flex-wrap gap-x-4 gap-y-2 font-body text-[10px] md:text-xs uppercase tracking-widest text-darkWalnut/70 font-bold">
-        {startTime && <span>{startTime}</span>}
-        {event.neighborhood && <span>{event.neighborhood}</span>}
-        {event.organizer && <span>{event.organizer}</span>}
-      </div>
-    )}
-  </CardRoot>
-) : (
-  <CardRoot
-    {...cardLinkAttributes}
-    class:list={[
-      'bg-transparent border-b border-dashed border-darkWalnut/35 py-3 md:py-4',
-      linkedCardClass,
-    ]}
-  >
-    <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-      <div class="min-w-0">
-        <div class="flex flex-wrap items-center gap-2">
-          <h3 class="font-body text-darkWalnut text-base md:text-lg leading-snug font-extrabold">
-            {event.title}
-          </h3>
-          {safeEventUrl && (
-            <span class="font-body text-[10px] uppercase tracking-widest text-darkWalnut/65 border border-dashed border-darkWalnut/35 px-2 py-0.5 font-bold">
-              Details ↗
-            </span>
-          )}
-        </div>
-        <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-body text-xs md:text-sm text-darkWalnut/65">
-          {startTime && <span class="font-bold">{startTime}</span>}
-          <span class="font-bold">{event.venue}</span>
-          {event.neighborhood && <span>{event.neighborhood}</span>}
-          {event.organizer && <span>{event.organizer}</span>}
-          {event.cost_info && <span>{event.cost_info}</span>}
-        </div>
-      </div>
-
-      {tags.length > 0 && (
-        <div class="flex flex-wrap gap-1.5 md:justify-end md:max-w-xs">
-          {tags.map((tag) => (
-            <span class="font-body text-[10px] uppercase tracking-widest text-darkWalnut/55 bg-darkWalnut/5 border border-dashed border-darkWalnut/25 px-2 py-1 font-bold">
-              {tag}
-            </span>
-          ))}
-        </div>
+    <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+      {organizerDisplay && (
+        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/65 font-bold">
+          {organizerDisplay}
+        </span>
       )}
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        {safeEventUrl && (
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${event.title}`} data-ga-event="rsvp_click" data-ga-label={event.title}>
+            Details / RSVP <span aria-hidden="true">↗</span>
+          </a>
+        )}
+        <button type="button" class={shareBtnClass} data-share-button data-share-title={event.title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={event.title}>
+          Share
+        </button>
+      </div>
     </div>
-  </CardRoot>
+  </article>
 )}
 
 <style>
@@ -268,4 +270,50 @@ const hasCuratedMeta = Boolean(startTime || event.organizer || event.neighborhoo
   .ticket-stub::after {
     right: -0.85rem;
   }
+
+  .share-feedback {
+    position: relative;
+  }
 </style>
+
+<script>
+  // One delegated handler for every card's Share button. Astro includes this
+  // module once per page no matter how many EventCards render.
+  if (!(window as any).__brownLineShareWired) {
+    (window as any).__brownLineShareWired = true;
+
+    document.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest('[data-share-button]') as HTMLButtonElement | null;
+      if (!button) return;
+
+      event.preventDefault();
+      const title = button.dataset.shareTitle ?? 'The Brown Line';
+      const url = button.dataset.shareUrl || window.location.href;
+      const shareText = `${title} — via The Brown Line`;
+
+      const flash = (message: string) => {
+        const original = button.dataset.shareOriginal ?? button.textContent ?? 'Share';
+        if (!button.dataset.shareOriginal) button.dataset.shareOriginal = original;
+        button.textContent = message;
+        window.setTimeout(() => {
+          button.textContent = button.dataset.shareOriginal ?? 'Share';
+        }, 1600);
+      };
+
+      if (navigator.share) {
+        navigator.share({ title, text: shareText, url }).catch(() => {});
+        return;
+      }
+
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard
+          .writeText(url)
+          .then(() => flash('Link copied'))
+          .catch(() => flash('Copy failed'));
+      } else {
+        flash(url);
+      }
+    });
+  }
+</script>

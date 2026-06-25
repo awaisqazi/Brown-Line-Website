@@ -14,6 +14,9 @@ interface Props {
 
 const { field, placeholder, label, options, inline = false } = Astro.props;
 const selectAttrs = { [`data-${field}`]: '' };
+// GA4 event name, e.g. "category-filter" -> "filter_category". The site-wide
+// change listener (Layout.astro) reads this and reports the selected value.
+const gaEvent = `filter_${field.replace(/-filter$/, '').replace(/[^a-z0-9]+/gi, '_')}`;
 ---
 
 <div class="relative mt-1" data-themed-select>
@@ -21,6 +24,7 @@ const selectAttrs = { [`data-${field}`]: '' };
   <select
     {...selectAttrs}
     data-themed-native
+    data-ga-event={gaEvent}
     aria-label={label}
     class="w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base font-bold text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue md:hidden md:text-sm"
   >

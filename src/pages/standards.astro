@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 
+const base = import.meta.env.BASE_URL;
 const EMAIL = 'hi@thebrownlinechi.com';
 
 const criteria = [
@@ -144,7 +145,7 @@ const description =
         Event Submissions
       </h2>
       <p class="font-body text-darkWalnut text-lg leading-relaxed">
-        Community members and event organizers are welcome to submit events for consideration at <a href={`mailto:${EMAIL}`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">{EMAIL}</a>. I review all submissions using the criteria above, but not everything can be included. Submitting an event doesn't guarantee it will be featured.
+        Community members and event organizers can submit events through the <a href={`${base}submit-event`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">event submission form</a>. I review all submissions using the criteria above, but not everything can be included. Submitting an event doesn't guarantee it will be featured. Prefer email? Reach me at <a href={`mailto:${EMAIL}`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">{EMAIL}</a>.
       </p>
     </div>
   </section>
@@ -235,7 +236,7 @@ const description =
   <section class="px-6 py-12 md:py-16">
     <div class="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
-        Last updated: April 2026
+        Last updated: June 2026
       </p>
       <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
         Questions? <a href={`mailto:${EMAIL}`} class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne normal-case tracking-normal">{EMAIL}</a>

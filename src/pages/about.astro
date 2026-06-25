@@ -3,6 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 
+const base = import.meta.env.BASE_URL;
+
 const affiliations = [
   { label: 'Editor, National Nonprofit Newsroom',            accent: 'amber'    },
   { label: 'Board, Borderless Magazine',                     accent: 'mayaBlue' },
@@ -20,7 +22,7 @@ const accentClass: Record<string, string> = {
 };
 
 const description =
-  'Meet Ghazala Irshad, founder of The Brown Line, a Chicago newsletter amplifying arts, culture, and community through a Global South diaspora lens. Subscribe and ride along.';
+  'The Brown Line is an independent local guide to Chicago arts, culture, and community through a Global South diaspora lens, founded and edited by journalist Ghazala Irshad. Subscribe and ride along.';
 ---
 <Layout
   title="About · The Brown Line"
@@ -28,119 +30,126 @@ const description =
   ogImage="images/ghazala.jpeg"
   ogType="profile"
 >
-  {/* ---------- Hero ---------- */}
+  {/* ---------- Hero: the project first ---------- */}
   <section class="px-6 pt-16 md:pt-24 pb-12">
-    <div class="max-w-5xl mx-auto text-center">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
-        Meet your conductor
-      </p>
-      <h1 class="font-heading text-darkWalnut text-5xl md:text-7xl lg:text-8xl leading-[0.95] tracking-tight">
-        Ghazala Irshad
-      </h1>
-      <p class="font-body text-darkWalnut/70 text-base md:text-lg mt-6 uppercase tracking-widest font-bold">
-        Founder &amp; Editor &middot; The Brown Line
-      </p>
-    </div>
-  </section>
-
-  {/* ---------- Portrait + lead ---------- */}
-  <section class="px-6 py-12 md:py-16">
-    <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
-      {/* Portrait */}
-      <div class="md:col-span-5">
-        <div class="relative inline-block w-full">
-          <img
-            src={`${import.meta.env.BASE_URL}images/ghazala.jpeg`}
-            alt="Ghazala Irshad, founder of The Brown Line"
-            class="w-full h-auto border-2 border-darkWalnut shadow-retro"
-            width="800"
-            height="800"
-            decoding="async"
-            loading="eager"
-          />
-          {/* Decorative stripe peeking out behind the photo */}
-          <div
-            class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48"
-            aria-hidden="true"
-          ></div>
-        </div>
-      </div>
-
-      {/* Lead bio */}
-      <div class="md:col-span-7 font-body text-darkWalnut leading-relaxed">
-        <p class="text-xl md:text-2xl font-semibold text-darkWalnut leading-snug">
-          I am a Chicago-based journalist, editor, media entrepreneur, and the founder of <span class="text-cayenne font-bold">The Brown Line</span>, a local newsletter amplifying arts, culture, and community events through a Global South diaspora lens.
-        </p>
-
-        <p class="mt-6 text-darkWalnut/80">
-          I work full-time as an editor at a national nonprofit newsroom. The Brown Line is a separate, independent project. Because this work is community-rooted, I may have personal or professional connections to some of the people or spaces featured. Those relationships don't determine coverage. When context matters, I'll share it.
-        </p>
-
-        <p class="mt-4 text-darkWalnut/80">
-          The Brown Line has a perspective, not a political agenda. The Brown Line intentionally centers Global South diaspora communities in Chicago. The politics you'll find here live in the communities I cover, in the events, the organizers, and the cultural work being documented, not in advocacy or activism on my part.
-        </p>
-
-        <p class="mt-4 text-darkWalnut/80">
-          My career spans international reporting, nonprofit media, and community storytelling. After teaching English to refugees and orphans in Thailand, I lived in Egypt during the Arab Spring, reporting on protests and abuses of power. I later produced an award-winning documentary series highlighting grassroots changemakers across the Global South, and developed a Muslim diaspora-focused, decolonial travel storytelling platform as a Tow-Knight Entrepreneurial Journalism Fellow at CUNY.
-        </p>
-
-        <p class="mt-4 text-darkWalnut/80">
-          I serve on the board of <strong class="font-semibold text-darkWalnut">Borderless Magazine</strong>, focused on immigrants and immigration news in Chicago, and am a fellow of executive leadership programs at the Asian American Journalists Association and the Poynter Institute.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  {/* ---------- Affiliations ---------- */}
-  <section class="px-6 py-12 md:py-16">
-    <div class="max-w-5xl mx-auto">
-      <p class="font-body uppercase text-xs tracking-[0.3em] text-darkWalnut/60 font-bold mb-6 text-center">
-        Currently &amp; previously
-      </p>
-      <ul class="flex flex-wrap justify-center gap-3">
-        {affiliations.map((a) => (
-          <li
-            class:list={[
-              'font-body text-darkWalnut text-sm font-semibold uppercase tracking-wider bg-seashell border-2 px-4 py-2',
-              accentClass[a.accent],
-            ]}
-          >
-            {a.label}
-          </li>
-        ))}
-      </ul>
-    </div>
-  </section>
-
-  <div class="max-w-5xl mx-auto px-6">
-    <TransitDivider />
-  </div>
-
-  {/* ---------- About the newsletter ---------- */}
-  <section class="px-6 py-20 md:py-28">
     <div class="max-w-4xl mx-auto">
       <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
         About the line
       </p>
-      <h2 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[0.95] tracking-tight">
+      <h1 class="font-heading text-darkWalnut text-4xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance">
+        We map the Chicago culture that travels by word of mouth.
+      </h1>
+      <p class="font-body text-darkWalnut/85 text-lg md:text-xl mt-8 leading-relaxed">
+        The Brown Line spotlights Global South diaspora arts, culture, and community events: the film
+        screenings, food pop-ups, dance floors, book talks, fundraisers, workshops, neighborhood
+        gatherings, and independent artists that make Chicago feel like the world.
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-4xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  {/* ---------- What we're building ---------- */}
+  <section class="px-6 py-16 md:py-24">
+    <div class="max-w-4xl mx-auto">
+      <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
         A creator-led local newsroom for the Global South diaspora.
       </h2>
 
-      <div class="mt-10 font-body text-darkWalnut text-lg leading-relaxed space-y-6">
+      <div class="mt-8 font-body text-darkWalnut text-lg leading-relaxed space-y-6">
         <p>
-          The Brown Line is a Chicago-based, creator-led, local media brand serving Global South diaspora communities through culturally intelligent journalism. It blends curated weekly and neighborhood guides, independent artist and small-business spotlights, original reporting, and values-driven commentary through a Global South lens.
+          The Brown Line is a Chicago-based, creator-led, local media brand serving Global South
+          diaspora communities through culturally intelligent journalism. It blends curated weekly and
+          neighborhood guides, independent artist and small-business spotlights, original reporting, and
+          values-driven commentary through a Global South lens.
         </p>
         <p>
-          Initially built through word-of-mouth and organic Instagram growth, the newsletter has attracted a highly engaged local subscriber base and is expanding through live events, community partnerships, and cross-platform distribution. The long-term model includes paid subscriptions, branded community gatherings, partnerships with immigrant-owned businesses, and strategic collaborations with cultural institutions.
+          Built through word of mouth and organic Instagram growth, it has attracted a highly engaged
+          local subscriber base and is expanding through live events, community partnerships, and
+          cross-platform distribution.
         </p>
       </div>
+    </div>
+  </section>
 
-      {/* Pull quote */}
-      <figure class="mt-14 border-l-4 border-cayenne pl-6 md:pl-10">
-        <blockquote class="font-body italic font-medium text-darkWalnut text-2xl md:text-4xl leading-[1.3] tracking-tight">
-          Positioned at the intersection of local journalism, community building, and creator-economy strategy. Designed to be a sustainable, audience-supported platform rooted in belonging and trust.
-        </blockquote>
-      </figure>
+  {/* ---------- Meet the founder ---------- */}
+  <section class="px-6 py-12 md:py-16 bg-seashell">
+    <div class="max-w-5xl mx-auto">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-8">
+        Meet the founder
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-14 items-start">
+        {/* Portrait */}
+        <div class="md:col-span-5">
+          <div class="relative inline-block w-full">
+            <img
+              src={`${base}images/ghazala.jpeg`}
+              alt="Ghazala Irshad, founder of The Brown Line"
+              class="w-full h-auto border-2 border-darkWalnut shadow-retro"
+              width="800"
+              height="800"
+              decoding="async"
+              loading="eager"
+            />
+            <div
+              class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48"
+              aria-hidden="true"
+            ></div>
+          </div>
+        </div>
+
+        {/* Lead bio */}
+        <div class="md:col-span-7 font-body text-darkWalnut leading-relaxed">
+          <p class="text-xl md:text-2xl font-semibold text-darkWalnut leading-snug">
+            The Brown Line is founded and edited by <span class="text-cayenne font-bold">Ghazala Irshad</span>,
+            a Chicago-based journalist, editor, and media entrepreneur whose work spans international
+            reporting, nonprofit media, standards editing, and community storytelling.
+          </p>
+
+          <p class="mt-6 text-darkWalnut/85">
+            She works full-time as an editor at a national nonprofit newsroom; The Brown Line is a
+            separate, independent project. Because this work is community-rooted, she may have personal or
+            professional connections to some of the people or spaces featured. Those relationships don't
+            determine coverage, and when context matters, she shares it.
+          </p>
+
+          <p class="mt-4 text-darkWalnut/85">
+            Her career spans international reporting, nonprofit media, and community storytelling. After
+            teaching English to refugees and orphans in Thailand, she lived in Egypt during the Arab
+            Spring, reporting on protests and abuses of power. She later produced an award-winning
+            documentary series highlighting grassroots changemakers across the Global South, and developed
+            a Muslim diaspora-focused, decolonial travel storytelling platform as a Tow-Knight
+            Entrepreneurial Journalism Fellow at CUNY.
+          </p>
+
+          <p class="mt-4 text-darkWalnut/85">
+            She serves on the board of <strong class="font-semibold text-darkWalnut">Borderless Magazine</strong>,
+            focused on immigrants and immigration news in Chicago, and is a fellow of executive leadership
+            programs at the Asian American Journalists Association and the Poynter Institute.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-12">
+        <p class="font-body uppercase text-xs tracking-[0.3em] text-darkWalnut/60 font-bold mb-6">
+          Currently &amp; previously
+        </p>
+        <ul class="flex flex-wrap gap-3">
+          {affiliations.map((a) => (
+            <li
+              class:list={[
+                'font-body text-darkWalnut text-sm font-semibold uppercase tracking-wider bg-seashell border-2 px-4 py-2',
+                accentClass[a.accent],
+              ]}
+            >
+              {a.label}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -171,18 +180,43 @@ const description =
     </div>
   </section>
 
+  {/* ---------- Where we're headed (business model, kept lower) ---------- */}
+  <section class="px-6 py-20 md:py-28">
+    <div class="max-w-4xl mx-auto">
+      <figure class="border-l-4 border-cayenne pl-6 md:pl-10">
+        <blockquote class="font-body italic font-medium text-darkWalnut text-2xl md:text-4xl leading-[1.3] tracking-tight">
+          Positioned at the intersection of local journalism, community building, and creator-economy
+          strategy. Designed to be a sustainable, audience-supported platform rooted in belonging and trust.
+        </blockquote>
+      </figure>
+      <p class="font-body text-darkWalnut/85 text-lg leading-relaxed mt-10">
+        The long-term model includes paid subscriptions, branded community gatherings, partnerships with
+        immigrant-owned businesses, and strategic collaborations with cultural institutions.
+      </p>
+    </div>
+  </section>
+
   {/* ---------- CTA ---------- */}
-  <section id="subscribe" class="px-6 py-20 md:py-28">
+  <section id="subscribe" class="px-6 py-20 md:py-28 bg-seashell">
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[0.95] tracking-tight">
         Ride with us.
       </h2>
-      <p class="font-body text-darkWalnut/80 text-lg mt-6 max-w-xl mx-auto leading-relaxed">
+      <p class="font-body text-darkWalnut/85 text-lg mt-6 max-w-xl mx-auto leading-relaxed">
         One stop a week in your inbox. Arts, culture, and community from the corners of Chicago you actually want to know.
       </p>
       <div class="mt-10 flex justify-center">
         <SubscribeForm caption="" />
       </div>
+      <p class="font-body text-darkWalnut/70 text-sm mt-8 uppercase tracking-widest">
+        Want to do more?
+        <a
+          href={`${base}support`}
+          class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne"
+        >
+          Support The Brown Line
+        </a>
+      </p>
     </div>
   </section>
 </Layout>

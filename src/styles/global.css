@@ -70,15 +70,21 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4, h5, h6,
-.font-heading {
-  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
+/* Heading defaults live in @layer base so Tailwind weight utilities
+   (font-semibold, font-extrabold) reliably override them. Without the layer,
+   these unlayered rules would beat the utility classes and flatten the
+   hierarchy (every heading would render at 800). See design.md § 3. */
+@layer base {
+  h1, h2, h3, h4, h5, h6,
+  .font-heading {
+    font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
 
-/* Display headings (the former JT Modernism "showpiece" role) lean on
-   Montserrat ExtraBold for presence and legibility. */
-.font-heading {
-  font-weight: 800;
+  /* Display headings default to Montserrat ExtraBold for presence; section
+     heads and card titles opt down to font-semibold for weight contrast. */
+  .font-heading {
+    font-weight: 800;
+  }
 }
 
 /* ---------- Utilities from design.md ---------- */

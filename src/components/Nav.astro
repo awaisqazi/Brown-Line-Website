@@ -1,11 +1,16 @@
 ---
 const base = import.meta.env.BASE_URL;
+// Route stops = destinations. Support + Subscribe are visually distinct buttons.
 const navLinks = [
-  { href: `${base}#archive`,   label: 'Archive',            stopColor: '#F79CD0' },
-  { href: `${base}events`,     label: 'Events',             stopColor: '#5BC3FF' },
-  { href: `${base}about`,      label: 'About',              stopColor: '#90D393' },
-  { href: `${base}standards`,  label: 'Standards & Ethics', stopColor: '#FFBC29' },
-  { href: `${base}#subscribe`, label: 'Subscribe',          stopColor: '#F35A0F' },
+  { href: `${base}events`,       label: 'Events',    stopColor: '#5BC3FF' },
+  { href: `${base}submit-event`, label: 'Submit',    stopColor: '#90D393', gaEvent: 'submit_click' },
+  { href: `${base}#archive`,     label: 'Archive',   stopColor: '#F79CD0' },
+  { href: `${base}about`,        label: 'About',     stopColor: '#FFBC29' },
+  { href: `${base}standards`,    label: 'Standards', stopColor: '#F35A0F' },
+];
+const navButtons = [
+  { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
+  { href: `${base}#subscribe`, label: 'Subscribe', variant: 'filled',  gaEvent: 'subscribe_click' },
 ];
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 ---
@@ -22,22 +27,34 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       />
     </a>
 
-    {/* Desktop nav */}
-    <nav aria-label="Primary" class="desktop-route-nav hidden md:block min-w-0">
-      <ul class="desktop-route">
-        {navLinks.map(({ href, label, stopColor }) => (
-          <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
-            <a
-              href={href}
-              class="desktop-route-link"
-            >
-              <span class="desktop-route-stop" aria-hidden="true"></span>
-              <span class="desktop-route-label">{label}</span>
-            </a>
-          </li>
+    {/* Desktop nav: route of destinations + distinct Support/Subscribe buttons */}
+    <div class="hidden md:flex items-center gap-6 lg:gap-8 min-w-0">
+      <nav aria-label="Primary" class="desktop-route-nav min-w-0">
+        <ul class="desktop-route">
+          {navLinks.map(({ href, label, stopColor, gaEvent }) => (
+            <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
+              <a
+                href={href}
+                class="desktop-route-link"
+                data-ga-event={gaEvent}
+                data-ga-label={gaEvent ? 'nav' : undefined}
+              >
+                <span class="desktop-route-stop" aria-hidden="true"></span>
+                <span class="desktop-route-label">{label}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      <div class="flex shrink-0 items-center gap-2.5">
+        {navButtons.map(({ href, label, variant, gaEvent }) => (
+          <a href={href} class:list={['nav-cta', variant === 'filled' ? 'nav-cta-filled' : 'nav-cta-outline']} data-ga-event={gaEvent} data-ga-label="nav">
+            {label}
+          </a>
         ))}
-      </ul>
-    </nav>
+      </div>
+    </div>
 
     {/* Mobile menu toggle */}
     <button
@@ -77,9 +94,9 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
     <nav aria-label="Mobile primary" class="px-6 pt-4 pb-2 flex-1">
       <ul id="mobile-nav-list" class="nav-stops flex flex-col">
-        {navLinks.map(({ href, label, stopColor }) => (
+        {navLinks.map(({ href, label, stopColor, gaEvent }) => (
           <li class="mobile-nav-item" style={`--stop-color: ${stopColor};`}>
-            <a href={href} class="mobile-nav-link" data-mobile-link>
+            <a href={href} class="mobile-nav-link" data-mobile-link data-ga-event={gaEvent} data-ga-label={gaEvent ? 'nav' : undefined}>
               <span class="mobile-nav-stop" aria-hidden="true"></span>
               <span class="mobile-nav-label">{label}</span>
               <span class="mobile-nav-arrow" aria-hidden="true">&rarr;</span>
@@ -87,6 +104,20 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
           </li>
         ))}
       </ul>
+
+      <div class="mt-6 flex flex-col gap-3">
+        {navButtons.map(({ href, label, variant, gaEvent }) => (
+          <a
+            href={href}
+            data-mobile-link
+            data-ga-event={gaEvent}
+            data-ga-label="nav"
+            class:list={['nav-cta nav-cta-mobile', variant === 'filled' ? 'nav-cta-filled' : 'nav-cta-outline']}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
     </nav>
 
     <div class="mx-6 pt-5 pb-1 flex items-center gap-3 border-t-2 border-darkWalnut/10">
@@ -162,6 +193,51 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   }
   #nav-toggle.is-open .nav-bar-bot {
     transform: translateY(-8px) rotate(-45deg);
+  }
+
+  /* Support / Subscribe buttons: visually distinct from the route links */
+  .nav-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #642713;
+    padding: 0.5rem 1rem;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    white-space: nowrap;
+    transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+  }
+
+  .nav-cta-outline {
+    background: #FAF1EC;
+    color: #642713;
+  }
+
+  .nav-cta-filled {
+    background: #F35A0F;
+    color: #FAF1EC;
+  }
+
+  .nav-cta:hover,
+  .nav-cta:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: 3px 3px 0 #642713;
+    outline: none;
+  }
+
+  .nav-cta-mobile {
+    padding: 0.85rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  @media (min-width: 1024px) {
+    .nav-cta {
+      font-size: 0.78rem;
+    }
   }
 
   /* Desktop route map mirrors the mobile stop language on a compact horizontal track */

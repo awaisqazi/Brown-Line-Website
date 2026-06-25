@@ -38,6 +38,11 @@ const manifestUrl = `${base}site.webmanifest`;
 // If ogImage is already absolute, use it as-is; otherwise resolve relative to site+base
 const ogImageUrl = ogImage.startsWith('http') ? ogImage : new URL(`${base}${ogImage.replace(/^\//, '')}`, baseUrl).toString();
 const tickerItems = minimal ? [] : await getTickerItems();
+
+// Google Analytics 4. Loads only when PUBLIC_GA_MEASUREMENT_ID (a "G-XXXXXXXXXX"
+// id) is set, so the site never ships a non-collecting tracker. Uses Consent
+// Mode v2 defaulting to denied; the consent banner below upgrades to granted.
+const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
 ---
 <!doctype html>
 <html lang="en">
@@ -75,11 +80,47 @@ const tickerItems = minimal ? [] : await getTickerItems();
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content="The Brown Line, a Chicago cultural newsletter" />
 
-    {/* Clear any legacy splash-skip flag so the loading animation runs on every page load. */}
+    {/* Intro gate memory: returning visitors (and anyone opening a shared link a
+        second time) skip the splash entirely. Setting splash-done in <head>,
+        before the body paints, means the React splash is never shown, no flash.
+        Also auto-skip for reduced-motion users. */}
     <script is:inline>
-      try { sessionStorage.removeItem('brownLineSplashShown'); } catch (_) {}
+      try {
+        var seen = localStorage.getItem('brownLineIntroSeen') === '1';
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (seen || reduced) {
+          document.documentElement.classList.add('splash-done');
+        }
+      } catch (_) {}
     </script>
-    
+
+    {gaMeasurementId && (
+      <Fragment>
+        {/* Google Analytics 4 with Consent Mode v2. Analytics storage defaults to
+            denied (no cookies) until the visitor accepts via the banner below. */}
+        <script is:inline define:vars={{ gaMeasurementId }}>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){ dataLayer.push(arguments); }
+          window.gtag = gtag;
+          gtag('consent', 'default', {
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            analytics_storage: 'denied',
+            wait_for_update: 500,
+          });
+          try {
+            if (localStorage.getItem('blAnalyticsConsent') === 'granted') {
+              gtag('consent', 'update', { analytics_storage: 'granted' });
+            }
+          } catch (_) {}
+          gtag('js', new Date());
+          gtag('config', gaMeasurementId, { anonymize_ip: true });
+        </script>
+        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}></script>
+      </Fragment>
+    )}
+
     {/* Beehiiv V3 Attribution tracking */}
     <script type="text/javascript" async src="https://subscribe-forms.beehiiv.com/attribution.js"></script>
   </head>
@@ -95,6 +136,82 @@ const tickerItems = minimal ? [] : await getTickerItems();
     </main>
 
     {!minimal && <Footer tickerItems={tickerItems} />}
+
+    {gaMeasurementId && (
+      <Fragment>
+      <div
+        id="bl-consent"
+        class="fixed inset-x-0 bottom-0 z-[1000] hidden border-t-2 border-darkWalnut bg-seashell px-4 py-4 shadow-[0_-4px_0_#642713]"
+        role="dialog"
+        aria-label="Analytics consent"
+        aria-live="polite"
+      >
+        <div class="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <p class="font-body text-sm text-darkWalnut leading-relaxed">
+            We use privacy-respecting analytics to see what's useful. No ads, and we never sell your data. See our <a href={`${base}privacy`} class="font-bold underline decoration-2 decoration-mayaBlue underline-offset-2 hover:decoration-cayenne">privacy page</a>.
+          </p>
+          <div class="flex shrink-0 items-center gap-2">
+            <button type="button" data-consent="decline" class="border-2 border-darkWalnut bg-seashell px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">Decline</button>
+            <button type="button" data-consent="accept" class="border-2 border-darkWalnut bg-cayenne px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">Accept</button>
+          </div>
+        </div>
+      </div>
+
+      <script is:inline>
+        (() => {
+          // Consent banner: show only when the visitor hasn't chosen yet.
+          var banner = document.getElementById('bl-consent');
+          var stored = null;
+          try { stored = localStorage.getItem('blAnalyticsConsent'); } catch (_) {}
+          if (banner && !stored) banner.classList.remove('hidden');
+          function setConsent(choice) {
+            try { localStorage.setItem('blAnalyticsConsent', choice); } catch (_) {}
+            if (choice === 'granted' && window.gtag) {
+              window.gtag('consent', 'update', { analytics_storage: 'granted' });
+            }
+            if (banner) banner.classList.add('hidden');
+          }
+          if (banner) {
+            banner.addEventListener('click', function (e) {
+              var btn = e.target.closest('[data-consent]');
+              if (!btn) return;
+              setConsent(btn.getAttribute('data-consent') === 'accept' ? 'granted' : 'denied');
+            });
+          }
+
+          // Delegated custom-event tracking. No-ops if gtag isn't present.
+          document.addEventListener('click', function (e) {
+            var el = e.target.closest('[data-ga-event]');
+            if (!el || !window.gtag) return;
+            var params = {};
+            if (el.dataset.gaLabel) params.label = el.dataset.gaLabel;
+            window.gtag('event', el.dataset.gaEvent, params);
+          });
+          document.addEventListener('change', function (e) {
+            var el = e.target.closest('select[data-ga-event]');
+            if (!el || !window.gtag) return;
+            window.gtag('event', el.dataset.gaEvent, { label: el.value || '(cleared)' });
+          });
+
+          // Homepage / page scroll depth: each threshold fires once.
+          var marks = [25, 50, 75, 90];
+          var hit = {};
+          window.addEventListener('scroll', function () {
+            var max = document.documentElement.scrollHeight - window.innerHeight;
+            if (max <= 0) return;
+            var pct = (window.scrollY / max) * 100;
+            for (var i = 0; i < marks.length; i++) {
+              var m = marks[i];
+              if (pct >= m && !hit[m]) {
+                hit[m] = true;
+                if (window.gtag) window.gtag('event', 'scroll_depth', { label: m + '%', value: m });
+              }
+            }
+          }, { passive: true });
+        })();
+      </script>
+      </Fragment>
+    )}
 
     {/* Paper-grain noise overlay: 4% multiply texture, sits above all chrome but never blocks clicks. */}
     <div

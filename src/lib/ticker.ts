@@ -7,9 +7,11 @@ export interface TickerItem {
   text: string;
 }
 
-type TickerEvent = Pick<TransitEvent, 'event_date' | 'title' | 'venue' | 'event_url'>;
+type TickerEvent = Pick<TransitEvent, 'event_date' | 'title' | 'venue' | 'event_url' | 'is_curated'>;
 
-const EVENT_WINDOW_DAYS = 7;
+// Hand-picked highlights only: a few strong stops, not the full multi-week dump.
+const MAX_HIGHLIGHTS = 5;
+const EVENT_WINDOW_DAYS = 21;
 const SITE_TIME_ZONE = 'America/Chicago';
 
 let tickerCache: Promise<TickerItem[]> | undefined;
@@ -34,26 +36,45 @@ async function buildTickerItems() {
     });
   }
 
-  if (events.length > 0) {
-    items.push({
-      label: 'Next 7 Days',
-      text: '',
-    });
+  const highlights = pickHighlights(events);
 
-    groupEventsByDate(events).forEach(({ date, events }) => {
+  if (highlights.length > 0) {
+    highlights.forEach((event) => {
       items.push({
-        label: date,
-        text: events.map(formatEventDetail).join(' / '),
+        label: formatStopDate(event.event_date),
+        text: formatEventDetail(event),
       });
     });
   } else {
     items.push({
-      label: 'Next 7 Days',
-      text: 'No scheduled stops',
+      label: 'Next stops',
+      text: 'See the events board',
     });
   }
 
   return items;
+}
+
+// Curate: Conductor's Picks first, then soonest, de-duplicated by title so a
+// recurring series (e.g. a multi-week camp) only appears once.
+function pickHighlights(events: TickerEvent[]): TickerEvent[] {
+  const ranked = [...events].sort((a, b) => {
+    if (a.is_curated !== b.is_curated) return a.is_curated ? -1 : 1;
+    return a.event_date.localeCompare(b.event_date);
+  });
+
+  const seenTitles = new Set<string>();
+  const highlights: TickerEvent[] = [];
+  for (const event of ranked) {
+    const key = event.title.trim().toLowerCase();
+    if (seenTitles.has(key)) continue;
+    seenTitles.add(key);
+    highlights.push(event);
+    if (highlights.length >= MAX_HIGHLIGHTS) break;
+  }
+
+  // Show highlights in chronological order once selected.
+  return highlights.sort((a, b) => a.event_date.localeCompare(b.event_date));
 }
 
 async function getUpcomingEvents() {
@@ -64,7 +85,7 @@ async function getUpcomingEvents() {
     const { supabase } = await import('./supabase');
     const { data, error } = await supabase
       .from('events')
-      .select('event_date,title,venue,event_url')
+      .select('event_date,title,venue,event_url,is_curated')
       .gte('event_date', today)
       .lte('event_date', windowEnd)
       .order('event_date', { ascending: true })
@@ -77,17 +98,6 @@ async function getUpcomingEvents() {
     console.error('Error fetching upcoming ticker events:', error);
     return [];
   }
-}
-
-function groupEventsByDate(events: TickerEvent[]) {
-  const groups = new Map<string, TickerEvent[]>();
-
-  events.forEach((event) => {
-    const date = formatStopDate(event.event_date);
-    groups.set(date, [...(groups.get(date) ?? []), event]);
-  });
-
-  return Array.from(groups, ([date, events]) => ({ date, events }));
 }
 
 function formatEventDetail(event: TickerEvent) {

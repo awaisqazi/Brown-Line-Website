@@ -101,12 +101,12 @@ const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_P
 
   .marquee::before {
     left: 0;
-    background: linear-gradient(to right, #642713 0%, rgba(100, 39, 19, 0) 100%);
+    background: linear-gradient(to right, #642713 0%, #642713 35%, rgba(100, 39, 19, 0) 100%);
   }
 
   .marquee::after {
     right: 0;
-    background: linear-gradient(to left, #642713 0%, rgba(100, 39, 19, 0) 100%);
+    background: linear-gradient(to left, #642713 0%, #642713 45%, rgba(100, 39, 19, 0) 100%);
   }
 
   .marquee-viewport {
@@ -116,6 +116,11 @@ const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_P
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
+    /* Reserve space at both ends so scrolling text never collides with the grip
+       (left) or the pause toggle (right). Margins shrink the clip box, so text is
+       clipped before it reaches either control; the edge fades cover the gaps. */
+    margin-left: 1.9rem;
+    margin-right: 2.9rem;
   }
 
   .marquee.is-dragging .marquee-viewport {
@@ -176,10 +181,10 @@ const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_P
     height: 1.55rem;
     transform: translateY(-50%);
     color: #FFBC29;
-    background: rgba(100, 39, 19, 0.78);
-    border: 1px solid rgba(255, 188, 41, 0.48);
+    background: #642713;
+    border: 1px solid rgba(255, 188, 41, 0.65);
     border-radius: 2px;
-    opacity: 0.62;
+    opacity: 0.85;
     transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
   }
 

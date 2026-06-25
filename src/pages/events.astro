@@ -24,25 +24,81 @@ if (error) {
 
 const events = data ?? [];
 
-const groupedEvents = events.reduce<Record<string, TransitEvent[]>>((groups, event) => {
-  const key = event.event_date;
-  (groups[key] ??= []).push(event);
+function getTodayChicago() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${byType.year}-${byType.month}-${byType.day}`;
+}
+const today = getTodayChicago();
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function monthDay(dateString: string) {
+  const [y, m, d] = dateString.split('-').map(Number);
+  if (!y || !m || !d) return dateString;
+  return `${MONTHS_SHORT[m - 1]} ${d}`;
+}
+
+// Collapse identical recurring / multi-day events (same title + venue) into a
+// single card with a date range, so a 25-day summer camp doesn't flood the board.
+interface EventGroup {
+  rep: TransitEvent;
+  start: string;
+  end: string;
+  recurrenceLabel: string;
+  sortDate: string;
+}
+
+const seriesMap = new Map<string, TransitEvent[]>();
+for (const event of events) {
+  const key = `${event.title}||${event.venue}`;
+  const bucket = seriesMap.get(key);
+  if (bucket) bucket.push(event);
+  else seriesMap.set(key, [event]);
+}
+
+const eventGroups: EventGroup[] = Array.from(seriesMap.values()).map((rows) => {
+  const dates = rows.map((r) => r.event_date).filter(Boolean).sort();
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  // Place the card on its first still-relevant date so an ongoing series surfaces
+  // on the board even if it began before today.
+  const sortDate = dates.find((d) => d >= today) ?? end;
+  const rep = rows.find((r) => r.event_date === sortDate) ?? rows[0];
+  const recurrenceLabel = start !== end ? `${monthDay(start)} – ${monthDay(end)}` : '';
+  return { rep, start, end, recurrenceLabel, sortDate };
+});
+
+const groupedByDate = eventGroups.reduce<Record<string, EventGroup[]>>((groups, group) => {
+  (groups[group.sortDate] ??= []).push(group);
   return groups;
 }, {});
 
-// Group by the canonical event_date and derive the heading label from it, so a
-// single day is always one segment regardless of how it was originally typed.
-const groupedEventEntries = Object.entries(groupedEvents)
+// One segment per calendar day; curated picks lead within a day.
+const groupedEventEntries = Object.entries(groupedByDate)
   .sort(([a], [b]) => a.localeCompare(b))
-  .map(([eventDate, dayEvents]) => ({
+  .map(([eventDate, dayGroups]) => ({
     eventDate,
     label: formatStopDate(eventDate),
-    dayEvents,
+    dayGroups: dayGroups.sort((a, b) => {
+      if (a.rep.is_curated !== b.rep.is_curated) return a.rep.is_curated ? -1 : 1;
+      return a.rep.title.localeCompare(b.rep.title);
+    }),
   }));
 
+// Calendar marks every distinct event date (including individual recurring days).
 const eventDates = Array.from(
   new Set(events.map((event) => event.event_date).filter(Boolean))
 ).sort();
+
+function isFreeEvent(event: TransitEvent) {
+  const cost = event.cost_info?.toLowerCase() ?? '';
+  return /\bfree\b/.test(cost) && !/\bnot free\b/.test(cost);
+}
 
 // Canonical order for the diaspora community tags; anything else falls to the end.
 const CATEGORY_ORDER = [
@@ -77,7 +133,7 @@ const controlsGridClass =
     : 'lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))]';
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 const pageDescription =
-  'A static, Supabase-powered guide to Chicago arts, culture, and community events from The Brown Line.';
+  "A curated guide to Chicago's Global South diaspora arts, culture, and community events. Updated weekly.";
 
 function getEventKind(event: TransitEvent) {
   if (event.is_giveaway) return 'giveaway';
@@ -112,16 +168,18 @@ function getEventSearchText(event: TransitEvent) {
 
       <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] gap-10 lg:gap-14 items-end">
         <div>
-          <h1 class="font-heading text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02] text-balance">
-            Chicago events, mapped like a <em class="not-italic text-cayenne">CTA ride</em>.
+          <h1 class="font-heading font-extrabold text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.02] text-balance">
+            Find your <em class="not-italic text-cayenne">next stop</em>.
           </h1>
         </div>
         <div class="max-w-xl">
-          <p class="font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed">
-            Curated community stops, fundraisers, workshops, comedy nights, and neighborhood gatherings pulled from Supabase every time the site rebuilds.
+          <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed">
+            Curated events across Chicago's Global South diaspora: film screenings and artist talks, food pop-ups, fundraisers, dance floors, workshops, and more.
           </p>
           <a
             href={`${base}submit-event`}
+            data-ga-event="submit_click"
+            data-ga-label="events_hero"
             class="mt-6 inline-flex items-center gap-2 border-2 border-darkWalnut bg-amber px-4 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
           >
             Submit an event
@@ -163,6 +221,13 @@ function getEventSearchText(event: TransitEvent) {
           >
             Reset
           </button>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
+          <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip is-active" aria-pressed="true">This week</button>
+          <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
+          <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip" aria-pressed="false">All upcoming</button>
+          <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
         </div>
 
         <div class:list={['mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5', controlsGridClass]}>
@@ -267,6 +332,13 @@ function getEventSearchText(event: TransitEvent) {
             />
           </label>
 
+          <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
+            <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip is-active" aria-pressed="true">This week</button>
+            <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
+            <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip" aria-pressed="false">All upcoming</button>
+            <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
+          </div>
+
           <div
             id="floating-event-filters"
             data-floating-filter-panel
@@ -328,11 +400,11 @@ function getEventSearchText(event: TransitEvent) {
       {events.length === 0 ? (
         <div class="border-2 border-darkWalnut bg-seashell p-8 md:p-10 shadow-retro">
           <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenne font-bold">No scheduled stops</p>
-          <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-3">
-            Events are loading soon.
+          <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none mt-3">
+            New stops are on the way.
           </h2>
-          <p class="font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed mt-5 max-w-2xl">
-            Once the team imports the next CSV in Supabase Studio, this static page will update on the next scheduled rebuild.
+          <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed mt-5 max-w-2xl">
+            The board updates every week. Check back soon, or submit an event to put it on the map.
           </p>
         </div>
       ) : (
@@ -345,39 +417,47 @@ function getEventSearchText(event: TransitEvent) {
             <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenne font-bold">
               No matching stops
             </p>
-            <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-3">
+            <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none mt-3">
               Try a different route.
             </h2>
+            <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed mt-4 max-w-2xl">
+              No stops match these filters. Try All upcoming, or clear a filter.
+            </p>
           </div>
 
           <div data-events-board class="space-y-14 md:space-y-16">
-            {groupedEventEntries.map(({ eventDate, label, dayEvents }) => (
+            {groupedEventEntries.map(({ eventDate, label, dayGroups }, sectionIndex) => (
             <section
               data-event-day-section
               data-event-date={eventDate}
               class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] gap-8 md:gap-10"
             >
               <div>
-                <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mb-3">
-                  Platform
-                </p>
-                <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none">
+                {sectionIndex === 0 && (
+                  <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mb-3">
+                    Platform
+                  </p>
+                )}
+                <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none">
                   {label}
                 </h2>
               </div>
 
               <ol class="events-route relative space-y-6">
-                {dayEvents.map((event, index) => (
+                {dayGroups.map(({ rep, start, end, recurrenceLabel }, index) => (
                   <li
                     data-event-card
-                    data-event-date={event.event_date}
-                    data-event-kind={getEventKind(event)}
-                    data-event-curated={event.is_curated ? 'true' : 'false'}
-                    data-event-giveaway={event.is_giveaway ? 'true' : 'false'}
-                    data-event-tags={(event.tags ?? []).join('|')}
-                    data-event-neighborhood={event.neighborhood ?? ''}
-                    data-event-search={getEventSearchText(event)}
-                    data-has-link={event.event_url ? 'true' : 'false'}
+                    data-event-date={rep.event_date}
+                    data-event-start={start}
+                    data-event-end={end}
+                    data-event-free={isFreeEvent(rep) ? 'true' : 'false'}
+                    data-event-kind={getEventKind(rep)}
+                    data-event-curated={rep.is_curated ? 'true' : 'false'}
+                    data-event-giveaway={rep.is_giveaway ? 'true' : 'false'}
+                    data-event-tags={(rep.tags ?? []).join('|')}
+                    data-event-neighborhood={rep.neighborhood ?? ''}
+                    data-event-search={getEventSearchText(rep)}
+                    data-has-link={rep.event_url ? 'true' : 'false'}
                     class="relative pl-12 md:pl-14"
                   >
                     <span
@@ -388,7 +468,7 @@ function getEventSearchText(event: TransitEvent) {
                       aria-hidden="true"
                     ></span>
 
-                    <EventCard event={event} />
+                    <EventCard event={rep} recurrenceLabel={recurrenceLabel} />
                   </li>
                 ))}
               </ol>
@@ -402,6 +482,35 @@ function getEventSearchText(event: TransitEvent) {
 </Layout>
 
 <style>
+  /* Quick-filter chips (This week / This weekend / All upcoming / Free) */
+  .quick-chip {
+    display: inline-flex;
+    align-items: center;
+    border: 2px solid #642713;
+    background: #FAF1EC;
+    color: #642713;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    transition: transform 120ms ease, background-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  }
+
+  .quick-chip:hover,
+  .quick-chip:focus-visible {
+    transform: translate(-1px, -1px);
+    box-shadow: 2px 2px 0 #642713;
+    outline: none;
+  }
+
+  .quick-chip.is-active {
+    background: #642713;
+    color: #FAF1EC;
+  }
+
   .events-route::before {
     content: '';
     position: absolute;
@@ -491,6 +600,15 @@ function getEventSearchText(event: TransitEvent) {
     transform: translateX(calc(100% + 1rem));
   }
 
+  /* One filter block per breakpoint: the inline "Route controls" serve desktop,
+     the floating "Line signal" serves mobile/tablet. Hide the floating copy on
+     large screens so the two never appear at once. */
+  @media (min-width: 1024px) {
+    [data-floating-event-controls] {
+      display: none !important;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [data-floating-event-controls],
     .floating-event-panel {
@@ -513,6 +631,7 @@ function getEventSearchText(event: TransitEvent) {
     const resetButtons = getControlFields('[data-reset-filters]');
     const resultCounts = getControlFields('[data-event-result-count]');
     const calendarRoots = getControlFields('[data-calendar]');
+    const quickFilterButtons = getControlFields('[data-quick-filter]');
     const floatingToggle = floatingControls?.querySelector('[data-floating-filter-toggle]');
     const floatingMinimize = floatingControls?.querySelector('[data-floating-minimize]');
     const floatingRestore = floatingControls?.querySelector('[data-floating-restore]');
@@ -536,9 +655,18 @@ function getEventSearchText(event: TransitEvent) {
     let pendingScrollDate = null;
     let controlsAreOutOfView = false;
     let floatingIsMinimized = false;
+    // Date-range mode: 'week' (default) | 'weekend' | 'all'. 'free' is a separate toggle.
+    let dateMode = 'week';
+    let freeOnly = false;
 
     const normalize = (value) => value.toString().trim().toLowerCase();
     const pad = (value) => String(value).padStart(2, '0');
+
+    function addDays(dateString, days) {
+      const [y, m, d] = dateString.split('-').map(Number);
+      const next = new Date(Date.UTC(y, m - 1, d + days));
+      return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
+    }
 
     function getSyncedValue(inputs) {
       return inputs.find((input) => input.value)?.value ?? '';
@@ -563,6 +691,40 @@ function getEventSearchText(event: TransitEvent) {
     }
 
     const today = getChicagoDateString();
+
+    // The lower/upper date bounds for the active quick-filter mode. A past
+    // calendar pick lowers the floor so events from that day onward reappear.
+    function getActiveRange() {
+      const floor = selectedDate && selectedDate < today ? selectedDate : today;
+      if (dateMode === 'all') {
+        return { lo: floor, hi: '9999-12-31' };
+      }
+      if (dateMode === 'weekend') {
+        const [, , ] = today.split('-');
+        const dow = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0 Sun .. 6 Sat
+        let sat;
+        let sun;
+        if (dow === 0) {
+          sat = addDays(today, -1);
+          sun = today;
+        } else {
+          sat = addDays(today, (6 - dow + 7) % 7);
+          sun = addDays(sat, 1);
+        }
+        return { lo: sat < floor ? floor : sat, hi: sun };
+      }
+      // 'week': today (or lowered floor) through the next 6 days.
+      return { lo: floor, hi: addDays(floor, 6) };
+    }
+
+    function syncQuickFilters() {
+      quickFilterButtons.forEach((button) => {
+        const kind = button.dataset.quickFilter;
+        const active = kind === 'free' ? freeOnly : dateMode === kind;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+    }
 
     function formatDateLabel(dateString) {
       const [year, month, day] = dateString.split('-').map(Number);
@@ -594,6 +756,13 @@ function getEventSearchText(event: TransitEvent) {
 
     function setSelectedDate(date) {
       selectedDate = date || '';
+      // Picking a specific day implies "show me everything from here": widen the
+      // window to all upcoming so the chosen day isn't hidden by the week/weekend
+      // chip, then jump to it. Clearing the date returns to the default week view.
+      if (selectedDate) {
+        dateMode = 'all';
+        syncQuickFilters();
+      }
       // Choosing a date is a JUMP, not a hard filter: scroll to that day while
       // keeping the surrounding events visible. Clearing it scrolls nowhere.
       pendingScrollDate = selectedDate || null;
@@ -931,7 +1100,9 @@ function getEventSearchText(event: TransitEvent) {
         getSyncedValue(searchInputs) ||
         selectedDate ||
         getSyncedValue(categorySelects) ||
-        getSyncedValue(neighborhoodSelects)
+        getSyncedValue(neighborhoodSelects) ||
+        freeOnly ||
+        dateMode !== 'week'
       );
     }
 
@@ -953,18 +1124,23 @@ function getEventSearchText(event: TransitEvent) {
       const query = normalize(getSyncedValue(searchInputs));
       const category = getSyncedValue(categorySelects);
       const neighborhood = getSyncedValue(neighborhoodSelects);
-      const cardDate = card.dataset.eventDate ?? '';
+      const cardStart = card.dataset.eventStart || card.dataset.eventDate || '';
+      const cardEnd = card.dataset.eventEnd || card.dataset.eventDate || '';
       const cardTags = (card.dataset.eventTags ?? '').split('|').filter(Boolean);
       const cardNeighborhood = card.dataset.eventNeighborhood ?? '';
+      const isFree = card.dataset.eventFree === 'true';
 
       if (query && !(card.dataset.eventSearch ?? '').includes(query)) return false;
 
-      // Default to upcoming events (today onward). Picking a date only LOWERS the
-      // floor when it's in the past, so a past pick reveals events from there on;
-      // a future pick keeps everything visible and simply scrolls to that day.
-      const floor = selectedDate && selectedDate < today ? selectedDate : today;
-      if (cardDate && cardDate < floor) return false;
+      // A multi-day / recurring event matches when its [start, end] range overlaps
+      // the active window. Searching expands the window to all upcoming, since a
+      // search means "find this anywhere," not "only this week."
+      const range = getActiveRange();
+      const hi = query ? '9999-12-31' : range.hi;
+      if (cardEnd && cardEnd < range.lo) return false;
+      if (cardStart && cardStart > hi) return false;
 
+      if (freeOnly && !isFree) return false;
       if (category && !cardTags.includes(category)) return false;
       if (neighborhood && cardNeighborhood !== neighborhood) return false;
 
@@ -1033,10 +1209,26 @@ function getEventSearchText(event: TransitEvent) {
       setSyncedValue(categorySelects, '');
       setSyncedValue(neighborhoodSelects, '');
       refreshThemed();
+      dateMode = 'week';
+      freeOnly = false;
+      syncQuickFilters();
       setSelectedDate('');
     }
 
     /* ---------- Wiring ---------- */
+    quickFilterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const kind = button.dataset.quickFilter;
+        if (kind === 'free') {
+          freeOnly = !freeOnly;
+        } else {
+          dateMode = kind;
+        }
+        syncQuickFilters();
+        renderFilters();
+      });
+    });
+
     searchInputs.forEach((input) => {
       input.addEventListener('input', () => {
         setSyncedValue(searchInputs, input.value, input);
@@ -1099,6 +1291,7 @@ function getEventSearchText(event: TransitEvent) {
     setSyncedValue(searchInputs, getSyncedValue(searchInputs));
     setSyncedValue(categorySelects, getSyncedValue(categorySelects));
     setSyncedValue(neighborhoodSelects, getSyncedValue(neighborhoodSelects));
+    syncQuickFilters();
     setFloatingExpanded(false);
 
     if (floatingControls && controls && 'IntersectionObserver' in window) {

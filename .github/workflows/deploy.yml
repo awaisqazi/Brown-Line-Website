@@ -42,6 +42,10 @@ jobs:
           # Cloudflare Turnstile site key for the public submit-event form. When the
           # repo variable is unset the build falls back to Cloudflare's TEST key.
           PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.PUBLIC_TURNSTILE_SITE_KEY }}
+          # Google Analytics 4. The gtag script loads only when this repo variable
+          # is set to the GA4 Measurement ID (G-XXXXXXXXXX). Leave it unset to ship
+          # no tracker. Analytics uses Consent Mode v2 (denied until the visitor accepts).
+          PUBLIC_GA_MEASUREMENT_ID: ${{ vars.PUBLIC_GA_MEASUREMENT_ID }}
 
   deploy:
     needs: build

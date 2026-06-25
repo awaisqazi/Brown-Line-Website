@@ -344,6 +344,7 @@ const pageDescription =
           form.reset();
           syncConditionalFields();
           (window as any).turnstile?.reset();
+          (window as any).gtag?.('event', 'submit_event_success');
           setStatus('', false);
           form.hidden = true;
           if (successPanel) successPanel.hidden = false;

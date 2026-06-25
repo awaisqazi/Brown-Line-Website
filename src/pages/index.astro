@@ -12,18 +12,49 @@ import type { TickerItem } from '../lib/ticker';
 import type { TransitEvent } from '../lib/supabase';
 
 const HOMEPAGE_EVENTS_LIMIT = 3;
+
+// Real testimonials only (reader + organizer/partner mix). Leave empty until
+// quotes are collected via DM/form, then fill in here. The section renders only
+// when this has entries, so the homepage never shows a fabricated quote.
+const testimonials: { quote: string; name: string; role: string; accent: string }[] = [
+  // Example shape (do not ship until confirmed real, with permission):
+  // { quote: '...', name: 'First name', role: 'Neighborhood or role', accent: 'cayenne' },
+];
+const testimonialAccent: Record<string, string> = {
+  cayenne: 'border-cayenne',
+  mayaBlue: 'border-mayaBlue',
+  celadon: 'border-celadon',
+  amber: 'border-amber',
+  babyPink: 'border-babyPink',
+};
+
+// Credibility strip. Real, accurate labels only: don't add orgs or imply
+// partnership beyond these (see design.md § 8). Width/height set per logo aspect
+// ratio (normalized to ~32px tall) to avoid layout shift.
+const base = import.meta.env.BASE_URL;
+const supportedBy = [
+  { src: 'logos/medill.png',   name: 'Northwestern Medill', w: 61, h: 32 },
+  { src: 'logos/projectc.png', name: 'Project C',           w: 48, h: 32 },
+  { src: 'logos/neighbor.png', name: 'Meet Your Neighbor',  w: 41, h: 32 },
+];
+const featuredIn = [
+  { src: 'logos/creader.png',  name: 'Chicago Reader',      w: 75, h: 32 },
+];
 // Cycle the brand palette across stops so the homepage route reads like the
 // colorful line on the full events board (src/pages/events.astro).
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 
 const issues = await getRecentIssues();
 const todayDateString = getChicagoDateString();
+// Lead with editorial priority, not date: a Conductor's Pick surfaces first so
+// the homepage always opens with a strong example (Conductor's Picks first, then
+// soonest date).
 const { data: upcomingEventsData, error: upcomingEventsError } = await supabase
   .from('events')
   .select('*')
   .gte('event_date', todayDateString)
-  .order('event_date', { ascending: true })
   .order('is_curated', { ascending: false })
+  .order('event_date', { ascending: true })
   .order('title', { ascending: true })
   .limit(HOMEPAGE_EVENTS_LIMIT)
   .returns<TransitEvent[]>();
@@ -33,13 +64,15 @@ if (upcomingEventsError) {
 }
 
 const upcomingEvents = upcomingEventsData ?? [];
-const firstUpcomingEvent = upcomingEvents[0];
+// The scrolling NEXT STOP banner leads with the next Conductor's Pick (the query
+// above already sorts curated picks first), so the brand always shows its best.
+const firstUpcomingEvent = upcomingEvents.find((event) => event.is_curated) ?? upcomingEvents[0];
 const upcomingStopsTicker: TickerItem[] = [
   {
     label: 'NEXT STOP',
     text: firstUpcomingEvent
-      ? `${firstUpcomingEvent.title} -- DOORS OPEN ON THE RIGHT`
-      : 'NO SCHEDULED STOPS -- CHECK THE EVENTS BOARD',
+      ? `${firstUpcomingEvent.title} · DOORS OPEN ON THE RIGHT`
+      : 'NO SCHEDULED STOPS · CHECK THE EVENTS BOARD',
   },
 ];
 
@@ -67,11 +100,11 @@ function getChicagoDateString() {
   <section id="subscribe" class="px-6 pt-12 pb-6 md:pt-16 md:pb-6 lg:pt-20">
     <div class="max-w-4xl mx-auto text-center">
       <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
-        A Chicago cultural newsletter
+        Chicago&rsquo;s Global South culture, in motion
       </p>
 
       <h1 class="font-heading text-darkWalnut text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-balance">
-        Chicago&rsquo;s go-to guide for <em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community events.
+        Chicago&rsquo;s go-to guide for <em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community.
       </h1>
 
       <div class="mt-8 md:mt-10 flex justify-center">
@@ -89,6 +122,51 @@ function getChicagoDateString() {
     </div>
   </section>
 
+  {/* ---------- Credibility strip ---------- */}
+  <section class="px-6 pt-2 pb-10 md:pb-12">
+    <div class="max-w-5xl mx-auto flex flex-col items-center gap-7 md:flex-row md:items-stretch md:justify-center md:gap-10">
+      <div class="flex flex-col items-center gap-3">
+        <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Supported by</span>
+        <ul class="flex flex-wrap items-center justify-center gap-3">
+          {supportedBy.map((logo) => (
+            <li class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4">
+              <img
+                src={`${base}${logo.src}`}
+                alt={logo.name}
+                width={logo.w}
+                height={logo.h}
+                class="h-7 md:h-8 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <span class="hidden md:block w-px self-stretch bg-darkWalnut/20" aria-hidden="true"></span>
+
+      <div class="flex flex-col items-center gap-3">
+        <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Featured in</span>
+        <ul class="flex items-center justify-center">
+          {featuredIn.map((logo) => (
+            <li class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4">
+              <img
+                src={`${base}${logo.src}`}
+                alt={logo.name}
+                width={logo.w}
+                height={logo.h}
+                class="h-7 md:h-8 w-auto object-contain"
+                loading="lazy"
+                decoding="async"
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+
   {/* ---------- Upcoming Stops ---------- */}
   <section id="upcoming-stops" class="scroll-mt-24 pt-6 pb-16 md:scroll-mt-0 md:pt-6 md:pb-24">
     <div class="max-w-5xl mx-auto">
@@ -101,7 +179,7 @@ function getChicagoDateString() {
           <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
             Board here
           </p>
-          <h2 class="font-sans tracking-tight font-extrabold text-darkWalnut text-4xl md:text-6xl leading-none">
+          <h2 class="font-heading tracking-tight font-semibold text-darkWalnut text-4xl md:text-[2.5rem] leading-none">
             Upcoming Stops
           </h2>
         </div>
@@ -144,14 +222,11 @@ function getChicagoDateString() {
               </span>
               <a
                 href={`${import.meta.env.BASE_URL}events`}
-                class="see-more group inline-flex items-center gap-3 font-heading leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
+                class="see-more group inline-flex items-center gap-3 font-heading font-semibold leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
               >
-                <span>Stay on board for every stop</span>
+                <span>See every stop on the line</span>
                 <span class="see-more-arrow text-cayenne" aria-hidden="true">&rarr;</span>
               </a>
-              <p class="mt-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-darkWalnut/55 md:text-xs">
-                End of the line &mdash; ride to the full events board
-              </p>
             </div>
           </div>
         ) : (
@@ -178,12 +253,79 @@ function getChicagoDateString() {
     </div>
   </section>
 
+  {/* ---------- Two-sided band: the platform/network story ---------- */}
+  <section class="px-6 pb-16 md:pb-24">
+    <div class="max-w-5xl mx-auto grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
+      <div class="flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-8 shadow-retro">
+        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Feeling social?</p>
+        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
+          Find your next stop.
+        </h3>
+        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
+          Browse the live board for what&rsquo;s happening across Chicago&rsquo;s Global South diasporas this week.
+        </p>
+        <a
+          href={`${import.meta.env.BASE_URL}events`}
+          data-ga-event="browse_click"
+          data-ga-label="homepage_band"
+          class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-mayaBlue px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+        >
+          Browse events <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-8 shadow-retro">
+        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Hosting?</p>
+        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
+          Put it on the map.
+        </h3>
+        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
+          Submit your event and a human will review it for the board and the newsletter.
+        </p>
+        <a
+          href={`${import.meta.env.BASE_URL}submit-event`}
+          data-ga-event="submit_click"
+          data-ga-label="homepage_band"
+          class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-amber px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+        >
+          Submit an event <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- Testimonials (renders only when real quotes exist) ---------- */}
+  {testimonials.length > 0 && (
+    <section class="px-6 py-16 md:py-24 bg-seashell">
+      <div class="max-w-5xl mx-auto">
+        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3 text-center">
+          From the platform
+        </p>
+        <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] leading-none tracking-tight text-center">
+          Riders &amp; organizers
+        </h2>
+        <div class="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {testimonials.map((t) => (
+            <figure class:list={['bg-[#FDFBF7] border-l-4 p-6', testimonialAccent[t.accent] ?? 'border-cayenne']}>
+              <blockquote class="font-body italic text-darkWalnut text-lg leading-relaxed">
+                &ldquo;{t.quote}&rdquo;
+              </blockquote>
+              <figcaption class="mt-4 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut/70">
+                {t.name} &middot; {t.role}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
   {/* ---------- Recent Rides ---------- */}
   <section id="archive" class="px-6 py-20 md:py-28">
     <div class="max-w-5xl mx-auto">
       <div class="flex items-end justify-between flex-wrap gap-4 mb-12">
-        <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl tracking-tight leading-none">
-          Recent rides
+        <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] tracking-tight leading-none">
+          Recent dispatches
         </h2>
         <a
           href="https://www.thebrownline.co"
@@ -212,20 +354,44 @@ function getChicagoDateString() {
     </div>
   </section>
 
-  {/* ---------- About teaser ---------- */}
+  {/* ---------- Support band ---------- */}
+  <section class="px-6 py-16 md:py-20 bg-darkWalnut text-seashell">
+    <div class="max-w-5xl mx-auto flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+      <div class="max-w-xl">
+        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-amber font-bold">Fund the line</p>
+        <h2 class="font-heading text-seashell text-3xl md:text-4xl leading-tight tracking-tight mt-3">
+          Keep independent culture coverage on the rails.
+        </h2>
+        <p class="font-body text-seashell/80 text-base md:text-lg leading-relaxed mt-3">
+          The Brown Line is reader-supported. Chip in once or ride monthly to keep the guide free, independent, and growing.
+        </p>
+      </div>
+      <a
+        href={`${import.meta.env.BASE_URL}support`}
+        data-ga-event="support_click"
+        data-ga-label="homepage_band"
+        class="shrink-0 inline-flex items-center gap-2 border-2 border-amber bg-amber px-6 py-3 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0_#FAF1EC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seashell"
+      >
+        Support The Brown Line
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+    </div>
+  </section>
+
+  {/* ---------- About teaser (closing brand statement) ---------- */}
   <section class="px-6 py-20 md:py-28 bg-seashell">
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95] tracking-tight">
-        Communal. Gritty. Real.
+        Elevating Chicago&rsquo;s underground Global South culture
       </h2>
-      <p class="font-body text-darkWalnut/80 text-lg mt-6 leading-relaxed">
-        A Chicago-based, creator-led media brand serving Global South diaspora communities through culturally intelligent journalism: curated weekly guides, independent artist and small-business spotlights, original reporting, and values-driven commentary.
+      <p class="font-body text-darkWalnut/90 text-lg mt-6 leading-relaxed">
+        Your independent, local guide to the arts and culture of Chicago&rsquo;s Global South diasporas. From Rogers Park to Bridgeview, The Brown Line cuts through redlining to connect the neighborhoods, and the people, that make this city feel like the world.
       </p>
       <a
         href={`${import.meta.env.BASE_URL}about`}
         class="inline-flex items-center gap-2 mt-8 font-body font-bold text-sm uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-6 py-3 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro"
       >
-        Meet the founder
+        What we&rsquo;re building
         <span aria-hidden="true">&rarr;</span>
       </a>
     </div>

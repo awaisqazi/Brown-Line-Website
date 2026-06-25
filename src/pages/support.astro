@@ -1,0 +1,185 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+
+const base = import.meta.env.BASE_URL;
+
+// Stripe payment links (amounts confirmed 2026-06-25 from the live checkout pages).
+const STRIPE_LINKS = {
+  fare:    'https://buy.stripe.com/6oUcN65DS5iJcFa5vlasg00', // $20 one-time
+  stop:    'https://buy.stripe.com/4gM5kEeaodPfdJe5vlasg02', // $50 one-time
+  track:   'https://buy.stripe.com/6oUaEYeao26xdJe7Dtasg03', // $100 one-time
+  monthly: 'https://buy.stripe.com/7sY00k1nC4eF8oUg9Zasg04', // $9 / month
+};
+
+const oneTimeTiers = [
+  {
+    amount: '$20',
+    name: 'Buy a fare',
+    blurb: 'Chip in for the ride and help keep the guide free.',
+    href: STRIPE_LINKS.fare,
+    accent: 'mayaBlue',
+    popular: false,
+  },
+  {
+    amount: '$50',
+    name: 'Cover a stop',
+    blurb: 'Help fund a neighborhood guide.',
+    href: STRIPE_LINKS.stop,
+    accent: 'celadon',
+    popular: false,
+  },
+  {
+    amount: '$100',
+    name: 'Lay the track',
+    blurb: 'Power a full month of coverage.',
+    href: STRIPE_LINKS.track,
+    accent: 'amber',
+    popular: true,
+  },
+];
+
+const accentBar: Record<string, string> = {
+  mayaBlue: 'bg-mayaBlue',
+  celadon: 'bg-celadon',
+  amber: 'bg-amber',
+  cayenne: 'bg-cayenne',
+  babyPink: 'bg-babyPink',
+};
+
+const description =
+  'Support The Brown Line, an independent, reader-supported guide to Chicago Global South diaspora arts, culture, and community. Give once or ride monthly for $9.';
+---
+<Layout title="Support · The Brown Line" description={description}>
+  {/* ---------- Hero ---------- */}
+  <section class="px-6 pt-16 md:pt-24 pb-10">
+    <div class="max-w-3xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+        Fund the line
+      </p>
+      <h1 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[1.02] tracking-tight text-balance">
+        Keep the line running.
+      </h1>
+      <p class="font-body text-darkWalnut/85 text-lg md:text-xl mt-8 leading-relaxed">
+        The Brown Line is independent and reader-supported. Your support helps cut through redlining to
+        connect Chicago's socially conscious creatives through arts, culture, and community, all through a
+        Global South lens. No pay-to-play, ever.
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-4xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  {/* ---------- One-time giving ---------- */}
+  <section class="px-6 py-14 md:py-20">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex items-end justify-between flex-wrap gap-3 mb-10">
+        <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none tracking-tight">
+          Give once
+        </h2>
+        <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest font-bold">
+          Chip in for the ride
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        {oneTimeTiers.map((tier) => (
+          <a
+            href={tier.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="support_checkout"
+            data-ga-label={tier.name}
+            class:list={[
+              'group relative flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-6 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue',
+              tier.popular ? 'shadow-retro' : '',
+            ]}
+          >
+            <span class:list={['absolute inset-x-0 top-0 h-1.5', accentBar[tier.accent]]} aria-hidden="true"></span>
+            {tier.popular && (
+              <span class="absolute -top-3 right-4 font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-0.5">
+                Most popular
+              </span>
+            )}
+            <span class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-2">{tier.amount}</span>
+            <span class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm mt-3">{tier.name}</span>
+            <span class="font-body text-darkWalnut/80 text-sm leading-relaxed mt-2 flex-1">{tier.blurb}</span>
+            <span class="mt-5 inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-cayenne">
+              Give {tier.amount} <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-1">&rarr;</span>
+            </span>
+          </a>
+        ))}
+      </div>
+
+      <p class="font-body text-darkWalnut/70 text-sm mt-6 leading-relaxed">
+        Payments are processed securely by Stripe. Want to give a different amount?
+        <a href="mailto:hi@thebrownlinechi.com" class="link-transit font-bold">Email us</a> and we'll sort it out.
+      </p>
+    </div>
+  </section>
+
+  {/* ---------- Recurring / monthly ---------- */}
+  <section class="px-6 py-14 md:py-20 bg-seashell">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none tracking-tight mb-3">
+        Ride monthly
+      </h2>
+      <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed max-w-2xl">
+        Monthly support is the strongest way to keep independent culture coverage on the rails.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-7 flex flex-col">
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-darkWalnut/60 font-bold">Street Level</p>
+          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">Free</p>
+          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
+            The weekly newsletter, always free. Subscribe and ride along.
+          </p>
+          <a
+            href={`${base}#subscribe`}
+            data-ga-event="subscribe_click"
+            data-ga-label="support_page"
+            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-seashell px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Subscribe <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+
+        <div class="relative border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 shadow-retro flex flex-col">
+          <span class="absolute inset-x-0 top-0 h-1.5 bg-cayenne" aria-hidden="true"></span>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mt-1">Monthly rider</p>
+          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">$9<span class="text-base align-middle font-body font-bold">/mo</span></p>
+          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
+            Back the work every month and keep the guide free, independent, and growing.
+          </p>
+          <a
+            href={STRIPE_LINKS.monthly}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="support_checkout"
+            data-ga-label="Monthly $9"
+            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-cayenne px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Ride monthly for $9 <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* ---------- Reassurance ---------- */}
+  <section class="px-6 py-16 md:py-20">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="font-heading text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
+        Where your support goes
+      </h2>
+      <p class="font-body text-darkWalnut/85 text-lg mt-6 leading-relaxed">
+        Reporting and curation, community events, and keeping the guide free for everyone. The Brown Line
+        doesn't run ads or take pay-for-coverage. Read our
+        <a href={`${base}standards`} class="link-transit font-bold">standards &amp; ethics</a>.
+      </p>
+    </div>
+  </section>
+</Layout>

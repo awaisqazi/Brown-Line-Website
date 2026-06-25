@@ -9,6 +9,15 @@ const BASE_URL = import.meta.env.BASE_URL || '/';
 
 const assetPath = (path) => `${BASE_URL}${path.replace(/^\/+/, '')}`;
 
+// Persist that the intro has been seen so returning visitors (and anyone opening
+// a shared link a second time) never hit the gate again. Read in Layout.astro's
+// inline <head> script, which adds `splash-done` before the splash can paint.
+const rememberIntroSeen = () => {
+  try {
+    localStorage.setItem('brownLineIntroSeen', '1');
+  } catch (_) {}
+};
+
 // --- Synthesized & High-Fidelity CTA Audio Engine ---
 class CTATrainAudio {
   constructor() {
@@ -479,6 +488,7 @@ const TrainSplash = () => {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const finish = () => {
+      rememberIntroSeen();
       document.documentElement.classList.add('splash-done');
       document.body.classList.remove('splash-active');
       setPhase('gone');
@@ -556,6 +566,7 @@ const TrainSplash = () => {
       audioRef.current.stopSequence(); // Cut chimes and voice announcements immediately
     }
 
+    rememberIntroSeen();
     window.setTimeout(() => {
       document.documentElement.classList.add('splash-done');
       document.body.classList.remove('splash-active');
@@ -1003,7 +1014,7 @@ const TrainSplash = () => {
         <span className="flex items-center justify-center w-5 h-5 rounded-full bg-[#FAF1EC] text-[#642713] font-black text-[10px] tracking-normal">
           B
         </span>
-        <span className="whitespace-nowrap">{`Skip to ${nextStop}`}</span>
+        <span className="whitespace-nowrap">Skip intro</span>
 
         {/* Keyboard spacebar badge indicator */}
         <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 ml-2.5 rounded text-[10px] bg-[#FAF1EC]/25 border border-[#FAF1EC]/30 font-mono tracking-normal lowercase opacity-85">
