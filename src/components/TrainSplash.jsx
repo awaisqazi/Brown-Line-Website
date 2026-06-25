@@ -1029,6 +1029,18 @@ const TrainSplash = () => {
 
       {/* --- High-end Editorial CSS Animations --- */}
       <style>{`
+        /* Fail-safe: the splash normally dismisses via JS (this component
+           unmounts well before 9s). But if the script never hydrates (blocked,
+           slow, or errored), this pure-CSS animation fades the overlay out and
+           drops pointer-events so a visitor is never permanently trapped. It is
+           present in the server-rendered HTML, so it works with no JS at all. */
+        .train-splash-root {
+          animation: splash-failsafe-hide 0.6s ease 9s forwards;
+        }
+        @keyframes splash-failsafe-hide {
+          to { opacity: 0; visibility: hidden; pointer-events: none; }
+        }
+
         /* Elevated sleepers zooming down on perspective plane */
         .splash-tie,
         .splash-tie-warp {
