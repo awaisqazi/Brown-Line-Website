@@ -74,7 +74,7 @@ Reusable behaviors that show up across multiple components. When adding new UI, 
 ### Link Transit Underline (`.link-transit`)
 Defined in `src/styles/global.css`. A 5-color gradient bar slides in left-to-right (200ms ease) below the text on `:hover` and `:focus-visible`. Used on Nav text links, the Footer link column, and the homepage "View all" CTA. The colors match the Transit Divider gradient so the underline reads as a tiny slice of the same track. Falls back to no animation under `prefers-reduced-motion`.
 
-### Mobile Drawer Route Map (`Nav.astro`, sub-`md` only)
+### Mobile Drawer Route Map (`Nav.astro`, below `lg` only)
 The mobile menu is themed as a transit route map.
 - Hamburger button morphs into an X on open (top bar rotates +45° down, bottom -45° up, middle fades).
 - Drawer slides in from the right at `88vw` width, `max-w-sm`.
@@ -84,16 +84,17 @@ The mobile menu is themed as a transit route map.
 - Stop colors map in order: Baby Pink → Maya Blue → Celadon → Amber → Cayenne. Subscribe is always the Cayenne terminus (matches the CTA token).
 - Closes on link tap, backdrop tap, Escape, or resizing past `md`.
 
-### Desktop Header Route Map (`Nav.astro`, `md+` only)
-The desktop primary nav mirrors the mobile transit-stop language as a compact horizontal route.
+### Desktop Header Route Map (`Nav.astro`, `lg+` only)
+The desktop primary nav mirrors the mobile transit-stop language as a compact horizontal route, followed by the distinct Support/Subscribe buttons (`.nav-cta`). It renders at `lg+` only; tablets and phones get the hamburger drawer instead, because a 5-stop route plus two buttons and the logo gets crammed below ~1024px.
 - A Dark Walnut track runs behind the stop group and ends at the first and last dots.
 - Each link has a 20×20 colored dot, 2px walnut border, and the retro hard shadow.
 - Labels stay Montserrat, bold, uppercase, and compact so the header reads like signage rather than body copy.
-- Stop colors match the mobile drawer order: Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
+- **Label overflow:** station labels are absolutely positioned and centered under their dots, so they overflow the 20px dot width. `.desktop-route` carries horizontal padding (`--route-pad`) so the first/last labels stay inside the route box instead of colliding with the logo or the Support button; the track `::before` is inset by the same padding so it still starts/ends on the end dots. Gaps (`--route-gap`) are tuned so adjacent labels keep clearance (4.25rem at `lg`).
+- Stop colors match the mobile drawer order: Maya Blue → Celadon → Baby Pink → Amber → Cayenne (Events, Submit, Archive, About, Standards).
 - Hover/focus lifts the station slightly, scales the dot, and tints the label Cayenne.
 
 ### Sticky Header Rule
-Header is `sticky top-0 z-30` below `md` and reverts to `static` at `md+`. Rationale: keep the hamburger reachable while scrolling on mobile without claiming desktop vertical space, where the inline nav is always visible.
+Header is `sticky top-0 z-30` below `lg` and reverts to `static` at `lg+`. Rationale: keep the hamburger reachable while scrolling on phones and tablets without claiming desktop vertical space, where the inline nav is always visible.
 
 ### LED Marquee (`Marquee.astro`)
 Dark Walnut bar with Amber text, top and bottom 2px Amber borders. The marquee now accepts structured `TickerItem[]` data rather than one static phrase. Each item has a Seashell label, Amber body text, and a star separator. Three copies of the item line are rendered into a transform-driven track so the JS can normalize position for an endless loop. The track scrolls at a constant speed in pixels per second (default 90) rather than a fixed loop duration, so the pace stays even no matter how long the current copy is; callers can override with `pixelsPerSecond`. Callers can pass `visualRepeat` to duplicate short visual item sets without duplicating the screen-reader text.
@@ -213,7 +214,7 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 - **Partner logos (homepage credibility strip):** transparent PNGs in `public/logos/`, shown in bordered `#FDFBF7` tiles (height-normalized to ~32px, `object-contain`):
   - **Supported by:** `medill.png` (Northwestern Medill), `projectc.png` (Project C), `neighbor.png` (Meet Your Neighbor).
   - **Featured in:** `creader.png` (Chicago Reader).
-  - Use these exact four only. Do not add other orgs or imply partnership beyond these (per the master doc). Alt text is just the org name. The list is data-driven in `index.astro` (`supportedBy` / `featuredIn` arrays) with per-logo width/height to avoid layout shift.
+  - Use these exact four only. Do not add other orgs or imply partnership beyond these (per the master doc). Alt text is just the org name. The list is data-driven in `index.astro` (`supportedBy` / `featuredIn` arrays) with per-logo width/height to avoid layout shift. Each tile links to the org's site in a new tab (`target="_blank" rel="noopener noreferrer"`, "opens in a new tab" aria-label, GA `partner_click` event): Medill `medill.northwestern.edu`, Project C `projectc.biz`, Meet Your Neighbor `meetyourneighborchi.com`, Chicago Reader `chicagoreader.com`.
 - **Founder portrait:** `public/images/ghazala.jpeg`. Used on the About page and as that page's Open Graph share image.
 - **Web app icons:** `src/layouts/Layout.astro` links the favicon, Apple touch icon, and `public/site.webmanifest`. The manifest uses relative icon `src` values so the Android home-screen bookmark icons resolve correctly on both the root domain and the GitHub Pages base path.
 - **Fonts:**
@@ -224,7 +225,7 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 ## 9. Component & Page Inventory
 
 Components live in `src/components/`:
-- `Nav.astro`: header with logo, five route links (Events, Submit, Archive, About, Standards), and two distinct buttons (Support outline, Subscribe filled) via `.nav-cta`. Desktop = horizontal route-map nav + buttons. Mobile = hamburger that opens the sliding route-map drawer with the same buttons (see § 5). Sticky on mobile, static on desktop. (World Cup nav link intentionally omitted until `/events/world-cup` exists, to avoid a dead link.)
+- `Nav.astro`: header with logo, five route links (Events, Submit, Archive, About, Standards), and two distinct buttons (Support outline, Subscribe filled) via `.nav-cta`. At `lg+` = horizontal route-map nav + buttons; below `lg` (phones and tablets) = hamburger that opens the sliding route-map drawer with the same buttons (see § 5). Sticky below `lg`, static at `lg+`. (World Cup nav link intentionally omitted until `/events/world-cup` exists, to avoid a dead link.)
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
 - `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, constant pixels-per-second scroll, and dynamic data from `src/lib/ticker.ts`.
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts optional `caption` and `class` props.
@@ -387,6 +388,7 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-06-25 (credibility logos + nav fixes):** Added the four partner logos to the homepage credibility strip (Northwestern Medill, Project C, Meet Your Neighbor; Featured in Chicago Reader) in bordered tiles, each hyperlinked to the org in a new tab and GA-tracked (`partner_click`). Fixed the desktop nav: the last route label ("Standards") was overflowing into the Support button, so `.desktop-route` now reserves horizontal padding (with the track inset to match) and tighter gaps; the inline route also moved to `lg+` (tablets/phones use the hamburger drawer) so the 5 stops plus two buttons never cram below ~1024px.
 - **2026-06-25 (DC pitch pass, from the Website Master Change Doc):** Large consistency + hierarchy pass ahead of the July investor pitch.
   - **Event card:** unified all events onto the one bordered card (filled tags, venue-once, Conductor's Pick demoted to a badge, `Details / RSVP` + `Share` buttons). The card is now always an `<article>` (no whole-card link), and `Share` uses the Web Share API with clipboard fallback via one delegated listener.
   - **Events board:** collapse identical recurring/multi-day events into one card with a date range (Imaginarte 25 → 1, etc.); added quick-filter chips (This week default / This weekend / All upcoming / Free); default to This Week with range-overlap filtering; Neighborhood filter now populated (backfill below); "Platform" eyebrow shown once; floating "Line signal" panel hidden at `lg+` so there's one filter block per breakpoint.

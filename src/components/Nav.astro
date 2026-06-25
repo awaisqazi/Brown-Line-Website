@@ -14,7 +14,7 @@ const navButtons = [
 ];
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 ---
-<header class="bg-seashell sticky top-0 z-30 md:static md:z-auto">
+<header class="bg-seashell sticky top-0 z-30 lg:static lg:z-auto">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
     <a href={base} class="flex items-center gap-3 shrink-0 relative z-40" aria-label="The Brown Line, home">
       <img
@@ -27,8 +27,10 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       />
     </a>
 
-    {/* Desktop nav: route of destinations + distinct Support/Subscribe buttons */}
-    <div class="hidden md:flex items-center gap-6 lg:gap-8 min-w-0">
+    {/* Desktop nav: route of destinations + distinct Support/Subscribe buttons.
+        Shown at lg+; tablets and phones use the hamburger drawer below so the
+        7-item route never gets crammed. */}
+    <div class="hidden lg:flex items-center gap-8 min-w-0">
       <nav aria-label="Primary" class="desktop-route-nav min-w-0">
         <ul class="desktop-route">
           {navLinks.map(({ href, label, stopColor, gaEvent }) => (
@@ -63,7 +65,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       aria-label="Open menu"
       aria-expanded="false"
       aria-controls="mobile-nav"
-      class="md:hidden relative z-40 w-11 h-11 flex flex-col items-center justify-center gap-[5px] text-darkWalnut focus:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue rounded-sm"
+      class="lg:hidden relative z-40 w-11 h-11 flex flex-col items-center justify-center gap-[5px] text-darkWalnut focus:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue rounded-sm"
     >
       <span class="nav-bar nav-bar-top block w-7 h-[3px] bg-darkWalnut origin-center"></span>
       <span class="nav-bar nav-bar-mid block w-7 h-[3px] bg-darkWalnut"></span>
@@ -74,7 +76,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   {/* Mobile drawer backdrop */}
   <div
     id="mobile-nav-backdrop"
-    class="md:hidden fixed inset-0 z-20 bg-darkWalnut/60 opacity-0 pointer-events-none transition-opacity duration-300"
+    class="lg:hidden fixed inset-0 z-20 bg-darkWalnut/60 opacity-0 pointer-events-none transition-opacity duration-300"
     aria-hidden="true"
   ></div>
 
@@ -83,7 +85,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     id="mobile-nav"
     aria-label="Mobile menu"
     aria-hidden="true"
-    class="md:hidden fixed top-0 right-0 z-30 h-full w-[88vw] max-w-sm bg-seashell border-l-2 border-darkWalnut translate-x-full transition-transform duration-500 ease-out flex flex-col overflow-y-auto"
+    class="lg:hidden fixed top-0 right-0 z-30 h-full w-[88vw] max-w-sm bg-seashell border-l-2 border-darkWalnut translate-x-full transition-transform duration-500 ease-out flex flex-col overflow-y-auto"
   >
     <div class="transit-divider"></div>
 
@@ -173,7 +175,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     });
     links.forEach((link) => link.addEventListener('click', () => setOpen(false)));
 
-    const mq = window.matchMedia('(min-width: 768px)');
+    const mq = window.matchMedia('(min-width: 1024px)');
     mq.addEventListener('change', (e) => {
       if (e.matches) setOpen(false);
     });
@@ -246,8 +248,12 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   }
 
   .desktop-route {
-    --route-gap: 5.25rem;
+    --route-gap: 2.75rem;
     --stop-size: 20px;
+    /* Horizontal padding reserves room for the first/last station labels, which
+       are centered under their dots and overflow the dot width. Without it the
+       last label ("STANDARDS") spills into the Support button. */
+    --route-pad: 2.25rem;
     position: relative;
     display: flex;
     width: fit-content;
@@ -256,15 +262,16 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     align-items: flex-start;
     justify-content: flex-end;
     column-gap: var(--route-gap);
-    padding-bottom: 1.75rem;
+    padding: 0 var(--route-pad) 1.75rem;
     isolation: isolate;
   }
 
   .desktop-route::before {
     content: '';
     position: absolute;
-    left: calc(var(--stop-size) / 2);
-    right: calc(var(--stop-size) / 2);
+    /* Start/end on the first and last dot centers (inset by the route padding). */
+    left: calc(var(--route-pad) + var(--stop-size) / 2);
+    right: calc(var(--route-pad) + var(--stop-size) / 2);
     top: calc(var(--stop-size) / 2);
     height: 2px;
     background: #642713;
@@ -327,7 +334,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
   @media (min-width: 1024px) {
     .desktop-route {
-      --route-gap: 7.25rem;
+      --route-gap: 4.25rem;
     }
 
     .desktop-route-link {

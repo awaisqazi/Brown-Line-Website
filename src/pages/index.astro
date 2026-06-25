@@ -33,12 +33,12 @@ const testimonialAccent: Record<string, string> = {
 // ratio (normalized to ~32px tall) to avoid layout shift.
 const base = import.meta.env.BASE_URL;
 const supportedBy = [
-  { src: 'logos/medill.png',   name: 'Northwestern Medill', w: 61, h: 32 },
-  { src: 'logos/projectc.png', name: 'Project C',           w: 48, h: 32 },
-  { src: 'logos/neighbor.png', name: 'Meet Your Neighbor',  w: 41, h: 32 },
+  { src: 'logos/medill.png',   name: 'Northwestern Medill', href: 'https://www.medill.northwestern.edu', w: 61, h: 32 },
+  { src: 'logos/projectc.png', name: 'Project C',           href: 'https://projectc.biz',                w: 48, h: 32 },
+  { src: 'logos/neighbor.png', name: 'Meet Your Neighbor',  href: 'https://www.meetyourneighborchi.com', w: 41, h: 32 },
 ];
 const featuredIn = [
-  { src: 'logos/creader.png',  name: 'Chicago Reader',      w: 75, h: 32 },
+  { src: 'logos/creader.png',  name: 'Chicago Reader',      href: 'https://chicagoreader.com',           w: 75, h: 32 },
 ];
 // Cycle the brand palette across stops so the homepage route reads like the
 // colorful line on the full events board (src/pages/events.astro).
@@ -129,16 +129,26 @@ function getChicagoDateString() {
         <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Supported by</span>
         <ul class="flex flex-wrap items-center justify-center gap-3">
           {supportedBy.map((logo) => (
-            <li class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4">
-              <img
-                src={`${base}${logo.src}`}
-                alt={logo.name}
-                width={logo.w}
-                height={logo.h}
-                class="h-7 md:h-8 w-auto object-contain"
-                loading="lazy"
-                decoding="async"
-              />
+            <li>
+              <a
+                href={logo.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-ga-event="partner_click"
+                data-ga-label={logo.name}
+                aria-label={`${logo.name} (opens in a new tab)`}
+                class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4 transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >
+                <img
+                  src={`${base}${logo.src}`}
+                  alt={logo.name}
+                  width={logo.w}
+                  height={logo.h}
+                  class="h-7 md:h-8 w-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
             </li>
           ))}
         </ul>
@@ -150,16 +160,26 @@ function getChicagoDateString() {
         <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Featured in</span>
         <ul class="flex items-center justify-center">
           {featuredIn.map((logo) => (
-            <li class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4">
-              <img
-                src={`${base}${logo.src}`}
-                alt={logo.name}
-                width={logo.w}
-                height={logo.h}
-                class="h-7 md:h-8 w-auto object-contain"
-                loading="lazy"
-                decoding="async"
-              />
+            <li>
+              <a
+                href={logo.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-ga-event="partner_click"
+                data-ga-label={logo.name}
+                aria-label={`${logo.name} (opens in a new tab)`}
+                class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4 transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >
+                <img
+                  src={`${base}${logo.src}`}
+                  alt={logo.name}
+                  width={logo.w}
+                  height={logo.h}
+                  class="h-7 md:h-8 w-auto object-contain"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </a>
             </li>
           ))}
         </ul>
