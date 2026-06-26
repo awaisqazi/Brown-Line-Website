@@ -20,7 +20,7 @@ const DEFAULT_DESCRIPTION =
   'Chicago arts, culture, and community, through a Global South diaspora lens. One weekly stop in your inbox. Independent voices. Real neighborhoods. All aboard.';
 
 const {
-  title = 'The Brown Line: A Chicago Cultural Newsletter',
+  title = "The Brown Line: Chicago's Global South Arts & Culture Guide",
   description = DEFAULT_DESCRIPTION,
   ogImage = 'logos/logo.png',
   ogType = 'website',
@@ -70,7 +70,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
-    <meta property="og:image:alt" content="The Brown Line, a Chicago cultural newsletter" />
+    <meta property="og:image:alt" content="The Brown Line, Chicago's Global South arts and culture guide" />
     <meta property="og:locale" content="en_US" />
 
     {/* Twitter / X */}
@@ -78,7 +78,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
-    <meta name="twitter:image:alt" content="The Brown Line, a Chicago cultural newsletter" />
+    <meta name="twitter:image:alt" content="The Brown Line, Chicago's Global South arts and culture guide" />
 
     {/* Intro gate memory: returning visitors (and anyone opening a shared link a
         second time) skip the splash entirely. Setting splash-done in <head>,
