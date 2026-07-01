@@ -1,8 +1,7 @@
 ---
 const base = import.meta.env.BASE_URL;
-// Route stops = destinations. Submit an Event, Support, and Subscribe are
-// visually distinct call-to-action buttons (Submit is pulled off the route map
-// and promoted to an engaging amber button).
+// Route stops = destinations. Support + Subscribe sit side by side; Submit an
+// Event is a wide amber CTA on its own row beneath them (see the CTA cluster).
 const navLinks = [
   { href: `${base}events`,    label: 'Events',  stopColor: '#5BC3FF' },
   { href: `${base}#archive`,  label: 'Archive', stopColor: '#90D393' },
@@ -10,10 +9,10 @@ const navLinks = [
   { href: `${base}standards`, label: 'Ethics',  stopColor: '#F35A0F' },
 ];
 const navButtons = [
-  { href: `${base}support`,      label: 'Support',         variant: 'outline', gaEvent: 'support_click' },
-  { href: `${base}#subscribe`,   label: 'Subscribe',       variant: 'filled',  gaEvent: 'subscribe_click' },
-  { href: `${base}submit-event`, label: 'Submit an Event', variant: 'amber',   gaEvent: 'submit_click' },
+  { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
+  { href: `${base}#subscribe`, label: 'Subscribe', variant: 'filled',  gaEvent: 'subscribe_click' },
 ];
+const submitCta = { href: `${base}submit-event`, label: 'Submit an Event', gaEvent: 'submit_click' };
 const variantClass = {
   amber:   'nav-cta-amber',
   outline: 'nav-cta-outline',
@@ -56,12 +55,17 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
         </ul>
       </nav>
 
-      <div class="flex shrink-0 items-center gap-2.5">
-        {navButtons.map(({ href, label, variant, gaEvent }) => (
-          <a href={href} class:list={['nav-cta', variantClass[variant]]} data-ga-event={gaEvent} data-ga-label="nav">
-            {label}
-          </a>
-        ))}
+      <div class="flex shrink-0 flex-col gap-2.5">
+        <div class="flex items-stretch gap-2.5">
+          {navButtons.map(({ href, label, variant, gaEvent }) => (
+            <a href={href} class:list={['nav-cta flex-1', variantClass[variant]]} data-ga-event={gaEvent} data-ga-label="nav">
+              {label}
+            </a>
+          ))}
+        </div>
+        <a href={submitCta.href} class="nav-cta nav-cta-amber w-full" data-ga-event={submitCta.gaEvent} data-ga-label="nav">
+          {submitCta.label}
+        </a>
       </div>
     </div>
 
@@ -126,6 +130,15 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
             {label}
           </a>
         ))}
+        <a
+          href={submitCta.href}
+          data-mobile-link
+          data-ga-event={submitCta.gaEvent}
+          data-ga-label="nav"
+          class="nav-cta nav-cta-mobile nav-cta-amber"
+        >
+          {submitCta.label}
+        </a>
       </div>
     </nav>
 
