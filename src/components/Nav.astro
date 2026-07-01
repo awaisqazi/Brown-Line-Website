@@ -282,12 +282,14 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     --route-pad: 2.25rem;
     position: relative;
     display: flex;
-    /* Fill the width between the logo and the CTA buttons and distribute the
-       stops evenly, so the route reads as a long transit line across the header
-       instead of a tight cluster on the right. */
-    width: 100%;
+    /* A content-width group centered in the space between the logo and the CTA
+       cluster: comfortable spacing between stops without stretching the route
+       across the whole header. */
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
     align-items: flex-start;
-    justify-content: space-between;
+    justify-content: center;
     column-gap: var(--route-gap);
     padding: 0 var(--route-pad) 1.75rem;
     isolation: isolate;
@@ -361,7 +363,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
   @media (min-width: 1024px) {
     .desktop-route {
-      --route-gap: 4.25rem;
+      --route-gap: 5rem;
     }
 
     .desktop-route-link {
