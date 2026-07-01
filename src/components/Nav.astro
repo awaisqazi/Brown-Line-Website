@@ -1,17 +1,24 @@
 ---
 const base = import.meta.env.BASE_URL;
-// Route stops = destinations. Support + Subscribe are visually distinct buttons.
+// Route stops = destinations. Submit an Event, Support, and Subscribe are
+// visually distinct call-to-action buttons (Submit is pulled off the route map
+// and promoted to an engaging amber button).
 const navLinks = [
-  { href: `${base}events`,       label: 'Events',          stopColor: '#5BC3FF' },
-  { href: `${base}submit-event`, label: 'Submit an Event', stopColor: '#90D393', gaEvent: 'submit_click' },
-  { href: `${base}#archive`,     label: 'Archive',         stopColor: '#F79CD0' },
-  { href: `${base}about`,        label: 'About',           stopColor: '#FFBC29' },
-  { href: `${base}standards`,    label: 'Ethics',          stopColor: '#F35A0F' },
+  { href: `${base}events`,    label: 'Events',  stopColor: '#5BC3FF' },
+  { href: `${base}#archive`,  label: 'Archive', stopColor: '#90D393' },
+  { href: `${base}about`,     label: 'About',   stopColor: '#FFBC29' },
+  { href: `${base}standards`, label: 'Ethics',  stopColor: '#F35A0F' },
 ];
 const navButtons = [
-  { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
-  { href: `${base}#subscribe`, label: 'Subscribe', variant: 'filled',  gaEvent: 'subscribe_click' },
+  { href: `${base}submit-event`, label: 'Submit an Event', variant: 'amber',   gaEvent: 'submit_click' },
+  { href: `${base}support`,      label: 'Support',         variant: 'outline', gaEvent: 'support_click' },
+  { href: `${base}#subscribe`,   label: 'Subscribe',       variant: 'filled',  gaEvent: 'subscribe_click' },
 ];
+const variantClass = {
+  amber:   'nav-cta-amber',
+  outline: 'nav-cta-outline',
+  filled:  'nav-cta-filled',
+};
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 ---
 <header class="bg-seashell sticky top-0 z-30 lg:static lg:z-auto">
@@ -51,7 +58,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
       <div class="flex shrink-0 items-center gap-2.5">
         {navButtons.map(({ href, label, variant, gaEvent }) => (
-          <a href={href} class:list={['nav-cta', variant === 'filled' ? 'nav-cta-filled' : 'nav-cta-outline']} data-ga-event={gaEvent} data-ga-label="nav">
+          <a href={href} class:list={['nav-cta', variantClass[variant]]} data-ga-event={gaEvent} data-ga-label="nav">
             {label}
           </a>
         ))}
@@ -114,7 +121,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
             data-mobile-link
             data-ga-event={gaEvent}
             data-ga-label="nav"
-            class:list={['nav-cta nav-cta-mobile', variant === 'filled' ? 'nav-cta-filled' : 'nav-cta-outline']}
+            class:list={['nav-cta nav-cta-mobile', variantClass[variant]]}
           >
             {label}
           </a>
@@ -222,6 +229,12 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   .nav-cta-filled {
     background: #F35A0F;
     color: #FAF1EC;
+  }
+
+  /* Submit an Event: engaging amber CTA (matches the site's other Submit buttons). */
+  .nav-cta-amber {
+    background: #FFBC29;
+    color: #642713;
   }
 
   .nav-cta:hover,
@@ -334,9 +347,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
   @media (min-width: 1024px) {
     .desktop-route {
-      /* Wide enough that the longest label ("Submit an Event") clears its
-         neighbors ("Events", "Archive"), which are centered under their dots. */
-      --route-gap: 5.25rem;
+      --route-gap: 4.25rem;
     }
 
     .desktop-route-link {
