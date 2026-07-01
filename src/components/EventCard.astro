@@ -12,6 +12,15 @@ interface Props {
 
 const { event, recurrenceLabel = '' } = Astro.props;
 
+// Defensive spelling normalization for text that comes straight from the DB.
+// Currently just restores the umlaut on the occasional "Turkiye" so a series
+// never renders two spellings.
+function fixSpelling(value: string) {
+  return value.replace(/\bTurkiye\b/g, 'Türkiye').replace(/\bTURKIYE\b/g, 'TÜRKIYE');
+}
+const title = fixSpelling(event.title);
+const description = event.description ? fixSpelling(event.description) : event.description;
+
 const isGiveaway = event.is_giveaway;
 const isCurated = event.is_curated;
 const tags = event.tags ?? [];
@@ -87,7 +96,7 @@ function formatStartTime(value: string | null) {
 }
 
 const startTime = formatStartTime(event.start_time);
-const giveawayDescription = splitGiveawayDescription(event.description);
+const giveawayDescription = splitGiveawayDescription(description);
 const giveawayRules =
   giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
 
@@ -124,7 +133,7 @@ const shareBtnClass =
       )}
       <div class="min-w-0">
         <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.05]">
-          {event.title}
+          {title}
         </h3>
         <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
           {venueLine}
@@ -140,7 +149,7 @@ const shareBtnClass =
     )}
 
     {giveawayDescription.body && (
-      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4">
+      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
         {giveawayDescription.body}
       </p>
     )}
@@ -163,11 +172,11 @@ const shareBtnClass =
       )}
       <div class="flex flex-wrap items-center gap-2">
         {safeEventUrl && (
-          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${event.title}`} data-ga-event="rsvp_click" data-ga-label={event.title}>
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
             Details / RSVP <span aria-hidden="true">↗</span>
           </a>
         )}
-        <button type="button" class={shareBtnClass} data-share-button data-share-title={event.title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={event.title}>
+        <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
         </button>
       </div>
@@ -201,7 +210,7 @@ const shareBtnClass =
       )}
       <div class="min-w-0">
         <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.1]">
-          {event.title}
+          {title}
         </h3>
         <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
           {venueLine}
@@ -216,16 +225,21 @@ const shareBtnClass =
       </div>
     )}
 
-    {event.description && (
-      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4">
-        {event.description}
+    {description && (
+      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
+        {description}
       </p>
     )}
 
     {event.author_note && (
-      <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-4 border-l-4 border-mayaBlue pl-4">
-        {event.author_note}
-      </p>
+      <div class="mt-4 border-l-4 border-mayaBlue pl-4">
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.2em] text-cayenne">
+          Conductor&rsquo;s note
+        </p>
+        <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-1.5 break-words">
+          {event.author_note}
+        </p>
+      </div>
     )}
 
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -236,11 +250,11 @@ const shareBtnClass =
       )}
       <div class="ml-auto flex flex-wrap items-center gap-2">
         {safeEventUrl && (
-          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${event.title}`} data-ga-event="rsvp_click" data-ga-label={event.title}>
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
             Details / RSVP <span aria-hidden="true">↗</span>
           </a>
         )}
-        <button type="button" class={shareBtnClass} data-share-button data-share-title={event.title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={event.title}>
+        <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
         </button>
       </div>
@@ -290,7 +304,7 @@ const shareBtnClass =
       event.preventDefault();
       const title = button.dataset.shareTitle ?? 'The Brown Line';
       const url = button.dataset.shareUrl || window.location.href;
-      const shareText = `${title} — via The Brown Line`;
+      const shareText = `${title}, via The Brown Line`;
 
       const flash = (message: string) => {
         const original = button.dataset.shareOriginal ?? button.textContent ?? 'Share';

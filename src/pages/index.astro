@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import IssueCard from '../components/IssueCard.astro';
 import EventCard from '../components/EventCard.astro';
+import CredibilityStrip from '../components/CredibilityStrip.astro';
 import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
@@ -28,18 +29,8 @@ const testimonialAccent: Record<string, string> = {
   babyPink: 'border-babyPink',
 };
 
-// Credibility strip. Real, accurate labels only: don't add orgs or imply
-// partnership beyond these (see design.md § 8). Width/height set per logo aspect
-// ratio (normalized to ~32px tall) to avoid layout shift.
-const base = import.meta.env.BASE_URL;
-const supportedBy = [
-  { src: 'logos/medill.png',   name: 'Northwestern Medill', href: 'https://www.medill.northwestern.edu', w: 124, h: 32 },
-  { src: 'logos/projectc.png', name: 'Project C',           href: 'https://projectc.biz',                w: 48, h: 32 },
-  { src: 'logos/neighbor.png', name: 'Meet Your Neighbor',  href: 'https://www.meetyourneighborchi.com', w: 41, h: 32 },
-];
-const featuredIn = [
-  { src: 'logos/creader.png',  name: 'Chicago Reader',      href: 'https://chicagoreader.com',           w: 75, h: 32 },
-];
+// The credibility strip (Supported by / Featured in) is a shared component,
+// used here and on the About page so the two never drift (see CredibilityStrip.astro).
 // Cycle the brand palette across stops so the homepage route reads like the
 // colorful line on the full events board (src/pages/events.astro).
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
@@ -104,7 +95,7 @@ function getChicagoDateString() {
       </p>
 
       <h1 class="font-heading text-darkWalnut text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-balance">
-        Chicago&rsquo;s go-to guide for <em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community.
+        Chicago&rsquo;s go-to guide for&nbsp;<em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community.
       </h1>
 
       <div class="mt-8 md:mt-10 flex justify-center">
@@ -124,67 +115,7 @@ function getChicagoDateString() {
 
   {/* ---------- Credibility strip ---------- */}
   <section class="px-6 pt-2 pb-10 md:pb-12">
-    <div class="max-w-5xl mx-auto flex flex-col items-center gap-7 md:flex-row md:items-stretch md:justify-center md:gap-10">
-      <div class="flex flex-col items-center gap-3">
-        <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Supported by</span>
-        <ul class="flex flex-wrap items-center justify-center gap-3">
-          {supportedBy.map((logo) => (
-            <li>
-              <a
-                href={logo.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-ga-event="partner_click"
-                data-ga-label={logo.name}
-                aria-label={`${logo.name} (opens in a new tab)`}
-                class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4 transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-              >
-                <img
-                  src={`${base}${logo.src}`}
-                  alt={logo.name}
-                  width={logo.w}
-                  height={logo.h}
-                  class="h-7 md:h-8 w-auto object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <span class="hidden md:block w-px self-stretch bg-darkWalnut/20" aria-hidden="true"></span>
-
-      <div class="flex flex-col items-center gap-3">
-        <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Featured in</span>
-        <ul class="flex items-center justify-center">
-          {featuredIn.map((logo) => (
-            <li>
-              <a
-                href={logo.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-ga-event="partner_click"
-                data-ga-label={logo.name}
-                aria-label={`${logo.name} (opens in a new tab)`}
-                class="flex h-14 items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-4 transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-              >
-                <img
-                  src={`${base}${logo.src}`}
-                  alt={logo.name}
-                  width={logo.w}
-                  height={logo.h}
-                  class="h-7 md:h-8 w-auto object-contain"
-                  loading="lazy"
-                  decoding="async"
-                />
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
+    <CredibilityStrip />
   </section>
 
   {/* ---------- Upcoming Stops ---------- */}
@@ -241,10 +172,10 @@ function getChicagoDateString() {
                 <span class="block h-2.5 w-2.5 rounded-full bg-darkWalnut md:h-3 md:w-3"></span>
               </span>
               <a
-                href={`${import.meta.env.BASE_URL}events`}
+                href={`${import.meta.env.BASE_URL}events#all`}
                 class="see-more group inline-flex items-center gap-3 font-heading font-semibold leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
               >
-                <span>See every stop on the line</span>
+                <span>See all stops</span>
                 <span class="see-more-arrow text-cayenne" aria-hidden="true">&rarr;</span>
               </a>
             </div>

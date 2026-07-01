@@ -32,13 +32,42 @@ const pageDescription =
         Flag a stop
       </p>
       <h1 class="font-heading text-darkWalnut text-[2.5rem] sm:text-5xl md:text-6xl leading-[1.02] text-balance">
-        Submit an <em class="not-italic text-cayenne">event</em>.
+        Put your event <em class="not-italic text-cayenne">on the map</em>.
       </h1>
-      <p class="mt-6 font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed max-w-2xl">
-        Know a Chicago event that centers Global South diaspora communities? Send it our way. Every
-        submission is reviewed by a human before it ever shows up on the board, so share what you
-        know and we will take it from there.
+      <p class="mt-6 font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed max-w-2xl">
+        Hosting a show, screening, fundraiser, workshop, pop-up, watch party, or community gathering
+        rooted in Chicago's Global South diaspora? Send it our way.
       </p>
+      <p class="mt-4 font-body text-darkWalnut/75 text-base md:text-lg leading-relaxed max-w-2xl">
+        The Brown Line is curated by a human, not scraped by an algorithm. Submission doesn't guarantee
+        inclusion, but every event is reviewed by hand.
+      </p>
+    </div>
+  </section>
+
+  {/* ---------- Who should submit / What we look for ---------- */}
+  <section class="px-6 pb-4">
+    <div class="mx-auto grid max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+      <div>
+        <p class="mb-2 font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          Who should submit
+        </p>
+        <p class="font-body text-sm leading-relaxed text-darkWalnut/80 md:text-base">
+          Artists, organizers, venues, collectives, bookstores, museums, restaurants, mutual aid
+          groups, DJs, film programmers, workshop hosts, and community groups.
+        </p>
+      </div>
+      <div>
+        <p class="mb-2 font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          What we look for
+        </p>
+        <p class="font-body text-sm leading-relaxed text-darkWalnut/80 md:text-base">
+          Events rooted in Global South diaspora communities: culturally specific programming,
+          underpromoted neighborhood events, community fundraisers, independent artists,
+          immigrant-owned spaces, cross-cultural solidarity, and accessible, free, or low-cost
+          gatherings.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -82,6 +111,10 @@ const pageDescription =
         <label class={labelClass} for="event-date">
           Event date<span class={reqClass}>Required</span>
           <input id="event-date" name="event_date" type="date" class={inputClass} required />
+          <span class="mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60">
+            For best consideration, submit at least 7&ndash;10 days ahead. Events submitted by Thursday
+            may make that Sunday's newsletter.
+          </span>
         </label>
 
         <label class={labelClass} for="event-time">
@@ -195,11 +228,11 @@ const pageDescription =
           On the platform
         </p>
         <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
-          Thanks, it is in the queue.
+          Thanks, your stop is in the queue.
         </h2>
         <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
-          A human reviews every submission before it goes live, so it will not appear on the events
-          board right away. We appreciate you helping map the city.
+          Our conductor reviews every submission by hand before it reaches the board. If it's a fit,
+          you may see it on the events page, in the weekly newsletter, or on social.
         </p>
         <button type="button" data-submit-another class={`${buttonClass} mt-6`}>Submit another</button>
       </div>

@@ -9,7 +9,7 @@ const STRIPE_LINKS = {
   fare:    'https://buy.stripe.com/6oUcN65DS5iJcFa5vlasg00', // $20 one-time
   stop:    'https://buy.stripe.com/4gM5kEeaodPfdJe5vlasg02', // $50 one-time
   track:   'https://buy.stripe.com/6oUaEYeao26xdJe7Dtasg03', // $100 one-time
-  monthly: 'https://buy.stripe.com/7sY00k1nC4eF8oUg9Zasg04', // $9 / month
+  monthly: 'https://buy.stripe.com/7sY00k1nC4eF8oUg9Zasg04', // $7 / month (UPDATE STRIPE LINK: still the old $9 product)
 };
 
 const oneTimeTiers = [
@@ -48,7 +48,7 @@ const accentBar: Record<string, string> = {
 };
 
 const description =
-  'Support The Brown Line, an independent, reader-supported guide to Chicago Global South diaspora arts, culture, and community. Give once or ride monthly for $9.';
+  'Support The Brown Line, an independent, reader-supported guide to Chicago Global South diaspora arts, culture, and community. Give once or ride monthly for $7.';
 ---
 <Layout title="Support · The Brown Line" description={description}>
   {/* ---------- Hero ---------- */}
@@ -61,9 +61,9 @@ const description =
         Keep the line running.
       </h1>
       <p class="font-body text-darkWalnut/85 text-lg md:text-xl mt-8 leading-relaxed">
-        The Brown Line is independent and reader-supported. Your support helps cut through redlining to
-        connect Chicago's socially conscious creatives through arts, culture, and community, all through a
-        Global South lens. No pay-to-play, ever.
+        The Brown Line newsletter, social media, and curated events calendar are free for everyone, always.
+        If you're able, a $7/month Solidarity Fare helps keep it that way: for you, and for the next rider
+        who can't pay anything at all.
       </p>
     </div>
   </section>
@@ -127,7 +127,8 @@ const description =
         Ride monthly
       </h2>
       <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed max-w-2xl">
-        Monthly support is the strongest way to keep independent culture coverage on the rails.
+        This is a solidarity-fare model, not a paywall. Everything stays free regardless of payment.
+        Monthly riders subsidize free access for everyone else. None of us ride alone.
       </p>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
@@ -149,20 +150,21 @@ const description =
 
         <div class="relative border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 shadow-retro flex flex-col">
           <span class="absolute inset-x-0 top-0 h-1.5 bg-cayenne" aria-hidden="true"></span>
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mt-1">Monthly rider</p>
-          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">$9<span class="text-base align-middle font-body font-bold">/mo</span></p>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mt-1">Solidarity Fare</p>
+          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">$7<span class="text-base align-middle font-body font-bold">/mo</span></p>
           <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
-            Back the work every month and keep the guide free, independent, and growing.
+            An optional way to subsidize free access for everyone else, in keeping with the "everyone is
+            welcome aboard" ethos. Cancel any time.
           </p>
           <a
             href={STRIPE_LINKS.monthly}
             target="_blank"
             rel="noopener noreferrer"
             data-ga-event="support_checkout"
-            data-ga-label="Monthly $9"
+            data-ga-label="Monthly $7"
             class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-cayenne px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
           >
-            Ride monthly for $9 <span aria-hidden="true">&rarr;</span>
+            Pay the solidarity fare <span aria-hidden="true">&rarr;</span>
           </a>
         </div>
       </div>

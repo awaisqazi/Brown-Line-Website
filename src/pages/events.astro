@@ -10,9 +10,16 @@ import { formatStopDate } from '../lib/dates';
 
 const base = import.meta.env.BASE_URL;
 
+// Only fetch upcoming events. The board is a build-time snapshot, so filtering
+// server-side (mirroring the homepage query) keeps the static HTML from shipping
+// months of past stops and shows the right count to no-JS visitors; the
+// client-side quick filters still narrow within the upcoming set.
+const today = getTodayChicago();
+
 const { data, error } = await supabase
   .from('events')
   .select('*')
+  .gte('event_date', today)
   .order('event_date', { ascending: true })
   .order('is_curated', { ascending: false })
   .order('title', { ascending: true })
@@ -34,7 +41,6 @@ function getTodayChicago() {
   const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
-const today = getTodayChicago();
 
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function monthDay(dateString: string) {
@@ -185,6 +191,17 @@ function getEventSearchText(event: TransitEvent) {
             Submit an event
             <span aria-hidden="true">&rarr;</span>
           </a>
+          <p class="mt-4">
+            <a
+              href={`${base}standards`}
+              data-ga-event="standards_click"
+              data-ga-label="events_hero"
+              class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+            >
+              How we curate
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+          </p>
         </div>
       </div>
     </div>
@@ -288,7 +305,7 @@ function getEventSearchText(event: TransitEvent) {
           <div class="flex items-center justify-between gap-3">
             <div>
               <p class="font-body text-[9px] font-bold uppercase tracking-[0.28em] text-cayenne">
-                Line signal
+                Filter the route
               </p>
               <p
                 data-event-result-count
@@ -658,6 +675,12 @@ function getEventSearchText(event: TransitEvent) {
     // Date-range mode: 'week' (default) | 'weekend' | 'all'. 'free' is a separate toggle.
     let dateMode = 'week';
     let freeOnly = false;
+
+    // Deep link: the homepage "See all stops" link (/events#all) opens the board
+    // on All upcoming instead of the default This week.
+    if (window.location.hash === '#all') {
+      dateMode = 'all';
+    }
 
     const normalize = (value) => value.toString().trim().toLowerCase();
     const pad = (value) => String(value).padStart(2, '0');

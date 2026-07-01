@@ -2,11 +2,11 @@
 const base = import.meta.env.BASE_URL;
 // Route stops = destinations. Support + Subscribe are visually distinct buttons.
 const navLinks = [
-  { href: `${base}events`,       label: 'Events',    stopColor: '#5BC3FF' },
-  { href: `${base}submit-event`, label: 'Submit',    stopColor: '#90D393', gaEvent: 'submit_click' },
-  { href: `${base}#archive`,     label: 'Archive',   stopColor: '#F79CD0' },
-  { href: `${base}about`,        label: 'About',     stopColor: '#FFBC29' },
-  { href: `${base}standards`,    label: 'Standards', stopColor: '#F35A0F' },
+  { href: `${base}events`,       label: 'Events',          stopColor: '#5BC3FF' },
+  { href: `${base}submit-event`, label: 'Submit an Event', stopColor: '#90D393', gaEvent: 'submit_click' },
+  { href: `${base}#archive`,     label: 'Archive',         stopColor: '#F79CD0' },
+  { href: `${base}about`,        label: 'About',           stopColor: '#FFBC29' },
+  { href: `${base}standards`,    label: 'Ethics',          stopColor: '#F35A0F' },
 ];
 const navButtons = [
   { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
@@ -141,7 +141,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     </div>
 
     <div class="px-6 pt-4 pb-8">
-      <p class="font-body text-darkWalnut/60 text-xs uppercase tracking-widest">All stops, all stories.</p>
+      <p class="font-body text-darkWalnut/60 text-xs uppercase tracking-widest">Chicago&rsquo;s Global South culture, in motion.</p>
     </div>
   </aside>
 </header>
@@ -334,7 +334,9 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
   @media (min-width: 1024px) {
     .desktop-route {
-      --route-gap: 4.25rem;
+      /* Wide enough that the longest label ("Submit an Event") clears its
+         neighbors ("Events", "Archive"), which are centered under their dots. */
+      --route-gap: 5.25rem;
     }
 
     .desktop-route-link {

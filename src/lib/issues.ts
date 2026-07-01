@@ -80,7 +80,7 @@ function parseIssueRss(xmlText: string): Issue[] {
     .map((match, feedIndex) => {
       const itemXml = match[1];
       const title = decodeXmlText(getFirstXmlValue(itemXml, 'title'));
-      const href = decodeXmlText(getFirstXmlValue(itemXml, 'link'));
+      const href = normalizeIssueHref(decodeXmlText(getFirstXmlValue(itemXml, 'link')));
       const pubDateRaw = decodeXmlText(getFirstXmlValue(itemXml, 'pubDate'));
       const category = decodeXmlText(getFirstXmlValue(itemXml, 'category')) || 'Culture';
       const publishedAt = Date.parse(pubDateRaw);
@@ -102,6 +102,12 @@ function parseIssueRss(xmlText: string): Issue[] {
       ...issue,
       accent: index % 2 === 0 ? 'cayenne' : 'amber',
     }));
+}
+
+// Issues live on the .co (Beehiiv) domain; normalize any .com the feed emits so
+// the "Recent dispatches" links always point at the newsletter (see design.md §5).
+function normalizeIssueHref(href: string) {
+  return href.replace(/\/\/(?:www\.)?thebrownline\.com/i, '//www.thebrownline.co');
 }
 
 function getFirstXmlValue(xml: string, tagName: string) {
