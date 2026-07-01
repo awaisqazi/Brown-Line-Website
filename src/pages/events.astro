@@ -241,9 +241,9 @@ function getEventSearchText(event: TransitEvent) {
         </div>
 
         <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
-          <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip is-active" aria-pressed="true">This week</button>
+          <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip" aria-pressed="false">This week</button>
           <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
-          <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip" aria-pressed="false">All upcoming</button>
+          <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip is-active" aria-pressed="true">All upcoming</button>
           <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
         </div>
 
@@ -350,9 +350,9 @@ function getEventSearchText(event: TransitEvent) {
           </label>
 
           <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
-            <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip is-active" aria-pressed="true">This week</button>
+            <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip" aria-pressed="false">This week</button>
             <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
-            <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip" aria-pressed="false">All upcoming</button>
+            <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip is-active" aria-pressed="true">All upcoming</button>
             <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
           </div>
 
@@ -672,15 +672,12 @@ function getEventSearchText(event: TransitEvent) {
     let pendingScrollDate = null;
     let controlsAreOutOfView = false;
     let floatingIsMinimized = false;
-    // Date-range mode: 'week' (default) | 'weekend' | 'all'. 'free' is a separate toggle.
-    let dateMode = 'week';
+    // Date-range mode: 'all' (default) | 'week' | 'weekend'. 'free' is a separate
+    // toggle. The board defaults to All upcoming so the full slate is visible;
+    // the This week / This weekend chips narrow it.
+    const DEFAULT_DATE_MODE = 'all';
+    let dateMode = DEFAULT_DATE_MODE;
     let freeOnly = false;
-
-    // Deep link: the homepage "See all stops" link (/events#all) opens the board
-    // on All upcoming instead of the default This week.
-    if (window.location.hash === '#all') {
-      dateMode = 'all';
-    }
 
     const normalize = (value) => value.toString().trim().toLowerCase();
     const pad = (value) => String(value).padStart(2, '0');
@@ -1125,7 +1122,7 @@ function getEventSearchText(event: TransitEvent) {
         getSyncedValue(categorySelects) ||
         getSyncedValue(neighborhoodSelects) ||
         freeOnly ||
-        dateMode !== 'week'
+        dateMode !== DEFAULT_DATE_MODE
       );
     }
 
@@ -1232,7 +1229,7 @@ function getEventSearchText(event: TransitEvent) {
       setSyncedValue(categorySelects, '');
       setSyncedValue(neighborhoodSelects, '');
       refreshThemed();
-      dateMode = 'week';
+      dateMode = DEFAULT_DATE_MODE;
       freeOnly = false;
       syncQuickFilters();
       setSelectedDate('');

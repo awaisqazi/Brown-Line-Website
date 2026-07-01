@@ -36,7 +36,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     {/* Desktop nav: route of destinations + distinct Support/Subscribe buttons.
         Shown at lg+; tablets and phones use the hamburger drawer below so the
         7-item route never gets crammed. */}
-    <div class="hidden lg:flex items-center gap-8 min-w-0">
+    <div class="hidden lg:flex flex-1 items-center gap-8 min-w-0">
       <nav aria-label="Primary" class="desktop-route-nav min-w-0">
         <ul class="desktop-route">
           {navLinks.map(({ href, label, stopColor, gaEvent }) => (
@@ -278,15 +278,16 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     --stop-size: 20px;
     /* Horizontal padding reserves room for the first/last station labels, which
        are centered under their dots and overflow the dot width. Without it the
-       last label ("STANDARDS") spills into the Support button. */
+       first/last label spills past the route box. */
     --route-pad: 2.25rem;
     position: relative;
     display: flex;
-    width: fit-content;
-    max-width: 100%;
-    margin-left: auto;
+    /* Fill the width between the logo and the CTA buttons and distribute the
+       stops evenly, so the route reads as a long transit line across the header
+       instead of a tight cluster on the right. */
+    width: 100%;
     align-items: flex-start;
-    justify-content: flex-end;
+    justify-content: space-between;
     column-gap: var(--route-gap);
     padding: 0 var(--route-pad) 1.75rem;
     isolation: isolate;
