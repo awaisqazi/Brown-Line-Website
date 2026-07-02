@@ -119,9 +119,10 @@ function stripCdata(value: string) {
   return value.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
 }
 
+// Decode &amp; last so double-encoded entities (e.g. &amp;#39;) only decode one
+// level per pass instead of collapsing all the way down in a single call.
 function decodeXmlText(value: string) {
   return value
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -130,6 +131,7 @@ function decodeXmlText(value: string) {
     .replace(/&#x27;/g, "'")
     .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
     .replace(/&#x([\da-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&amp;/g, '&')
     .trim();
 }
 

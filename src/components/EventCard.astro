@@ -20,6 +20,8 @@ function fixSpelling(value: string) {
 }
 const title = fixSpelling(event.title);
 const description = event.description ? fixSpelling(event.description) : event.description;
+const venue = fixSpelling(event.venue);
+const organizer = event.organizer ? fixSpelling(event.organizer) : '';
 
 const isGiveaway = event.is_giveaway;
 const isCurated = event.is_curated;
@@ -27,26 +29,43 @@ const tags = event.tags ?? [];
 const eventUrl = event.event_url?.trim() ?? '';
 const safeEventUrl = /^https?:\/\//i.test(eventUrl) ? eventUrl : '';
 
+// Optional photo or flyer, usually carried over from a community submission.
+// Only http(s) URLs render, and a broken image hides itself instead of
+// leaving a broken-image glyph on the card.
+const imageUrl = event.image_url?.trim() ?? '';
+const safeImageUrl = /^https?:\/\//i.test(imageUrl) ? imageUrl : '';
+
 // Venue, once. The neighborhood is often baked into the venue text as a trailing
 // ", Neighborhood" segment (that's where the `neighborhood` column was derived
-// from), so when a neighborhood exists we drop that trailing segment and show it
-// as a separate "· Neighborhood" instead of printing the area twice.
+// from), so when that trailing segment really is the neighborhood we drop it and
+// show it as a separate "· Neighborhood" instead of printing the area twice.
+// Segments that aren't the neighborhood (e.g. "Cafe X, Second Floor") stay put.
+const normalizeArea = (value: string) => value.trim().replace(/^the\s+/i, '').toLowerCase();
+const lastCommaIndex = venue.lastIndexOf(',');
 const displayVenue =
-  event.neighborhood && event.venue.includes(',')
-    ? event.venue.slice(0, event.venue.lastIndexOf(',')).trim()
-    : event.venue;
+  event.neighborhood &&
+  lastCommaIndex !== -1 &&
+  normalizeArea(venue.slice(lastCommaIndex + 1)) === normalizeArea(event.neighborhood)
+    ? venue.slice(0, lastCommaIndex).trim()
+    : venue;
 const venueLine = event.neighborhood ? `${displayVenue} · ${event.neighborhood}` : displayVenue;
 
 // Organizer, once. Many listings repeat the venue as the organizer (e.g. a museum
 // hosting its own program), which printed the same name twice. Only surface the
 // organizer when it adds new information.
-const organizerDisplay =
-  event.organizer && event.organizer !== event.venue && event.organizer !== displayVenue
-    ? event.organizer
-    : '';
+const organizerDisplay = organizer && organizer !== venue && organizer !== displayVenue ? organizer : '';
 
-const priceLabel = event.cost_info?.trim() ?? '';
-const shareUrl = safeEventUrl || '';
+// Safety net: internal research phrasing must never render on a card, even if a
+// row slips past data review.
+const rawPriceLabel = event.cost_info?.trim() ?? '';
+const priceLabel = /not (reviewed|inspected|shown)|reviewed (listing|page|snippet)/i.test(rawPriceLabel)
+  ? 'See organizer for details'
+  : rawPriceLabel;
+
+// Shareable anchor for this card on the events board. When an event has no URL
+// of its own, sharing copies a deep link to the card instead of a bare page URL.
+const anchorId = `event-${event.id}`;
+const shareUrl = safeEventUrl || new URL(`${import.meta.env.BASE_URL}events#${anchorId}`, Astro.site).href;
 
 const sentencePattern = /[^.!?]+[.!?]+|[^.!?]+$/g;
 
@@ -108,7 +127,7 @@ const shareBtnClass =
 ---
 
 {isGiveaway ? (
-  <article class="ticket-stub relative overflow-visible bg-[#FFF4D8] border-[3px] border-dashed border-darkWalnut p-5 md:p-6 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
+  <article id={anchorId} class="ticket-stub relative overflow-visible bg-[#FFF4D8] border-[3px] border-dashed border-darkWalnut p-5 md:p-6 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
     <div class="flex flex-wrap items-center gap-2">
       {isCurated && (
         <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-1">
@@ -171,10 +190,14 @@ const shareBtnClass =
         </div>
       )}
       <div class="flex flex-wrap items-center gap-2">
-        {safeEventUrl && (
+        {safeEventUrl ? (
           <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
             Details / RSVP <span aria-hidden="true">↗</span>
           </a>
+        ) : (
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
+            See organizer for details
+          </span>
         )}
         <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
@@ -183,7 +206,7 @@ const shareBtnClass =
     </div>
   </article>
 ) : (
-  <article class="event-card bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
+  <article id={anchorId} class="event-card bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
     <div class="flex flex-wrap items-center gap-2">
       {isCurated && (
         <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-1">
@@ -225,6 +248,17 @@ const shareBtnClass =
       </div>
     )}
 
+    {safeImageUrl && (
+      <img
+        src={safeImageUrl}
+        alt={`Flyer for ${title}`}
+        loading="lazy"
+        referrerpolicy="no-referrer"
+        class="mt-4 max-h-72 w-full border-2 border-darkWalnut object-cover"
+        onerror="this.style.display='none'"
+      />
+    )}
+
     {description && (
       <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
         {description}
@@ -249,10 +283,14 @@ const shareBtnClass =
         </span>
       )}
       <div class="ml-auto flex flex-wrap items-center gap-2">
-        {safeEventUrl && (
+        {safeEventUrl ? (
           <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
             Details / RSVP <span aria-hidden="true">↗</span>
           </a>
+        ) : (
+          <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/65 font-bold">
+            See organizer for details
+          </span>
         )}
         <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share

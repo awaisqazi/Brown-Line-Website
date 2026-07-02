@@ -95,7 +95,7 @@ const pageDescription =
       <form data-submit-form class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2" novalidate>
         <label class={labelClass} for="submitter-name">
           Your name<span class={reqClass}>Required</span>
-          <input id="submitter-name" name="submitter_name" type="text" autocomplete="name" class={inputClass} required />
+          <input id="submitter-name" name="submitter_name" type="text" autocomplete="name" maxlength="200" class={inputClass} required />
         </label>
 
         <label class={labelClass} for="submitter-email">
@@ -105,7 +105,7 @@ const pageDescription =
 
         <label class={`${labelClass} md:col-span-2`} for="event-title">
           Event title<span class={reqClass}>Required</span>
-          <input id="event-title" name="title" type="text" class={inputClass} required />
+          <input id="event-title" name="title" type="text" maxlength="300" class={inputClass} required />
         </label>
 
         <label class={labelClass} for="event-date">
@@ -124,7 +124,7 @@ const pageDescription =
 
         <label class={labelClass} for="event-venue">
           Venue name<span class={reqClass}>Required</span>
-          <input id="event-venue" name="venue" type="text" class={inputClass} required />
+          <input id="event-venue" name="venue" type="text" maxlength="300" class={inputClass} required />
         </label>
 
         <label class={labelClass} for="event-address">
@@ -200,21 +200,32 @@ const pageDescription =
           <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
         </label>
 
-        <label class={`${labelClass} md:col-span-2`} for="event-description">
-          Event description<span class={reqClass}>Required</span>
-          <textarea id="event-description" name="description" rows="5" class={inputClass} required></textarea>
+        <label class={`${labelClass} md:col-span-2`} for="event-image-url">
+          Photo or flyer URL<span class={optClass}>Optional</span>
+          <input id="event-image-url" name="image_url" type="url" maxlength="2000" placeholder="https://... (link to a flyer or photo)" class={inputClass} />
+          <span class="mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60">
+            A link to your event flyer or a photo helps your event stand out during review. Paste an
+            image link from your site, Google Drive, or anywhere public.
+          </span>
         </label>
 
-        {/* Honeypot: hidden from people, tempting to bots. Leave it empty. */}
+        <label class={`${labelClass} md:col-span-2`} for="event-description">
+          Event description<span class={reqClass}>Required</span>
+          <textarea id="event-description" name="description" rows="5" maxlength="6000" class={inputClass} required></textarea>
+        </label>
+
+        {/* Honeypot: hidden from people, tempting to bots. Leave it empty. The name
+            avoids browser autofill tokens (the old "company" matched "organization"
+            and could be filled by real browsers). */}
         <div class="submit-honeypot" aria-hidden="true">
           <label>
-            Company
-            <input name="company" type="text" tabindex="-1" autocomplete="off" />
+            Event sponsor
+            <input name="event_sponsor" type="text" tabindex="-1" autocomplete="off" />
           </label>
         </div>
 
         <div class="md:col-span-2">
-          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light"></div>
+          <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" data-size="flexible"></div>
         </div>
 
         <div class="md:col-span-2 flex flex-wrap items-center gap-4">
@@ -315,6 +326,14 @@ const pageDescription =
     locationSelect?.addEventListener('change', syncConditionalFields);
     suburbSelect?.addEventListener('change', syncSuburbOther);
 
+    // Past dates are rejected server-side; the min attribute stops them earlier.
+    const dateInput = app.querySelector('#event-date') as HTMLInputElement | null;
+    if (dateInput) {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      dateInput.min = now.toISOString().slice(0, 10);
+    }
+
     function getTurnstileToken() {
       const input = form?.querySelector(
         '[name="cf-turnstile-response"]'
@@ -340,7 +359,7 @@ const pageDescription =
 
       const payload = {
         token,
-        company: String(data.get('company') ?? ''),
+        event_sponsor: String(data.get('event_sponsor') ?? ''),
         submitter_name: String(data.get('submitter_name') ?? ''),
         submitter_email: String(data.get('submitter_email') ?? ''),
         title: String(data.get('title') ?? ''),
@@ -355,6 +374,7 @@ const pageDescription =
         suburb: suburbValue,
         cost: String(data.get('cost') ?? ''),
         event_url: String(data.get('event_url') ?? ''),
+        image_url: String(data.get('image_url') ?? ''),
         description: String(data.get('description') ?? ''),
       };
 
@@ -380,7 +400,15 @@ const pageDescription =
           (window as any).gtag?.('event', 'submit_event_success');
           setStatus('', false);
           form.hidden = true;
-          if (successPanel) successPanel.hidden = false;
+          if (successPanel) {
+            successPanel.hidden = false;
+            // Move focus so screen readers announce the confirmation copy.
+            const heading = successPanel.querySelector('h2') as HTMLElement | null;
+            if (heading) {
+              heading.setAttribute('tabindex', '-1');
+              heading.focus();
+            }
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Something went wrong.';
           setStatus(message, true);

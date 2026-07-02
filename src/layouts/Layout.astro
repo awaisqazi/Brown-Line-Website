@@ -11,6 +11,7 @@ interface Props {
   title?: string;
   description?: string;
   ogImage?: string;
+  ogImageAlt?: string;
   ogType?: 'website' | 'article' | 'profile';
   minimal?: boolean;
   noindex?: boolean;
@@ -19,10 +20,14 @@ interface Props {
 const DEFAULT_DESCRIPTION =
   'Chicago arts, culture, and community, through a Global South diaspora lens. One weekly stop in your inbox. Independent voices. Real neighborhoods. All aboard.';
 
+// 1200x630 share card; pages can override ogImage with their own art.
+const DEFAULT_OG_IMAGE = 'og/og-card.png';
+
 const {
   title = "The Brown Line: Chicago's Global South Arts & Culture Guide",
   description = DEFAULT_DESCRIPTION,
-  ogImage = 'logos/logo.png',
+  ogImage = DEFAULT_OG_IMAGE,
+  ogImageAlt = "The Brown Line, Chicago's Global South arts and culture guide",
   ogType = 'website',
   minimal = false,
   noindex = false,
@@ -37,6 +42,8 @@ const appleTouchIconUrl = `${base}app-icons/apple-touch-icon.png`;
 const manifestUrl = `${base}site.webmanifest`;
 // If ogImage is already absolute, use it as-is; otherwise resolve relative to site+base
 const ogImageUrl = ogImage.startsWith('http') ? ogImage : new URL(`${base}${ogImage.replace(/^\//, '')}`, baseUrl).toString();
+// Only the default card has known dimensions; overrides may be any size.
+const isDefaultOgImage = ogImage === DEFAULT_OG_IMAGE;
 const tickerItems = minimal ? [] : await getTickerItems();
 
 // Google Analytics 4. Loads only when PUBLIC_GA_MEASUREMENT_ID (a "G-XXXXXXXXXX"
@@ -70,7 +77,9 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:image" content={ogImageUrl} />
-    <meta property="og:image:alt" content="The Brown Line, Chicago's Global South arts and culture guide" />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    {isDefaultOgImage && <meta property="og:image:width" content="1200" />}
+    {isDefaultOgImage && <meta property="og:image:height" content="630" />}
     <meta property="og:locale" content="en_US" />
 
     {/* Twitter / X */}
@@ -78,7 +87,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
-    <meta name="twitter:image:alt" content="The Brown Line, Chicago's Global South arts and culture guide" />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
 
     {/* Intro gate memory: returning visitors (and anyone opening a shared link a
         second time) skip the splash entirely. Setting splash-done in <head>,
@@ -142,7 +151,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
       <div
         id="bl-consent"
         class="fixed inset-x-0 bottom-0 z-[1000] hidden border-t-2 border-darkWalnut bg-seashell px-4 py-4 shadow-[0_-4px_0_#642713]"
-        role="dialog"
+        role="region"
         aria-label="Analytics consent"
         aria-live="polite"
       >

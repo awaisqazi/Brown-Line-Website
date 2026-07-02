@@ -29,6 +29,7 @@ const description =
   title="About · The Brown Line"
   description={description}
   ogImage="images/ghazala.jpeg"
+  ogImageAlt="Ghazala Irshad, founder of The Brown Line"
   ogType="profile"
 >
   {/* ---------- Hero: the project first ---------- */}
@@ -72,6 +73,18 @@ const description =
           cross-platform distribution.
         </p>
       </div>
+
+      <p class="mt-8">
+        <a
+          href={`${base}standards`}
+          data-ga-event="standards_click"
+          data-ga-label="about_page"
+          class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+        >
+          How we curate
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </p>
     </div>
   </section>
 

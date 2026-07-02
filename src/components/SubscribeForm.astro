@@ -27,6 +27,17 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
     ></script>
   </div>
 
+  <!-- No-JS fallback: the Beehiiv loader renders nothing without JavaScript,
+       so send readers to the newsletter site to subscribe directly. -->
+  <noscript>
+    <a
+      href="https://www.thebrownline.co"
+      class="inline-flex w-full items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-6 py-3 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut"
+    >
+      Subscribe to The Brown Line
+    </a>
+  </noscript>
+
   {caption && (
     <p
       class="font-body text-darkWalnut/60 text-xs mt-3 uppercase tracking-widest text-center"

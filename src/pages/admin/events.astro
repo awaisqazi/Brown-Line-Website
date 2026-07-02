@@ -18,15 +18,29 @@ const buttonClass =
 const secondaryButtonClass =
   'inline-flex border-2 border-darkWalnut bg-amber px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
 const fieldMarkerClass = 'ml-2 text-[9px] tracking-widest';
+// The fixed diaspora category taxonomy. Events carry only these tags.
+const DIASPORA_TAGS = [
+  'South Asian',
+  'SWANA',
+  'East Asian',
+  'Southeast Asian',
+  'Black Diaspora',
+  'Latine',
+  'Afro-Latine',
+  'Indigenous',
+  'Cross-cultural',
+];
 const csvHeaders = [
   'event_date',
   'title',
   'venue',
+  'start_time',
   'neighborhood',
   'description',
   'organizer',
   'cost_info',
   'event_url',
+  'image_url',
   'author_note',
   'emoji',
   'tags',
@@ -87,7 +101,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
           Enter the line room.
         </h2>
-        <form data-password-form class="mt-6 space-y-4">
+        {/* onsubmit guard: if the module script has not attached yet, a native submit
+            would GET the page with ?password=... in the URL. Block it outright. */}
+        <form data-password-form class="mt-6 space-y-4" onsubmit="return false">
           <label class={labelClass} for="admin-password">
             Password
             <input
@@ -99,7 +115,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               required
             />
           </label>
-          <button type="submit" class={buttonClass}>Unlock admin</button>
+          <button type="submit" data-login-submit class={buttonClass}>Unlock admin</button>
+          <p data-login-status class="font-body text-sm font-bold text-cayenne" role="status" aria-live="polite"></p>
         </form>
       </section>
 
@@ -134,6 +151,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <input id="event-venue" name="venue" type="text" class={inputClass} required />
             </label>
 
+            <label class={labelClass} for="event-start-time">
+              Start time
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-start-time" name="start_time" type="time" class={inputClass} />
+            </label>
+
             <label class={labelClass} for="event-neighborhood">
               Neighborhood
               <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
@@ -158,17 +181,32 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
             </label>
 
+            <label class={`${labelClass} md:col-span-2`} for="event-image-url">
+              Photo or flyer URL
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-image-url" name="image_url" type="url" placeholder="https://... (link to a flyer or photo)" class={inputClass} />
+            </label>
+
             <label class={labelClass} for="event-emoji">
               Emoji
               <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
               <input id="event-emoji" name="emoji" type="text" class={inputClass} />
             </label>
 
-            <label class={labelClass} for="event-tags">
-              Tags
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-tags" name="tags" type="text" placeholder="Asian, Workshop" class={inputClass} />
-            </label>
+            <fieldset class="md:col-span-2">
+              <legend class={labelClass}>
+                Community tags
+                <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional, pick any that apply</span>
+              </legend>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {DIASPORA_TAGS.map((tag) => (
+                  <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut has-[:checked]:bg-amber">
+                    <input name="tags" value={tag} type="checkbox" class="h-4 w-4 accent-cayenne" />
+                    {tag}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <label class={`${labelClass} md:col-span-2`} for="event-description">
               Description
@@ -198,7 +236,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </div>
 
             <div class="md:col-span-2">
-              <button type="submit" class={buttonClass}>Add event</button>
+              <button type="submit" data-single-submit class={buttonClass}>Add event</button>
+              <p data-single-status class="mt-3 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
             </div>
           </form>
         </div>
@@ -238,13 +277,15 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Optional columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                neighborhood, description, organizer, cost_info, event_url, author_note, emoji, tags, is_curated, is_giveaway
+                start_time, neighborhood, description, organizer, cost_info, event_url, image_url, author_note, emoji, tags, is_curated, is_giveaway
               </p>
             </div>
           </div>
 
           <p class="mt-4 font-body text-sm leading-relaxed text-darkWalnut/75">
-            Tags can be comma-separated inside one cell. For pick or giveaway columns, use true, false, yes, no, 1, or 0.
+            Tags can be comma-separated inside one cell and must come from the fixed community tag
+            list: {DIASPORA_TAGS.join(', ')}. For pick or giveaway columns, use true, false, yes,
+            no, 1, or 0. Start time uses 24-hour HH:MM.
           </p>
 
           <form data-csv-form class="mt-7 space-y-5">
@@ -269,7 +310,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               </p>
             </div>
 
-            <button type="submit" class={buttonClass}>Upload CSV</button>
+            <button type="submit" data-csv-submit class={buttonClass}>Upload CSV</button>
+            <div data-csv-status class="font-body text-sm font-bold leading-relaxed text-darkWalnut" role="status" aria-live="polite"></div>
           </form>
         </div>
       </section>
@@ -320,6 +362,26 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             <span data-display="raw_location" class="ml-2"></span>
           </div>
 
+          <div data-photo-wrap class="mt-4 border-2 border-dashed border-darkWalnut/35 bg-[#FDFBF7] p-3" hidden>
+            <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/45">
+              Submitted photo
+            </p>
+            <img
+              data-photo
+              alt="Submitted event photo or flyer"
+              loading="lazy"
+              referrerpolicy="no-referrer"
+              class="mt-2 max-h-64 w-auto max-w-full border-2 border-darkWalnut object-contain"
+            />
+            <a
+              data-photo-link
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              class="mt-2 inline-block break-all font-body text-xs font-bold text-cayenne underline"
+            >Open original</a>
+          </div>
+
           <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label class={`${labelClass} md:col-span-2`}>
               Title<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
@@ -361,15 +423,29 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <input data-field="event_url" type="url" class={inputClass} />
             </label>
 
+            <label class={`${labelClass} md:col-span-2`}>
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="image_url" type="url" class={inputClass} />
+            </label>
+
             <label class={labelClass}>
               Emoji<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
               <input data-field="emoji" type="text" class={inputClass} />
             </label>
 
-            <label class={labelClass}>
-              Tags<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="tags" type="text" placeholder="Latine, Workshop" class={inputClass} />
-            </label>
+            <fieldset class="md:col-span-2">
+              <legend class={labelClass}>
+                Community tags<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Pick any that apply</span>
+              </legend>
+              <div data-tag-group class="mt-2 flex flex-wrap gap-2">
+                {DIASPORA_TAGS.map((tag) => (
+                  <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut has-[:checked]:bg-amber">
+                    <input data-tag-option value={tag} type="checkbox" class="h-4 w-4 accent-cayenne" />
+                    {tag}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <label class={`${labelClass} md:col-span-2`}>
               Description<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
@@ -394,9 +470,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           </div>
 
           <div class="mt-5 flex flex-wrap items-center gap-3 border-t-2 border-dashed border-darkWalnut/35 pt-4">
-            <button type="button" data-approve class={buttonClass}>Approve &amp; publish</button>
-            <button type="button" data-reject class="border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
+            <button type="button" data-approve class={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0`}>Approve &amp; publish</button>
+            <button type="button" data-reject class="border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60">
               Reject
+            </button>
+            <button type="button" data-retry-approved hidden class={secondaryButtonClass}>
+              Retry marking reviewed
             </button>
             <p data-card-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
           </div>
@@ -420,17 +499,32 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     event_date: string;
     title: string;
     venue: string;
+    start_time: string | null;
     neighborhood: string | null;
     description: string | null;
     organizer: string | null;
     cost_info: string | null;
     event_url: string | null;
+    image_url: string | null;
     author_note: string | null;
     emoji: string | null;
     tags: string[] | null;
     is_curated: boolean;
     is_giveaway: boolean;
   };
+
+  // Keep in sync with DIASPORA_TAGS in the frontmatter and the public submit form.
+  const ALLOWED_TAGS = [
+    'South Asian',
+    'SWANA',
+    'East Asian',
+    'Southeast Asian',
+    'Black Diaspora',
+    'Latine',
+    'Afro-Latine',
+    'Indigenous',
+    'Cross-cultural',
+  ];
 
   type CsvRow = Record<string, unknown>;
 
@@ -444,9 +538,15 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     const loginPanel = app.querySelector('[data-login-panel]') as HTMLElement | null;
     const portal = app.querySelector('[data-admin-portal]') as HTMLElement | null;
     const passwordForm = app.querySelector('[data-password-form]') as HTMLFormElement | null;
+    const loginSubmit = app.querySelector('[data-login-submit]') as HTMLButtonElement | null;
+    const loginStatus = app.querySelector('[data-login-status]') as HTMLElement | null;
     const logoutButton = app.querySelector('[data-admin-logout]') as HTMLButtonElement | null;
     const singleEventForm = app.querySelector('[data-single-event-form]') as HTMLFormElement | null;
+    const singleSubmit = app.querySelector('[data-single-submit]') as HTMLButtonElement | null;
+    const singleStatus = app.querySelector('[data-single-status]') as HTMLElement | null;
     const csvForm = app.querySelector('[data-csv-form]') as HTMLFormElement | null;
+    const csvSubmit = app.querySelector('[data-csv-submit]') as HTMLButtonElement | null;
+    const csvStatus = app.querySelector('[data-csv-status]') as HTMLElement | null;
     const csvFileInput = app.querySelector('[data-csv-file]') as HTMLInputElement | null;
     const submissionsSection = app.querySelector('[data-submissions-section]') as HTMLElement | null;
     const submissionsList = app.querySelector('[data-submissions-list]') as HTMLElement | null;
@@ -506,13 +606,37 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return clean;
     }
 
-    function normalizeUrl(value: unknown) {
+    function normalizeUrl(value: unknown, fieldName = 'event_url') {
       const clean = nullableText(value);
       if (!clean) return null;
       if (!/^https?:\/\//i.test(clean)) {
-        throw new Error('event_url must start with http:// or https://.');
+        throw new Error(`${fieldName} must start with http:// or https://.`);
       }
       return clean;
+    }
+
+    function normalizeStartTime(value: unknown) {
+      const clean = nullableText(value);
+      if (!clean) return null;
+      if (!/^\d{2}:\d{2}(:\d{2})?$/.test(clean)) {
+        throw new Error('start_time must use 24-hour HH:MM format.');
+      }
+      return clean.slice(0, 5);
+    }
+
+    // Case-insensitive match against the fixed taxonomy, normalized to the
+    // canonical casing. Unknown tags are an error so free-form labels can
+    // never leak onto the public board.
+    function validateTags(tags: string[] | null) {
+      if (!tags) return null;
+      const normalized = tags.map((tag) => {
+        const match = ALLOWED_TAGS.find((allowed) => allowed.toLowerCase() === tag.toLowerCase());
+        if (!match) {
+          throw new Error(`Unknown tag "${tag}". Allowed tags: ${ALLOWED_TAGS.join(', ')}.`);
+        }
+        return match;
+      });
+      return [...new Set(normalized)];
     }
 
     function parseTags(value: unknown) {
@@ -539,6 +663,30 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return tags.length > 0 ? tags : null;
     }
 
+    function setInlineStatus(el: HTMLElement | null, message: string, isError = false) {
+      if (!el) return;
+      el.textContent = message;
+      el.classList.toggle('text-cayenne', isError);
+      el.classList.toggle('text-darkWalnut', !isError);
+    }
+
+    // Disable a button and show progress text while `work` runs.
+    async function withBusy<T>(button: HTMLButtonElement | null, busyLabel: string, work: () => Promise<T>) {
+      const restore = button?.textContent ?? '';
+      if (button) {
+        button.disabled = true;
+        button.textContent = busyLabel;
+      }
+      try {
+        return await work();
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = restore;
+        }
+      }
+    }
+
     function parseBoolean(value: unknown) {
       const clean = cleanText(value).toLowerCase();
       if (!clean) return false;
@@ -551,18 +699,21 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
     function recordFromForm(form: HTMLFormElement): AdminEventRecord {
       const formData = new FormData(form);
+      const checkedTags = formData.getAll('tags').map((tag) => cleanText(tag)).filter(Boolean);
       return {
         title: requiredText(getFormValue(formData, 'title'), 'title'),
         event_date: requiredDate(getFormValue(formData, 'event_date')),
         venue: requiredText(getFormValue(formData, 'venue'), 'venue'),
+        start_time: normalizeStartTime(getFormValue(formData, 'start_time')),
         neighborhood: nullableText(getFormValue(formData, 'neighborhood')),
         organizer: nullableText(getFormValue(formData, 'organizer')),
         cost_info: nullableText(getFormValue(formData, 'cost_info')),
         event_url: normalizeUrl(getFormValue(formData, 'event_url')),
+        image_url: normalizeUrl(getFormValue(formData, 'image_url'), 'image_url'),
         description: nullableText(getFormValue(formData, 'description')),
         author_note: nullableText(getFormValue(formData, 'author_note')),
         emoji: nullableText(getFormValue(formData, 'emoji')),
-        tags: parseTags(getFormValue(formData, 'tags')),
+        tags: validateTags(checkedTags.length > 0 ? checkedTags : null),
         is_curated: formData.get('is_curated') === 'on',
         is_giveaway: formData.get('is_giveaway') === 'on',
       };
@@ -574,14 +725,16 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           event_date: requiredDate(row.event_date),
           title: requiredText(row.title, 'title'),
           venue: requiredText(row.venue, 'venue'),
+          start_time: normalizeStartTime(row.start_time),
           neighborhood: nullableText(row.neighborhood),
           description: nullableText(row.description),
           organizer: nullableText(row.organizer),
           cost_info: nullableText(row.cost_info),
           event_url: normalizeUrl(row.event_url),
+          image_url: normalizeUrl(row.image_url, 'image_url'),
           author_note: nullableText(row.author_note),
           emoji: nullableText(row.emoji),
-          tags: parseTags(row.tags),
+          tags: validateTags(parseTags(row.tags)),
           is_curated: parseBoolean(row.is_curated),
           is_giveaway: parseBoolean(row.is_giveaway),
         };
@@ -656,20 +809,29 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return `Submitted ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
     }
 
+    function cardTags(card: HTMLElement) {
+      const checked = Array.from(
+        card.querySelectorAll('[data-tag-option]:checked')
+      ) as HTMLInputElement[];
+      const tags = checked.map((el) => cleanText(el.value)).filter(Boolean);
+      return tags.length > 0 ? tags : null;
+    }
+
     function eventRecordFromCard(card: HTMLElement) {
       return {
         title: requiredText(cardFieldValue(card, 'title'), 'title'),
         event_date: requiredDate(cardFieldValue(card, 'event_date')),
         venue: requiredText(cardFieldValue(card, 'venue'), 'venue'),
-        start_time: nullableText(cardFieldValue(card, 'start_time')),
+        start_time: normalizeStartTime(cardFieldValue(card, 'start_time')),
         neighborhood: nullableText(cardFieldValue(card, 'neighborhood')),
         organizer: nullableText(cardFieldValue(card, 'organizer')),
         cost_info: nullableText(cardFieldValue(card, 'cost_info')),
         event_url: normalizeUrl(cardFieldValue(card, 'event_url')),
+        image_url: normalizeUrl(cardFieldValue(card, 'image_url'), 'image_url'),
         description: nullableText(cardFieldValue(card, 'description')),
         author_note: nullableText(cardFieldValue(card, 'author_note')),
         emoji: nullableText(cardFieldValue(card, 'emoji')),
-        tags: parseTags(cardFieldValue(card, 'tags')),
+        tags: validateTags(cardTags(card)),
         is_curated: cardFieldChecked(card, 'is_curated'),
         is_giveaway: cardFieldChecked(card, 'is_giveaway'),
       };
@@ -686,8 +848,35 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       }
     }
 
+    function cardButtons(card: HTMLElement) {
+      return {
+        approve: card.querySelector('[data-approve]') as HTMLButtonElement | null,
+        reject: card.querySelector('[data-reject]') as HTMLButtonElement | null,
+        retry: card.querySelector('[data-retry-approved]') as HTMLButtonElement | null,
+      };
+    }
+
+    // Marks the submission row reviewed after its event was published. Split out
+    // so the Retry button can re-run just this step if it fails the first time.
+    async function markSubmissionApproved(id: string, eventId: string) {
+      if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+      const { error } = await adminSupabase
+        .from('event_submissions')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          approved_event_id: eventId,
+        })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+    }
+
     async function approveSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
       if (!adminSupabase) return;
+      const { approve, reject, retry } = cardButtons(card);
+      if (approve?.disabled) return;
+      if (approve) approve.disabled = true;
+      if (reject) reject.disabled = true;
       try {
         if (statusEl) statusEl.textContent = 'Publishing...';
         const record = eventRecordFromCard(card);
@@ -699,19 +888,29 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         if (error) throw new Error(error.message);
         if (!data) throw new Error('Could not read the new event id.');
 
-        const { error: updateError } = await adminSupabase
-          .from('event_submissions')
-          .update({
-            status: 'approved',
-            reviewed_at: new Date().toISOString(),
-            approved_event_id: data.id,
-          })
-          .eq('id', id);
-
-        if (updateError) {
+        try {
+          await markSubmissionApproved(id, String(data.id));
+        } catch (_) {
+          // The event IS live; only the bookkeeping failed. Keep Approve disabled
+          // (a second click would publish a duplicate) and offer a retry.
           if (statusEl) {
             statusEl.textContent =
-              'Event published, but marking the submission approved failed. Reject it manually.';
+              'Event published, but marking the submission reviewed failed. Use "Retry marking reviewed" so it leaves this queue.';
+          }
+          if (retry) {
+            retry.hidden = false;
+            retry.onclick = () => {
+              void withBusy(retry, 'Retrying...', async () => {
+                try {
+                  await markSubmissionApproved(id, String(data.id));
+                  removeCard(card);
+                } catch (retryError) {
+                  const message =
+                    retryError instanceof Error ? retryError.message : 'Still failing.';
+                  if (statusEl) statusEl.textContent = `Still failing: ${message}`;
+                }
+              });
+            };
           }
           return;
         }
@@ -719,12 +918,17 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not approve this submission.';
         if (statusEl) statusEl.textContent = message;
+        if (approve) approve.disabled = false;
+        if (reject) reject.disabled = false;
       }
     }
 
     async function rejectSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
       if (!adminSupabase) return;
       if (!window.confirm('Reject this submission? It will not be published.')) return;
+      const { approve, reject } = cardButtons(card);
+      if (approve) approve.disabled = true;
+      if (reject) reject.disabled = true;
       try {
         if (statusEl) statusEl.textContent = 'Rejecting...';
         const { error } = await adminSupabase
@@ -736,6 +940,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not reject this submission.';
         if (statusEl) statusEl.textContent = message;
+        if (approve) approve.disabled = false;
+        if (reject) reject.disabled = false;
       }
     }
 
@@ -767,12 +973,34 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setFieldValue(card, 'organizer', cleanText(submission.organizer));
       setFieldValue(card, 'cost_info', cleanText(submission.cost_info));
       setFieldValue(card, 'event_url', cleanText(submission.event_url));
+      setFieldValue(card, 'image_url', cleanText(submission.image_url));
       setFieldValue(card, 'emoji', cleanText(submission.emoji));
-      setFieldValue(card, 'tags', Array.isArray(submission.tags) ? submission.tags.join(', ') : '');
       setFieldValue(card, 'description', cleanText(submission.description));
       setFieldValue(card, 'author_note', cleanText(submission.author_note));
       setFieldChecked(card, 'is_curated', Boolean(submission.is_curated));
       setFieldChecked(card, 'is_giveaway', Boolean(submission.is_giveaway));
+
+      // Check the taxonomy boxes matching the submitted tags.
+      const submittedTags = Array.isArray(submission.tags)
+        ? submission.tags.map((tag: unknown) => cleanText(tag).toLowerCase())
+        : [];
+      (card.querySelectorAll('[data-tag-option]') as NodeListOf<HTMLInputElement>).forEach((el) => {
+        el.checked = submittedTags.includes(el.value.toLowerCase());
+      });
+
+      // Photo preview: only http(s) URLs, hide the image (keep the link) if it 404s.
+      const photoUrl = cleanText(submission.image_url);
+      const photoWrap = card.querySelector('[data-photo-wrap]') as HTMLElement | null;
+      const photo = card.querySelector('[data-photo]') as HTMLImageElement | null;
+      const photoLink = card.querySelector('[data-photo-link]') as HTMLAnchorElement | null;
+      if (photoWrap && photo && photoLink && /^https?:\/\//i.test(photoUrl)) {
+        photoWrap.hidden = false;
+        photoLink.href = photoUrl;
+        photo.addEventListener('error', () => {
+          photo.hidden = true;
+        });
+        photo.src = photoUrl;
+      }
 
       const cardStatus = card.querySelector('[data-card-status]') as HTMLElement | null;
       card.querySelector('[data-approve]')?.addEventListener('click', () => {
@@ -816,20 +1044,29 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
     passwordForm?.addEventListener('submit', (event) => {
       event.preventDefault();
-      void (async () => {
+      void withBusy(loginSubmit, 'Checking...', async () => {
         const formData = new FormData(passwordForm);
         const password = cleanText(formData.get('password'));
+        setInlineStatus(loginStatus, '');
 
         try {
           const client = createAdminClient(password);
+          // Verify against the database before unlocking, so a typo is caught
+          // here instead of surfacing as an empty queue or a failed insert.
+          const { data, error } = await client.rpc('events_admin_login_check');
+          if (error) throw new Error(error.message);
+          if (data !== true) {
+            setInlineStatus(loginStatus, 'Wrong password. Try again.', true);
+            return;
+          }
           adminSupabase = client;
           passwordForm.reset();
           setUnlocked(true);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error.';
-          alert(`Could not unlock admin portal: ${message}`);
+          setInlineStatus(loginStatus, `Could not unlock the portal: ${message}`, true);
         }
-      })();
+      });
     });
 
     logoutButton?.addEventListener('click', () => {
@@ -837,62 +1074,114 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setUnlocked(false);
     });
 
-    singleEventForm?.addEventListener('submit', async (event) => {
+    singleEventForm?.addEventListener('submit', (event) => {
       event.preventDefault();
-
-      try {
-        const record = recordFromForm(singleEventForm);
-        await insertEvents([record]);
-        singleEventForm.reset();
-        alert('Event added. The public events page refreshes every 4 hours, so it should appear soon.');
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error.';
-        alert(`Could not add event: ${message}`);
-      }
+      void withBusy(singleSubmit, 'Saving...', async () => {
+        try {
+          setInlineStatus(singleStatus, '');
+          const record = recordFromForm(singleEventForm);
+          await insertEvents([record]);
+          singleEventForm.reset();
+          setInlineStatus(
+            singleStatus,
+            `Added "${record.title}". The public page refreshes every 4 hours, so it should appear soon.`
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(singleStatus, `Could not add event: ${message}`, true);
+        }
+      });
     });
+
+    function setCsvErrors(lines: string[]) {
+      if (!csvStatus) return;
+      csvStatus.textContent = '';
+      csvStatus.classList.add('text-cayenne');
+      csvStatus.classList.remove('text-darkWalnut');
+      const intro = document.createElement('p');
+      intro.textContent =
+        lines.length === 1 ? 'Fix this row and upload again:' : `Fix these ${lines.length} rows and upload again:`;
+      csvStatus.appendChild(intro);
+      const list = document.createElement('ul');
+      list.className = 'mt-2 list-disc space-y-1 pl-5 font-normal';
+      lines.forEach((line) => {
+        const item = document.createElement('li');
+        item.textContent = line;
+        list.appendChild(item);
+      });
+      csvStatus.appendChild(list);
+    }
 
     csvForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       const file = csvFileInput?.files?.[0];
 
       if (!file) {
-        alert('Choose a CSV file first.');
+        setInlineStatus(csvStatus, 'Choose a CSV file first.', true);
         return;
       }
 
-      Papa.parse<CsvRow>(file, {
-        header: true,
-        skipEmptyLines: 'greedy',
-        transformHeader: (header) => header.trim().toLowerCase(),
-        complete: (results) => {
-          void (async () => {
-            try {
-              if (results.errors.length > 0) {
-                const firstError = results.errors[0];
-                throw new Error(`CSV parse error on row ${firstError.row ?? 'unknown'}: ${firstError.message}`);
-              }
+      void withBusy(csvSubmit, 'Uploading...', () =>
+        new Promise<void>((resolve) => {
+          setInlineStatus(csvStatus, '');
+          Papa.parse<CsvRow>(file, {
+            header: true,
+            skipEmptyLines: 'greedy',
+            transformHeader: (header) => header.trim().toLowerCase(),
+            complete: (results) => {
+              void (async () => {
+                try {
+                  // Row numbers everywhere are spreadsheet rows: header is row 1,
+                  // first data row is row 2. Papa reports 0-based data indexes.
+                  const problems: string[] = [];
+                  results.errors.forEach((parseError) => {
+                    const rowNumber =
+                      typeof parseError.row === 'number' ? parseError.row + 2 : 'unknown';
+                    problems.push(`Row ${rowNumber}: ${parseError.message}`);
+                  });
 
-              const records = results.data
-                .filter((row) => !isBlankCsvRow(row))
-                .map((row, index) => recordFromCsvRow(row, index + 2));
+                  const records: AdminEventRecord[] = [];
+                  results.data.forEach((row, index) => {
+                    if (isBlankCsvRow(row)) return;
+                    try {
+                      records.push(recordFromCsvRow(row, index + 2));
+                    } catch (rowError) {
+                      problems.push(
+                        rowError instanceof Error ? rowError.message : `Row ${index + 2}: invalid row.`
+                      );
+                    }
+                  });
 
-              if (records.length === 0) {
-                throw new Error('No event rows found in the CSV.');
-              }
+                  if (problems.length > 0) {
+                    setCsvErrors(problems);
+                    return;
+                  }
+                  if (records.length === 0) {
+                    setInlineStatus(csvStatus, 'No event rows found in the CSV.', true);
+                    return;
+                  }
 
-              await insertEvents(records);
-              csvForm.reset();
-              alert(`${records.length} events added. The public events page refreshes every 4 hours, so they should appear soon.`);
-            } catch (error) {
-              const message = error instanceof Error ? error.message : 'Unknown error.';
-              alert(`Could not upload CSV: ${message}`);
-            }
-          })();
-        },
-        error: (error) => {
-          alert(`Could not read CSV: ${error.message}`);
-        },
-      });
+                  await insertEvents(records);
+                  csvForm.reset();
+                  setInlineStatus(
+                    csvStatus,
+                    `${records.length} ${records.length === 1 ? 'event' : 'events'} added. The public page refreshes every 4 hours, so they should appear soon.`
+                  );
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : 'Unknown error.';
+                  setInlineStatus(csvStatus, `Could not upload CSV: ${message}`, true);
+                } finally {
+                  resolve();
+                }
+              })();
+            },
+            error: (error) => {
+              setInlineStatus(csvStatus, `Could not read CSV: ${error.message}`, true);
+              resolve();
+            },
+          });
+        })
+      );
     });
 
     setUnlocked(false);

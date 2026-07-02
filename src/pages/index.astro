@@ -8,7 +8,7 @@ import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
 import { supabase } from '../lib/supabase';
-import { formatStopDate } from '../lib/dates';
+import { formatStopDate, getChicagoDateString } from '../lib/dates';
 import type { TickerItem } from '../lib/ticker';
 import type { TransitEvent } from '../lib/supabase';
 
@@ -44,7 +44,7 @@ const { data: upcomingEventsData, error: upcomingEventsError } = await supabase
   .from('events')
   .select('*')
   .gte('event_date', todayDateString)
-  .order('is_curated', { ascending: false })
+  .order('is_curated', { ascending: false, nullsFirst: false })
   .order('event_date', { ascending: true })
   .order('title', { ascending: true })
   .limit(HOMEPAGE_EVENTS_LIMIT)
@@ -66,25 +66,6 @@ const upcomingStopsTicker: TickerItem[] = [
       : 'NO SCHEDULED STOPS · CHECK THE EVENTS BOARD',
   },
 ];
-
-function getChicagoDateString() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Chicago',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-
-  const year = parts.find((part) => part.type === 'year')?.value;
-  const month = parts.find((part) => part.type === 'month')?.value;
-  const day = parts.find((part) => part.type === 'day')?.value;
-
-  if (!year || !month || !day) {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  return `${year}-${month}-${day}`;
-}
 ---
 <Layout>
   {/* ---------- Hero ---------- */}
@@ -104,7 +85,7 @@ function getChicagoDateString() {
 
       <a
         href="#upcoming-stops"
-        class="scroll-cue-link group mt-10 md:mt-12 inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/55 transition-colors hover:text-cayenne focus-visible:text-cayenne"
+        class="scroll-cue-link group mt-10 md:mt-12 inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
         aria-label="Scroll down to upcoming stops"
       >
         <span>Upcoming stops</span>
@@ -152,7 +133,7 @@ function getChicagoDateString() {
                     <span class="border-2 border-[#62361B] bg-seashell px-2 py-1">
                       {formatStopDate(event.event_date)}
                     </span>
-                    <span class="text-darkWalnut/55">Brown Line Stop</span>
+                    <span class="text-darkWalnut/75">Brown Line Stop</span>
                   </div>
 
                   <EventCard event={event} />
@@ -175,7 +156,7 @@ function getChicagoDateString() {
                 href={`${import.meta.env.BASE_URL}events`}
                 class="see-more group inline-flex items-center gap-3 font-heading font-semibold leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
               >
-                <span>See all stops</span>
+                <span>See every stop on the line</span>
                 <span class="see-more-arrow text-cayenne" aria-hidden="true">&rarr;</span>
               </a>
             </div>
@@ -294,6 +275,7 @@ function getChicagoDateString() {
             <IssueCard
               category={issue.category}
               date={issue.date}
+              datetime={issue.publishedAt ? new Date(issue.publishedAt).toISOString().slice(0, 10) : undefined}
               title={issue.title}
               href={issue.href}
               accent={issue.accent as 'amber' | 'cayenne'}

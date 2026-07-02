@@ -12,7 +12,8 @@ const year = new Date().getFullYear();
 const { tickerItems = [] } = Astro.props;
 ---
 <footer class="mt-24">
-  <Marquee items={tickerItems} />
+  {/* Decorative repeat of the header ticker: screen readers hear it once per page. */}
+  <Marquee items={tickerItems} decorative />
   <TransitDivider />
   <div class="bg-darkWalnut text-seashell">
     <div class="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-6">

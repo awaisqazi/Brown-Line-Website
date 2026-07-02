@@ -2,13 +2,18 @@
 import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import TransitDivider from '../components/TransitDivider.astro';
+import { getRecentIssues } from '../lib/issues';
 
 const base = import.meta.env.BASE_URL;
+
+const issues = await getRecentIssues();
+const latestIssueHref =
+  issues[0]?.href ?? 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation';
 
 const stops = [
   {
     label: 'Read the latest issue',
-    href: 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation',
+    href: latestIssueHref,
     external: true,
   },
   {
@@ -26,12 +31,17 @@ const stops = [
     href: 'https://www.instagram.com/thebrownlinechi',
     external: true,
   },
+  {
+    label: 'Browse the events board',
+    href: `${base}events`,
+    external: false,
+  },
 ];
 ---
 <Layout
   minimal
   title="The Brown Line: Links"
-  description="Chicago's overlooked stories. Always moving, always above ground. Subscribe, read, and follow."
+  description="The Brown Line: Chicago's Global South diaspora arts, culture, and community. Subscribe, read, and follow."
   ogImage="logos/4.png"
 >
   <TransitDivider />
@@ -57,9 +67,9 @@ const stops = [
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-cayenne animate-pulse"></span>
           Now boarding
         </p>
-        <h1 class="font-heading text-darkWalnut text-3xl md:text-5xl leading-none mt-1">@thebrownline</h1>
+        <h1 class="font-heading text-darkWalnut text-3xl md:text-5xl leading-none mt-1">@thebrownlinechi</h1>
         <p class="font-body text-darkWalnut/80 text-sm md:text-base mt-3 md:mt-4 leading-relaxed max-w-sm md:max-w-md mx-auto">
-          Chicago's overlooked stories. Always moving, always above ground.
+          Chicago's Global South culture, in motion. Always moving, always above ground.
         </p>
       </header>
 
@@ -102,7 +112,7 @@ const stops = [
       {/* Tagline closer pushed to bottom */}
       <footer class="mt-auto pt-12">
         <p class="font-body text-darkWalnut/55 text-[10px] md:text-xs uppercase tracking-[0.3em] text-center">
-          All stops, all stories.
+          Your go-to guide for Chicago's Global South diaspora arts, culture, and community.
         </p>
       </footer>
     </div>

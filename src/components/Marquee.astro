@@ -5,19 +5,21 @@ interface Props {
   items?: TickerItem[];
   pixelsPerSecond?: number;
   visualRepeat?: number;
+  decorative?: boolean;
 }
 
 const fallbackItems: TickerItem[] = [
   { label: 'The Brown Line', text: 'Always moving' },
   { label: 'The Brown Line', text: 'Always above ground' },
   { label: 'Next stop', text: 'Chicago' },
-  { label: 'All stops', text: 'All stories' },
+  { label: 'The Brown Line', text: "Chicago's Global South culture, in motion" },
 ];
 
 const {
   items: providedItems = [],
   pixelsPerSecond: providedPixelsPerSecond,
   visualRepeat: providedVisualRepeat = 1,
+  decorative = false,
 } = Astro.props;
 const items = providedItems.length > 0 ? providedItems : fallbackItems;
 const visualRepeat = Math.max(1, Math.floor(providedVisualRepeat));
@@ -37,10 +39,11 @@ const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_P
   class="marquee"
   data-marquee
   data-marquee-speed={pixelsPerSecond}
-  role="group"
-  aria-label="Latest issue and upcoming events ticker"
+  role={decorative ? undefined : 'group'}
+  aria-label={decorative ? undefined : 'Latest issue and upcoming events ticker'}
+  aria-hidden={decorative ? 'true' : undefined}
 >
-  <p class="sr-only">{screenReaderText}</p>
+  {!decorative && <p class="sr-only">{screenReaderText}</p>}
   <div class="marquee-grip" aria-hidden="true"></div>
   <div class="marquee-viewport" data-marquee-viewport aria-hidden="true">
     <div class="marquee-track" data-marquee-track>

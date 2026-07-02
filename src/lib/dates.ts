@@ -28,3 +28,27 @@ export function formatStopDate(dateString: string | null | undefined): string {
   const date = new Date(Date.UTC(year, month - 1, day));
   return `${WEEKDAYS[date.getUTCDay()]}. ${MONTHS[month - 1]} ${day}`;
 }
+
+/**
+ * Today's calendar date in America/Chicago as `YYYY-MM-DD`, so "upcoming"
+ * queries stay anchored to the site's home time zone no matter where the
+ * build runs. Falls back to the UTC date if the Intl parts are missing.
+ */
+export function getChicagoDateString(): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Chicago',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  if (!year || !month || !day) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month}-${day}`;
+}

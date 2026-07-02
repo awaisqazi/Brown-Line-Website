@@ -2,6 +2,7 @@
 interface Props {
   category: string;
   date: string;
+  datetime?: string;
   readTime?: string;
   title: string;
   href: string;
@@ -9,7 +10,7 @@ interface Props {
   featured?: boolean;
 }
 
-const { category, date, readTime, title, href, accent = 'amber', featured = false } = Astro.props;
+const { category, date, datetime, readTime, title, href, accent = 'amber', featured = false } = Astro.props;
 const isExternal = /^https?:\/\//.test(href);
 ---
 <a
@@ -29,7 +30,8 @@ const isExternal = /^https?:\/\//.test(href);
     ]}
   >
     <div class="flex items-center gap-3 flex-wrap">
-      <span class="font-body text-mayaBlue text-xs font-bold uppercase tracking-widest">
+      <span class="inline-flex items-center gap-1.5 font-body text-darkWalnut text-xs font-bold uppercase tracking-widest">
+        <span class="h-2 w-2 bg-mayaBlue" aria-hidden="true"></span>
         {category}
       </span>
       {featured && (
@@ -40,7 +42,7 @@ const isExternal = /^https?:\/\//.test(href);
     </div>
 
     <p class="font-body text-darkWalnut/70 text-sm">
-      <time>{date}</time>{readTime ? <span> &middot; {readTime}</span> : null}
+      <time datetime={datetime}>{date}</time>{readTime ? <span> &middot; {readTime}</span> : null}
     </p>
 
     <h3

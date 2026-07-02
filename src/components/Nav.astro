@@ -6,7 +6,7 @@ const navLinks = [
   { href: `${base}events`,    label: 'Events',  stopColor: '#5BC3FF' },
   { href: `${base}#archive`,  label: 'Archive', stopColor: '#90D393' },
   { href: `${base}about`,     label: 'About',   stopColor: '#FFBC29' },
-  { href: `${base}standards`, label: 'Ethics',  stopColor: '#F35A0F' },
+  { href: `${base}standards`, label: 'Ethics', stopColor: '#F35A0F' },
 ];
 const navButtons = [
   { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
@@ -96,6 +96,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     id="mobile-nav"
     aria-label="Mobile menu"
     aria-hidden="true"
+    inert
     class="lg:hidden fixed top-0 right-0 z-30 h-full w-[88vw] max-w-sm bg-seashell border-l-2 border-darkWalnut translate-x-full transition-transform duration-500 ease-out flex flex-col overflow-y-auto"
   >
     <div class="transit-divider"></div>
@@ -178,6 +179,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       drawer.classList.toggle('translate-x-full', !open);
       drawer.classList.toggle('translate-x-0', open);
       drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      drawer.inert = !open;
       backdrop.classList.toggle('opacity-0', !open);
       backdrop.classList.toggle('pointer-events-none', !open);
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');

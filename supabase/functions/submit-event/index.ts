@@ -56,6 +56,11 @@ function nullable(value: unknown): string | null {
 
 async function verifyTurnstile(token: string, ip: string | null): Promise<boolean> {
   const secret = Deno.env.get("TURNSTILE_SECRET") ?? TEST_SECRET;
+  if (secret === TEST_SECRET) {
+    console.warn(
+      "TURNSTILE_SECRET is not set; using Cloudflare's TEST secret, so the captcha always passes. Set the real secret before launch.",
+    );
+  }
   const form = new FormData();
   form.append("secret", secret);
   form.append("response", token);
@@ -81,8 +86,10 @@ Deno.serve(async (req: Request) => {
   }
 
   // Honeypot: real visitors never fill this hidden field. Accept silently so a
-  // bot cannot tell it was rejected, but store nothing.
-  if (str(body.company)) return json({ ok: true });
+  // bot cannot tell it was rejected, but store nothing. "company" is the legacy
+  // field name (still checked so older cached pages stay protected); the form
+  // now uses "event_sponsor", which no browser autofill token matches.
+  if (str(body.company) || str(body.event_sponsor)) return json({ ok: true });
 
   const token = str(body.token);
   if (!token) return json({ error: "Please complete the captcha." }, 400);
@@ -110,6 +117,22 @@ Deno.serve(async (req: Request) => {
   if (!description) missing.push("a description");
   if (missing.length) return json({ error: `Please provide: ${missing.join(", ")}.` }, 400);
 
+  // The regex above only checks the shape; reject impossible calendar dates
+  // (2026-99-99) and dates that have already passed in Chicago.
+  const [yy, mm, dd] = event_date.split("-").map(Number);
+  const parsed = new Date(Date.UTC(yy, mm - 1, dd));
+  const isRealDate = parsed.getUTCFullYear() === yy &&
+    parsed.getUTCMonth() === mm - 1 &&
+    parsed.getUTCDate() === dd;
+  if (!isRealDate) {
+    return json({ error: "That event date does not exist. Use a real calendar date." }, 400);
+  }
+  const chicagoToday = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" })
+    .format(new Date());
+  if (event_date < chicagoToday) {
+    return json({ error: "That event date has already passed. Pick an upcoming date." }, 400);
+  }
+
   const chicago_neighborhood = nullable(body.chicago_neighborhood);
   const suburb = nullable(body.suburb);
   if (location_type === "Chicago" && !chicago_neighborhood) {
@@ -122,6 +145,11 @@ Deno.serve(async (req: Request) => {
   const event_url = nullable(body.event_url);
   if (event_url && !/^https?:\/\//i.test(event_url)) {
     return json({ error: "Event URL must start with http:// or https://." }, 400);
+  }
+
+  const image_url = nullable(body.image_url);
+  if (image_url && !/^https?:\/\//i.test(image_url)) {
+    return json({ error: "Photo URL must start with http:// or https://." }, 400);
   }
 
   const submitter_email = nullable(body.submitter_email);
@@ -148,6 +176,7 @@ Deno.serve(async (req: Request) => {
     organizer: nullable(body.organizer),
     cost_info: nullable(body.cost),
     event_url,
+    image_url,
     description: description.slice(0, 6000),
     tags: [diaspora_tag],
     neighborhood,

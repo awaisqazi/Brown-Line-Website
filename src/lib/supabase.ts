@@ -27,4 +27,6 @@ export interface TransitEvent {
   /** Chicago neighborhood (free text); null when not yet assigned. */
   neighborhood: string | null;
   author_note: string | null;
+  /** Optional photo or flyer URL (http/https), usually from a submission. */
+  image_url: string | null;
 }

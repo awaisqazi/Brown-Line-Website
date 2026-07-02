@@ -1,5 +1,5 @@
 import { getRecentIssues } from './issues';
-import { formatStopDate } from './dates';
+import { formatStopDate, getChicagoDateString } from './dates';
 import type { TransitEvent } from './supabase';
 
 export interface TickerItem {
@@ -12,7 +12,6 @@ type TickerEvent = Pick<TransitEvent, 'event_date' | 'title' | 'venue' | 'event_
 // Hand-picked highlights only: a few strong stops, not the full multi-week dump.
 const MAX_HIGHLIGHTS = 5;
 const EVENT_WINDOW_DAYS = 21;
-const SITE_TIME_ZONE = 'America/Chicago';
 
 let tickerCache: Promise<TickerItem[]> | undefined;
 
@@ -78,7 +77,7 @@ function pickHighlights(events: TickerEvent[]): TickerEvent[] {
 }
 
 async function getUpcomingEvents() {
-  const today = getSiteDateString();
+  const today = getChicagoDateString();
   const windowEnd = addDaysToDateString(today, EVENT_WINDOW_DAYS);
 
   try {
@@ -103,25 +102,6 @@ async function getUpcomingEvents() {
 function formatEventDetail(event: TickerEvent) {
   const venue = event.venue?.trim();
   return venue ? `${event.title} at ${venue}` : event.title;
-}
-
-function getSiteDateString() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: SITE_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-
-  const year = parts.find((part) => part.type === 'year')?.value;
-  const month = parts.find((part) => part.type === 'month')?.value;
-  const day = parts.find((part) => part.type === 'day')?.value;
-
-  if (!year || !month || !day) {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  return `${year}-${month}-${day}`;
 }
 
 function addDaysToDateString(dateString: string, days: number) {

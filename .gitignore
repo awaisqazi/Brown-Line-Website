@@ -28,3 +28,6 @@ PRIVATE_README.md
 .vscode/
 .idea/
 *.swp
+
+# Supabase CLI local state
+supabase/.temp/

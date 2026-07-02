@@ -16,7 +16,7 @@ const featuredIn = [
 ---
 <div class="max-w-5xl mx-auto flex flex-col items-center gap-7 md:flex-row md:items-stretch md:justify-center md:gap-10">
   <div class="flex flex-col items-center gap-3">
-    <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Supported by</span>
+    <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/75">Supported by</span>
     <ul class="flex flex-wrap items-center justify-center gap-3">
       {supportedBy.map((logo) => (
         <li>
@@ -35,7 +35,7 @@ const featuredIn = [
               width={logo.w}
               height={logo.h}
               class={`${(logo as any).imgClass ?? 'h-7 md:h-8'} w-auto object-contain`}
-              loading="lazy"
+              loading="eager"
               decoding="async"
             />
           </a>
@@ -47,7 +47,7 @@ const featuredIn = [
   <span class="hidden md:block w-px self-stretch bg-darkWalnut/20" aria-hidden="true"></span>
 
   <div class="flex flex-col items-center gap-3">
-    <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/60">Featured in</span>
+    <span class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut/75">Featured in</span>
     <ul class="flex items-center justify-center">
       {featuredIn.map((logo) => (
         <li>
@@ -66,7 +66,7 @@ const featuredIn = [
               width={logo.w}
               height={logo.h}
               class="h-7 md:h-8 w-auto object-contain"
-              loading="lazy"
+              loading="eager"
               decoding="async"
             />
           </a>

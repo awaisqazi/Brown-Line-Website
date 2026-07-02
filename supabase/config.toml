@@ -1,0 +1,5 @@
+project_id = "xuursvzrlbqiwcevzhao"
+
+# The public submit form posts here without a Supabase session; Turnstile is the gate.
+[functions.submit-event]
+verify_jwt = false

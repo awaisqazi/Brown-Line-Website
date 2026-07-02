@@ -147,8 +147,14 @@ function getEventKind(event: TransitEvent) {
   return 'regular';
 }
 
+// Mirrors EventCard's display normalization so searching the rendered spelling
+// ("Türkiye") still matches rows stored as "Turkiye".
+function fixSpelling(value: string) {
+  return value.replace(/\bTurkiye\b/g, 'Türkiye').replace(/\bTURKIYE\b/g, 'TÜRKIYE');
+}
+
 function getEventSearchText(event: TransitEvent) {
-  return [
+  const raw = [
     event.title,
     event.description,
     event.venue,
@@ -158,8 +164,10 @@ function getEventSearchText(event: TransitEvent) {
     ...(event.tags ?? []),
   ]
     .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+    .join(' ');
+  // Index both spellings so either one matches a search.
+  const fixed = fixSpelling(raw);
+  return (fixed === raw ? raw : `${raw} ${fixed}`).toLowerCase();
 }
 ---
 <Layout
@@ -310,7 +318,6 @@ function getEventSearchText(event: TransitEvent) {
               <p
                 data-event-result-count
                 class="font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut/70"
-                aria-live="polite"
               >
                 {events.length} stops
               </p>
@@ -618,8 +625,8 @@ function getEventSearchText(event: TransitEvent) {
   }
 
   /* One filter block per breakpoint: the inline "Route controls" serve desktop,
-     the floating "Line signal" serves mobile/tablet. Hide the floating copy on
-     large screens so the two never appear at once. */
+     the floating "Filter the route" panel serves mobile/tablet. Hide the floating
+     copy on large screens so the two never appear at once. */
   @media (min-width: 1024px) {
     [data-floating-event-controls] {
       display: none !important;
@@ -720,7 +727,6 @@ function getEventSearchText(event: TransitEvent) {
         return { lo: floor, hi: '9999-12-31' };
       }
       if (dateMode === 'weekend') {
-        const [, , ] = today.split('-');
         const dow = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0 Sun .. 6 Sat
         let sat;
         let sun;
@@ -1115,22 +1121,13 @@ function getEventSearchText(event: TransitEvent) {
       syncFloatingVisibility();
     }
 
-    function hasActiveFilters() {
-      return Boolean(
-        getSyncedValue(searchInputs) ||
-        selectedDate ||
-        getSyncedValue(categorySelects) ||
-        getSyncedValue(neighborhoodSelects) ||
-        freeOnly ||
-        dateMode !== DEFAULT_DATE_MODE
-      );
-    }
-
+    // Pin only while the panel is in use (focus) or minimized to its tab. Active
+    // filters alone must not pin it: while the inline "Route controls" are still
+    // on screen the floating copy would cover card content.
     function shouldPinFloatingControls() {
       return Boolean(
         floatingControls?.contains(document.activeElement) ||
-        floatingIsMinimized ||
-        hasActiveFilters()
+        floatingIsMinimized
       );
     }
 
@@ -1243,6 +1240,14 @@ function getEventSearchText(event: TransitEvent) {
           freeOnly = !freeOnly;
         } else {
           dateMode = kind;
+          if (selectedDate) {
+            // A range chip takes over date filtering: clear the calendar pick so
+            // its highlighted day doesn't linger while no longer driving results.
+            // setSelectedDate('') re-syncs the calendars and re-renders.
+            syncQuickFilters();
+            setSelectedDate('');
+            return;
+          }
         }
         syncQuickFilters();
         renderFilters();
