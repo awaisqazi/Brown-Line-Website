@@ -844,259 +844,192 @@ const TrainSplash = () => {
       {/* --- Detailed CTA Train --- */}
       <div className={`relative z-20 flex flex-col items-center w-full ${trainAnimClass}`}>
 
-        {/* Soft, Blur-Filtered Volumetric Headlight Beams (anchored to the low sealed-beam lamps) */}
-        <div className="absolute top-[300px] inset-x-0 w-[400px] h-[300px] mx-auto pointer-events-none overflow-visible hidden sm:block">
+        {/* Soft, Blur-Filtered Volumetric Headlight Beams */}
+        <div className="absolute top-[280px] inset-x-0 w-[400px] h-[300px] mx-auto pointer-events-none overflow-visible hidden sm:block">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 300" aria-hidden="true">
             <defs>
               <filter id="beamBlur">
                 <feGaussianBlur stdDeviation="15" />
               </filter>
               <linearGradient id="beamGlowLeft" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FFF6DE" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="#FFECB8" stopOpacity="0.13" />
-                <stop offset="100%" stopColor="#FFECB8" stopOpacity="0" />
+                <stop offset="0%" stopColor="#FFBC29" stopOpacity="0.35" />
+                <stop offset="50%" stopColor="#FFBC29" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#FFBC29" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="beamGlowRight" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FFF6DE" stopOpacity="0.4" />
-                <stop offset="50%" stopColor="#FFECB8" stopOpacity="0.13" />
-                <stop offset="100%" stopColor="#FFECB8" stopOpacity="0" />
+                <stop offset="0%" stopColor="#FFBC29" stopOpacity="0.35" />
+                <stop offset="50%" stopColor="#FFBC29" stopOpacity="0.12" />
+                <stop offset="100%" stopColor="#FFBC29" stopOpacity="0" />
               </linearGradient>
             </defs>
-            {/* Volumetric cone glows from the inboard white headlights */}
-            <polygon points="124,5 -11,300 229,300" fill="url(#beamGlowLeft)" filter="url(#beamBlur)" className="animate-ambient-glare" />
-            <polygon points="276,5 171,300 411,300" fill="url(#beamGlowRight)" filter="url(#beamBlur)" className="animate-ambient-glare" />
+            {/* Volumetric cone glows */}
+            <polygon points="105,5 -30,300 210,300" fill="url(#beamGlowLeft)" filter="url(#beamBlur)" className="animate-ambient-glare" />
+            <polygon points="295,5 190,300 430,300" fill="url(#beamGlowRight)" filter="url(#beamBlur)" className="animate-ambient-glare" />
           </svg>
         </div>
 
-        {/* Train Illustration SVG: a CTA Brown Line railcar seen head-on, drawn
-            from platform reference photos (cars 3323 and 3426 signed for Kimball).
-            Key geometry: smooth gray-stainless face, taller than wide; a center
-            emergency door with its own window, safety chains, and the car number
-            painted on the door; two windshields flanking the door; a small amber
-            destination sign top-center with an amber run-number box to its right;
-            a row of colored marker lenses along the top; paired round lamps low
-            on each side (red taillight outboard, white headlight inboard); ribbed
-            anticlimber and coupler at the sill. The front face is smooth; fluting
-            lives on the car sides, so none is drawn head-on. */}
+        {/* Train Illustration SVG */}
         <svg
           viewBox="0 0 400 400"
-          className="w-[70vw] sm:w-full sm:max-w-[380px] md:max-w-[400px] max-h-[66vh] drop-shadow-[0_25px_35px_rgba(43,33,24,0.35)] animate-rumble mx-auto"
+          className="w-[82vw] sm:w-full sm:max-w-[420px] md:max-w-[460px] max-h-[66vh] drop-shadow-[0_25px_35px_rgba(100,39,19,0.35)] animate-rumble mx-auto"
           aria-hidden="true"
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            {/* Brushed stainless, lit from above */}
-            <linearGradient id="stainless" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#EDF0F2" />
-              <stop offset="30%" stopColor="#D9DDE0" />
-              <stop offset="70%" stopColor="#C7CCD0" />
-              <stop offset="100%" stopColor="#AEB4B9" />
-            </linearGradient>
-            {/* Horizontal sheen laid over the stainless */}
-            <linearGradient id="stainless-sheen" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
-              <stop offset="35%" stopColor="#FFFFFF" stopOpacity="0.35" />
-              <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.05" />
-              <stop offset="72%" stopColor="#FFFFFF" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-            </linearGradient>
-            {/* Windshield glass */}
-            <linearGradient id="glass-reflection" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1C2833" stopOpacity="0.97" />
-              <stop offset="35%" stopColor="#2E4053" stopOpacity="0.95" />
-              <stop offset="65%" stopColor="#1A5276" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#141C24" stopOpacity="0.97" />
-            </linearGradient>
-            {/* White sealed-beam headlight */}
-            <radialGradient id="sealed-beam" cx="50%" cy="45%" r="55%">
+            {/* Train body clip pattern to curve the bumper plates beautifully */}
+            <clipPath id="trainBodyClip">
+              <rect x="50" y="30" width="300" height="315" rx="38" />
+            </clipPath>
+            {/* Headlight inner bulb glow */}
+            <radialGradient id="headlight-lens" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="55%" stopColor="#FFF7E2" />
-              <stop offset="85%" stopColor="#E8DBB8" />
-              <stop offset="100%" stopColor="#9C9482" />
+              <stop offset="40%" stopColor="#FFF9E6" />
+              <stop offset="75%" stopColor="#FFBC29" />
+              <stop offset="100%" stopColor="#D4A017" />
             </radialGradient>
-            {/* Red marker lamp */}
-            <radialGradient id="marker-red" cx="50%" cy="40%" r="60%">
-              <stop offset="0%" stopColor="#FF7B6B" />
-              <stop offset="55%" stopColor="#D8342A" />
-              <stop offset="100%" stopColor="#7E140F" />
-            </radialGradient>
-            {/* Continuous stainless fluting: dense horizontal corrugation */}
-            <pattern id="fluting" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
-              <rect width="6" height="6" fill="#D4D9DC" />
-              <rect y="0" width="6" height="2" fill="#E9EDEF" />
-              <rect y="4" width="6" height="1.6" fill="#A9B0B6" />
-            </pattern>
-            {/* LED dot matrix for the destination sign */}
-            <pattern id="dot-grid" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="1" fill="#0A0C0E" fillOpacity="0.7" />
-            </pattern>
+            {/* Metallic Brushed Steel panel shader */}
+            <linearGradient id="metal-sheen" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#BDC3C7" />
+              <stop offset="25%" stopColor="#E2E7EB" />
+              <stop offset="50%" stopColor="#D5DBDB" />
+              <stop offset="75%" stopColor="#E2E7EB" />
+              <stop offset="100%" stopColor="#A6ACAF" />
+            </linearGradient>
+            {/* Window Glass reflection */}
+            <linearGradient id="glass-reflection" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1C2833" stopOpacity="0.95" />
+              <stop offset="35%" stopColor="#2E4053" stopOpacity="0.95" />
+              <stop offset="65%" stopColor="#1A5276" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#1C2833" stopOpacity="0.95" />
+            </linearGradient>
           </defs>
 
-          {/* Low-profile roof HVAC, set back so only a sliver shows over the arc */}
-          <rect x="146" y="24" width="108" height="14" rx="5" fill="#565D63" />
-          <rect x="146" y="24" width="108" height="5" rx="2.5" fill="#6C737A" />
+          {/* Roof AC Unit */}
+          <rect x="140" y="8" width="120" height="22" rx="6" fill="#171A1C" />
+          <rect x="155" y="4" width="90" height="10" rx="4" fill="#2C3E50" />
 
-          {/* Shallow smooth roof arc */}
-          <path d="M 76 46 Q 200 20 324 46 L 324 52 L 76 52 Z" fill="#C2C8CC" stroke="#2B2118" strokeWidth="3" strokeLinejoin="round" />
+          {/* Under-carriage bogie frame coupler */}
+          <rect x="110" y="340" width="180" height="30" rx="8" fill="#171A1C" />
+          <path d="M 170 350 L 190 380 L 210 380 L 230 350 Z" fill="#2C3E50" stroke="#111" strokeWidth="2" />
+          <rect x="70" y="335" width="55" height="15" rx="4" fill="#1C2833" />
+          <rect x="275" y="335" width="55" height="15" rx="4" fill="#1C2833" />
 
-          {/* Car face: taller than wide, gentle top shoulders, near-square bottom corners */}
-          <path
-            d="M 76 60 Q 76 46 90 46 L 310 46 Q 324 46 324 60 L 324 334 Q 324 340 318 340 L 82 340 Q 76 340 76 334 Z"
-            fill="url(#stainless)"
-          />
-          <path
-            d="M 76 60 Q 76 46 90 46 L 310 46 Q 324 46 324 60 L 324 334 Q 324 340 318 340 L 82 340 Q 76 340 76 334 Z"
-            fill="url(#stainless-sheen)"
-          />
+          {/* Core Train Body Structure (Stylized Metallic Silver Finish) */}
+          <rect x="50" y="30" width="300" height="315" rx="38" fill="url(#metal-sheen)" />
 
-          {/* Black window masking band across the upper face */}
-          <rect x="88" y="56" width="224" height="98" rx="9" fill="#171B1F" />
-          <rect x="88" y="56" width="224" height="98" rx="9" fill="none" stroke="#0C0E10" strokeWidth="1.5" />
+          {/* Fluted corrugations detail lines on steel sides */}
+          <line x1="56" y1="265" x2="344" y2="265" stroke="#95A5A6" strokeWidth="2" strokeDasharray="6 2" />
+          <line x1="56" y1="271" x2="344" y2="271" stroke="#95A5A6" strokeWidth="2" strokeDasharray="6 2" />
+          <line x1="56" y1="277" x2="344" y2="277" stroke="#95A5A6" strokeWidth="2" strokeDasharray="6 2" />
+          <line x1="56" y1="318" x2="344" y2="318" stroke="#95A5A6" strokeWidth="2" />
 
-          {/* Small amber destination sign, top-center above the door */}
-          <rect x="164" y="62" width="72" height="26" rx="3" fill="#08090B" stroke="#2E343A" strokeWidth="1.5" />
-          <rect x="166" y="64" width="68" height="22" rx="2" fill="#140F02" />
-          <rect x="166" y="64" width="68" height="22" rx="2" fill="url(#dot-grid)" />
+          {/* Iconic CTA Station Marker Board Frame */}
+          <rect x="62" y="42" width="276" height="295" rx="26" fill="none" stroke="#642713" strokeWidth="2" strokeOpacity="0.18" />
+
+          {/* Bold Brand Brown Stripe running along the front */}
+          <rect x="53" y="200" width="294" height="48" fill="#642713" />
+          <line x1="53" y1="200" x2="347" y2="200" stroke="#FAF1EC" strokeWidth="1.5" />
+          <line x1="53" y1="248" x2="347" y2="248" stroke="#FAF1EC" strokeWidth="1.5" />
+
+          {/* CTA lowercase retro logo in cream */}
+          <circle cx="200" cy="224" r="14" fill="none" stroke="#FAF1EC" strokeWidth="3" />
           <text
             x="200"
-            y="75.5"
+            y="228"
             textAnchor="middle"
-            dominantBaseline="central"
-            fill="#FFBC29"
-            fontFamily="ui-monospace, 'Courier New', Courier, monospace"
-            fontSize={nextStop.length > 10 ? '7.5' : '9.5'}
+            fill="#FAF1EC"
+            fontFamily="system-ui, -apple-system, sans-serif"
+            fontSize="11"
             fontWeight="900"
-            textLength={nextStop.length > 10 ? '62' : undefined}
-            lengthAdjust="spacingAndGlyphs"
-            style={{ letterSpacing: '0.5px', filter: 'drop-shadow(0 0 3px rgba(255,188,41,0.95))' }}
+            letterSpacing="1"
           >
-            {nextStop}
+            cta
           </text>
 
-          {/* Amber run-number box above the right windshield */}
-          <rect x="266" y="64" width="34" height="20" rx="2.5" fill="#08090B" stroke="#2E343A" strokeWidth="1.5" />
+          {/* LED Destination Board Marquee Frame */}
+          <rect x="80" y="55" width="240" height="42" rx="8" fill="#111" stroke="#333" strokeWidth="2" />
+          <rect x="83" y="58" width="234" height="36" rx="5" fill="#1C1300" />
+
+          {/* Dotted LED marquee matrix pattern overlay */}
+          <pattern id="dot-grid" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="#111111" fillOpacity="0.75" />
+          </pattern>
+          <rect x="83" y="58" width="234" height="36" rx="5" fill="url(#dot-grid)" />
+
+          {/* Glowing Destination notice on Matrix LED */}
           <text
-            x="283"
-            y="74.5"
+            x="200"
+            y="76"
             textAnchor="middle"
             dominantBaseline="central"
             fill="#FFBC29"
             fontFamily="ui-monospace, 'Courier New', Courier, monospace"
-            fontSize="10"
+            fontSize={nextStop.length > 15 ? "11.5" : "13.5"}
             fontWeight="900"
-            style={{ filter: 'drop-shadow(0 0 2.5px rgba(255,188,41,0.85))' }}
+            textLength={nextStop.length > 15 ? "210" : "185"}
+            lengthAdjust="spacingAndGlyphs"
+            style={{
+              filter: 'drop-shadow(0 0 4px rgba(255,188,41,0.95))',
+              letterSpacing: '1px'
+            }}
           >
-            417
+            {`TO ${nextStop}`}
           </text>
 
-          {/* Colored marker lenses along the top of the band */}
+          {/* Split cab windows layout with driver silhouette */}
+          <rect x="70" y="112" width="76" height="78" rx="8" fill="url(#glass-reflection)" stroke="#424949" strokeWidth="2" />
+          <rect x="254" y="112" width="76" height="78" rx="8" fill="url(#glass-reflection)" stroke="#424949" strokeWidth="2" />
+
           <g>
-            <circle cx="106" cy="74" r="4.5" fill="#B6231B" stroke="#33383D" strokeWidth="1.5" />
-            <circle cx="121" cy="74" r="4.5" fill="#E8901A" stroke="#33383D" strokeWidth="1.5" />
-            <circle cx="136" cy="74" r="4.5" fill="#3E8E4B" stroke="#33383D" strokeWidth="1.5" />
-            <circle cx="243" cy="74" r="4.5" fill="#2E5E8F" stroke="#33383D" strokeWidth="1.5" />
-            <circle cx="256" cy="74" r="4.5" fill="#B6231B" stroke="#33383D" strokeWidth="1.5" />
+            <rect x="156" y="112" width="88" height="78" rx="6" fill="url(#glass-reflection)" stroke="#424949" strokeWidth="2" />
+            <circle cx="200" cy="145" r="30" fill="#FFBC29" fillOpacity="0.1" style={{ filter: 'blur(5px)' }} />
+            <path d="M 190 190 C 190 162, 210 162, 210 190 Z" fill="#11161B" />
+            <circle cx="200" cy="155" r="9" fill="#11161B" />
+            <rect x="160" y="180" width="80" height="10" rx="2" fill="#0E1317" />
+            <circle cx="170" cy="184" r="2" fill="#90D393" />
           </g>
 
-          {/* Two windshields flanking the center door */}
+          {/* Windshield Glossy Highlights */}
+          <path d="M 76 116 L 115 116 L 85 186 L 76 186 Z" fill="#FAF1EC" fillOpacity="0.08" />
+          <path d="M 260 116 L 295 116 L 265 186 L 260 186 Z" fill="#FAF1EC" fillOpacity="0.08" />
+
+          {/* CTA grab rails */}
+          <path d="M 62 110 L 62 195" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 338 110 L 338 195" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" />
+
+          {/* Bottom Dual Headlights */}
           <g>
-            <rect x="96" y="96" width="68" height="54" rx="3.5" fill="url(#glass-reflection)" stroke="#3A4046" strokeWidth="2" />
-            <rect x="236" y="96" width="68" height="54" rx="3.5" fill="url(#glass-reflection)" stroke="#3A4046" strokeWidth="2" />
+            <circle cx="105" cy="285" r="20" fill="#424949" stroke="#5D6D7E" strokeWidth="1.5" />
+            <circle cx="105" cy="285" r="15" fill="url(#headlight-lens)" />
+            <circle cx="295" cy="285" r="20" fill="#424949" stroke="#5D6D7E" strokeWidth="1.5" />
+            <circle cx="295" cy="285" r="15" fill="url(#headlight-lens)" />
 
-            {/* Operator silhouette behind the LEFT glass */}
-            <g opacity="0.9">
-              <circle cx="130" cy="123" r="7.5" fill="#0E1317" />
-              <path d="M 117 150 C 117 132, 143 132, 143 150 Z" fill="#0E1317" />
-            </g>
-
-            {/* Wiper on the operator's glass, parked at an angle */}
-            <line x1="103" y1="148" x2="122" y2="108" stroke="#0B0D0F" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="103" y1="148" x2="108" y2="142" stroke="#0B0D0F" strokeWidth="4" strokeLinecap="round" />
-
-            {/* Glass glare streaks */}
-            <path d="M 102 99 L 120 99 L 106 147 L 99 147 Z" fill="#FAF1EC" fillOpacity="0.09" />
-            <path d="M 242 99 L 262 99 L 246 147 L 239 147 Z" fill="#FAF1EC" fillOpacity="0.09" />
-            <path d="M 288 99 L 298 99 L 290 147 L 284 147 Z" fill="#FAF1EC" fillOpacity="0.05" />
+            <circle cx="105" cy="285" r="35" fill="#FFBC29" fillOpacity="0.15" style={{ filter: 'blur(3px)' }} className="animate-pulse" />
+            <circle cx="295" cy="285" r="35" fill="#FFBC29" fillOpacity="0.15" style={{ filter: 'blur(3px)' }} className="animate-pulse" />
           </g>
 
-          {/* Center emergency door: window in the band, panel continuing below,
-              safety chains, and the car number painted on the door */}
-          <g>
-            {/* Door window, slightly narrower than the windshields */}
-            <rect x="182" y="96" width="36" height="54" rx="3" fill="url(#glass-reflection)" stroke="#3A4046" strokeWidth="2" />
-            <path d="M 186 99 L 196 99 L 188 147 L 184 147 Z" fill="#FAF1EC" fillOpacity="0.07" />
+          {/* Grille vent */}
+          <rect x="160" y="275" width="80" height="22" rx="4" fill="#1B2124" />
+          <line x1="170" y1="281" x2="230" y2="281" stroke="#4D5656" strokeWidth="2" />
+          <line x1="170" y1="286" x2="230" y2="286" stroke="#4D5656" strokeWidth="2" />
+          <line x1="170" y1="291" x2="230" y2="291" stroke="#4D5656" strokeWidth="2" />
 
-            {/* Door panel below the band, a shade darker than the face */}
-            <rect x="176" y="154" width="48" height="100" fill="#C3C8CC" stroke="#9AA1A7" strokeWidth="1.5" />
-            <rect x="180" y="154" width="40" height="100" fill="url(#stainless-sheen)" opacity="0.6" />
-
-            {/* Safety chains slung across the doorway */}
-            <path d="M 177 170 Q 200 181 223 170" fill="none" stroke="#4A5158" strokeWidth="2.5" strokeDasharray="3 2.5" strokeLinecap="round" />
-            <path d="M 177 184 Q 200 195 223 184" fill="none" stroke="#4A5158" strokeWidth="2.5" strokeDasharray="3 2.5" strokeLinecap="round" />
-
-            {/* Car number on the door */}
-            <text
-              x="200"
-              y="222"
-              textAnchor="middle"
-              fill="#3B4046"
-              fontFamily="'Montserrat', system-ui, sans-serif"
-              fontSize="13"
-              fontWeight="700"
-              style={{ letterSpacing: '2px' }}
-            >
-              3323
-            </text>
+          {/* Bold Retro Chicago Bumper Plates (design.md colors) - Clipped beautifully with rounded bottom edges */}
+          <g clipPath="url(#trainBodyClip)">
+            <rect x="50" y="322" width="300" height="7" fill="#F79CD0" />
+            <rect x="50" y="329" width="300" height="7" fill="#5BC3FF" />
+            <rect x="50" y="336" width="300" height="7" fill="#90D393" />
+            <rect x="50" y="343" width="300" height="7" fill="#FFBC29" />
+            <rect x="50" y="350" width="300" height="7" fill="#F35A0F" />
           </g>
 
-          {/* Face panel seams (the front is smooth; fluting is only on the sides) */}
-          <line x1="79" y1="254" x2="321" y2="254" stroke="#9AA1A7" strokeWidth="1.5" opacity="0.55" />
-          <line x1="79" y1="286" x2="321" y2="286" stroke="#9AA1A7" strokeWidth="1" opacity="0.35" />
-
-          {/* Paired round lamps low on each side: red taillight outboard,
-              white headlight inboard, each in a metal trim ring */}
-          <g>
-            <circle cx="101" cy="302" r="9.5" fill="#2E3338" stroke="#4A5158" strokeWidth="1.5" />
-            <circle cx="101" cy="302" r="7" fill="url(#marker-red)" stroke="#1E2225" strokeWidth="1.5" />
-            <circle cx="124" cy="302" r="9.5" fill="#2E3338" stroke="#4A5158" strokeWidth="1.5" />
-            <circle cx="124" cy="302" r="7" fill="url(#sealed-beam)" stroke="#1E2225" strokeWidth="1.5" />
-
-            <circle cx="276" cy="302" r="9.5" fill="#2E3338" stroke="#4A5158" strokeWidth="1.5" />
-            <circle cx="276" cy="302" r="7" fill="url(#sealed-beam)" stroke="#1E2225" strokeWidth="1.5" />
-            <circle cx="299" cy="302" r="9.5" fill="#2E3338" stroke="#4A5158" strokeWidth="1.5" />
-            <circle cx="299" cy="302" r="7" fill="url(#marker-red)" stroke="#1E2225" strokeWidth="1.5" />
-
-            {/* Soft halos on the white headlights only */}
-            <circle cx="124" cy="302" r="16" fill="#FFF6DE" fillOpacity="0.3" style={{ filter: 'blur(3px)' }} className="animate-pulse" />
-            <circle cx="276" cy="302" r="16" fill="#FFF6DE" fillOpacity="0.3" style={{ filter: 'blur(3px)' }} className="animate-pulse" />
-            {/* Dimmer red glow on the taillights */}
-            <circle cx="101" cy="302" r="12" fill="#D8342A" fillOpacity="0.22" style={{ filter: 'blur(2.5px)' }} />
-            <circle cx="299" cy="302" r="12" fill="#D8342A" fillOpacity="0.22" style={{ filter: 'blur(2.5px)' }} />
-          </g>
-
-          {/* Face outline */}
-          <path
-            d="M 76 60 Q 76 46 90 46 L 310 46 Q 324 46 324 60 L 324 334 Q 324 340 318 340 L 82 340 Q 76 340 76 334 Z"
-            fill="none"
-            stroke="#2B2118"
-            strokeWidth="3.5"
-          />
-
-          {/* Full-width ribbed anticlimber across the sill */}
-          <rect x="72" y="340" width="256" height="15" rx="2" fill="#1A1E22" stroke="#0D0F11" strokeWidth="1.5" />
-          <line x1="74" y1="344.5" x2="326" y2="344.5" stroke="#3D444B" strokeWidth="2" />
-          <line x1="74" y1="349.5" x2="326" y2="349.5" stroke="#3D444B" strokeWidth="2" />
-
-          {/* Coupler head with shank and air hoses */}
-          <rect x="192" y="355" width="16" height="13" fill="#23272B" stroke="#0D0F11" strokeWidth="1.5" />
-          <path d="M 184 368 L 216 368 L 211 381 L 189 381 Z" fill="#1A1E22" stroke="#0D0F11" strokeWidth="1.5" />
-          <path d="M 184 357 C 176 366, 174 372, 175 382" fill="none" stroke="#14171A" strokeWidth="3" strokeLinecap="round" />
-          <path d="M 216 357 C 224 366, 226 372, 225 382" fill="none" stroke="#14171A" strokeWidth="3" strokeLinecap="round" />
+          {/* Crisp, overarching outline stroke of the train body drawn on top of the clipped layers */}
+          <rect x="50" y="30" width="300" height="315" rx="38" fill="none" stroke="#642713" strokeWidth="6" />
         </svg>
 
         {/* Dynamic Sparks on Third-Rail Contact Shoes */}
         {(phase === 'approach' || phase === 'exit' || phase === 'idle') && (
-          <div className="absolute bottom-8 inset-x-0 w-[320px] mx-auto flex justify-between px-2 pointer-events-none">
+          <div className="absolute bottom-8 inset-x-0 w-[420px] mx-auto flex justify-between px-2 pointer-events-none">
             <div className="relative h-6 w-12 flex items-center justify-center">
               <div className="spark spark-1 bg-[#5BC3FF] absolute" style={{ left: '10%', animationDelay: '0.1s' }} />
               <div className="spark spark-2 bg-[#FAF1EC] absolute" style={{ left: '30%', animationDelay: '0.3s' }} />
