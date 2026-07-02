@@ -1,5 +1,6 @@
 ---
 import type { TransitEvent } from '../lib/supabase';
+import { formatStartTime } from '../lib/dates';
 
 interface Props {
   event: TransitEvent;
@@ -8,9 +9,14 @@ interface Props {
    * (e.g. "Jun 22 – Jul 24"). Rendered as a mono line in the card meta.
    */
   recurrenceLabel?: string;
+  /**
+   * Include the start time in the venue meta line. The homepage rail turns
+   * this off because it shows the time next to each stop's date chip instead.
+   */
+  showTime?: boolean;
 }
 
-const { event, recurrenceLabel = '' } = Astro.props;
+const { event, recurrenceLabel = '', showTime = true } = Astro.props;
 
 // Defensive spelling normalization for text that comes straight from the DB.
 // Currently just restores the umlaut on the occasional "Turkiye" so a series
@@ -105,16 +111,7 @@ function splitGiveawayDescription(description: string | null) {
   };
 }
 
-function formatStartTime(value: string | null) {
-  if (!value) return '';
-  const [hours, minutes] = value.split(':').map(Number);
-  if (Number.isNaN(hours)) return '';
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return minutes ? `${hour12}:${String(minutes).padStart(2, '0')} ${period}` : `${hour12} ${period}`;
-}
-
-const startTime = formatStartTime(event.start_time);
+const startTime = showTime ? formatStartTime(event.start_time) : '';
 
 // One meta line under the title: venue, neighborhood, date range, and time
 // joined together so the time never dangles in a row of its own.

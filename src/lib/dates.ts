@@ -30,6 +30,19 @@ export function formatStopDate(dateString: string | null | undefined): string {
 }
 
 /**
+ * Compact 12-hour label for a `HH:MM[:SS]` start time, e.g. "8 PM" or "5:30 PM".
+ * Returns '' for missing or unparseable values so callers can render nothing.
+ */
+export function formatStartTime(value: string | null | undefined): string {
+  if (!value) return '';
+  const [hours, minutes] = value.split(':').map(Number);
+  if (Number.isNaN(hours)) return '';
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return minutes ? `${hour12}:${String(minutes).padStart(2, '0')} ${period}` : `${hour12} ${period}`;
+}
+
+/**
  * Today's calendar date in America/Chicago as `YYYY-MM-DD`, so "upcoming"
  * queries stay anchored to the site's home time zone no matter where the
  * build runs. Falls back to the UTC date if the Intl parts are missing.
