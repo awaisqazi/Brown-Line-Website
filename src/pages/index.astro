@@ -82,22 +82,25 @@ const upcomingStopsTicker: TickerItem[] = [
       <div class="mt-8 md:mt-10 flex justify-center">
         <SubscribeForm caption="" />
       </div>
-
-      <a
-        href="#upcoming-stops"
-        class="scroll-cue-link group mt-10 md:mt-12 inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
-        aria-label="Scroll down to upcoming stops"
-      >
-        <span>Upcoming stops</span>
-        <span class="scroll-cue text-cayenne" aria-hidden="true">&darr;</span>
-      </a>
     </div>
   </section>
 
   {/* ---------- Credibility strip ---------- */}
-  <section class="px-6 pt-2 pb-10 md:pb-12">
+  <section class="px-6 pt-2">
     <CredibilityStrip />
   </section>
+
+  {/* ---------- Scroll cue: sits right above the Upcoming Stops section ---------- */}
+  <div class="px-6 pt-10 pb-10 md:pt-12 md:pb-12 text-center">
+    <a
+      href="#upcoming-stops"
+      class="scroll-cue-link group inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
+      aria-label="Scroll down to upcoming stops"
+    >
+      <span>Upcoming stops</span>
+      <span class="scroll-cue text-cayenne" aria-hidden="true">&darr;</span>
+    </a>
+  </div>
 
   {/* ---------- Upcoming Stops ---------- */}
   <section id="upcoming-stops" class="scroll-mt-24 pt-6 pb-16 md:scroll-mt-0 md:pt-6 md:pb-24">
@@ -129,11 +132,10 @@ const upcomingStopsTicker: TickerItem[] = [
                     aria-hidden="true"
                   ></span>
 
-                  <div class="mb-3 flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] md:text-xs">
-                    <span class="border-2 border-[#62361B] bg-seashell px-2 py-1">
+                  <div class="mb-3 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] md:text-xs">
+                    <span class="inline-block border-2 border-[#62361B] bg-seashell px-2 py-1">
                       {formatStopDate(event.event_date)}
                     </span>
-                    <span class="text-darkWalnut/75">Brown Line Stop</span>
                   </div>
 
                   <EventCard event={event} />
@@ -156,7 +158,7 @@ const upcomingStopsTicker: TickerItem[] = [
                 href={`${import.meta.env.BASE_URL}events`}
                 class="see-more group inline-flex items-center gap-3 font-heading font-semibold leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
               >
-                <span>See every stop on the line</span>
+                <span>See all stops</span>
                 <span class="see-more-arrow text-cayenne" aria-hidden="true">&rarr;</span>
               </a>
             </div>

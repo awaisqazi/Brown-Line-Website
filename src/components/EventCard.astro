@@ -115,6 +115,11 @@ function formatStartTime(value: string | null) {
 }
 
 const startTime = formatStartTime(event.start_time);
+
+// One meta line under the title: venue, neighborhood, date range, and time
+// joined together so the time never dangles in a row of its own.
+const metaLine = [venueLine, recurrenceLabel, startTime].filter(Boolean).join(' · ');
+
 const giveawayDescription = splitGiveawayDescription(description);
 const giveawayRules =
   giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
@@ -155,17 +160,10 @@ const shareBtnClass =
           {title}
         </h3>
         <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
-          {venueLine}
+          {metaLine}
         </p>
       </div>
     </div>
-
-    {(startTime || recurrenceLabel) && (
-      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#62361B]">
-        {recurrenceLabel && <span>{recurrenceLabel}</span>}
-        {startTime && <span>{startTime}</span>}
-      </div>
-    )}
 
     {giveawayDescription.body && (
       <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
@@ -236,17 +234,10 @@ const shareBtnClass =
           {title}
         </h3>
         <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
-          {venueLine}
+          {metaLine}
         </p>
       </div>
     </div>
-
-    {(startTime || recurrenceLabel) && (
-      <div class="mt-3 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-[#62361B]">
-        {recurrenceLabel && <span>{recurrenceLabel}</span>}
-        {startTime && <span>{startTime}</span>}
-      </div>
-    )}
 
     {safeImageUrl && (
       <img
