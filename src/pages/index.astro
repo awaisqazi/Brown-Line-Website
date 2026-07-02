@@ -132,12 +132,15 @@ const upcomingStopsTicker: TickerItem[] = [
                     aria-hidden="true"
                   ></span>
 
-                  <div class="mb-3 flex flex-wrap items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] md:text-xs">
-                    <span class="border-2 border-[#62361B] bg-seashell px-2 py-1">
+                  {/* Departure tag: date and time as one two-segment chip, like a ticket stub */}
+                  <div class="mb-3 inline-flex items-stretch font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-xs">
+                    <span class="border-2 border-[#62361B] bg-seashell px-2.5 py-1">
                       {formatStopDate(event.event_date)}
                     </span>
                     {formatStartTime(event.start_time) && (
-                      <span>{formatStartTime(event.start_time)}</span>
+                      <span class="flex items-center border-2 border-l-0 border-[#62361B] bg-amber px-2.5 py-1">
+                        {formatStartTime(event.start_time)}
+                      </span>
                     )}
                   </div>
 
