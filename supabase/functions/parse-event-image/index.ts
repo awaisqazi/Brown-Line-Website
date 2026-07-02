@@ -1,0 +1,367 @@
+// Admin-only "scan a flyer" endpoint.
+//
+// The admin portal posts a photo here; Gemini reads it and returns a draft
+// event matching the public.events columns, which the admin reviews before
+// inserting through the normal RLS-gated path. The Gemini API key never
+// reaches the browser: it lives only in this function's secrets.
+//
+// Free-tier protection: every parse consumes one row in the shared
+// private.gemini_usage ledger (capped per day across ALL admins, midnight
+// America/Chicago). A scan is refunded ONLY when the request never reached
+// Gemini (network failure); any HTTP response from Google keeps the charge,
+// because the request may have counted against Google's own daily quota.
+// Refunds credit the exact date that was charged, not "today".
+//
+// Secrets:
+//   GEMINI_API_KEY      required
+//   GEMINI_MODEL        optional, default gemini-3.5-flash
+//   GEMINI_DAILY_LIMIT  optional, default 20
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash";
+const DAILY_LIMIT = Number.parseInt(Deno.env.get("GEMINI_DAILY_LIMIT") ?? "20", 10) || 20;
+
+const DIASPORA_TAGS = [
+  "South Asian",
+  "SWANA",
+  "East Asian",
+  "Southeast Asian",
+  "Black Diaspora",
+  "Latine",
+  "Afro-Latine",
+  "Indigenous",
+  "Cross-cultural",
+];
+
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+// ~6 MB of binary once base64 is decoded. The portal downscales before upload,
+// so hitting this means something bypassed the client.
+const MAX_BASE64_LENGTH = 8_000_000;
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "content-type, x-admin-password, authorization, apikey",
+};
+
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...cors },
+  });
+}
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function clamp(value: unknown, max: number): string | null {
+  const clean = str(value);
+  return clean.length ? clean.slice(0, max) : null;
+}
+
+async function adminPasswordIsValid(password: string): Promise<boolean> {
+  if (!password) return false;
+  const client = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { "x-admin-password": password } } },
+  );
+  const { data, error } = await client.rpc("events_admin_login_check");
+  return !error && data === true;
+}
+
+function serviceClient() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
+
+type Quota = { used: number; remaining: number; limit: number };
+
+function withLimit(raw: Record<string, number> | null): Quota {
+  return {
+    used: raw?.used ?? 0,
+    remaining: raw?.remaining ?? DAILY_LIMIT,
+    limit: DAILY_LIMIT,
+  };
+}
+
+function chicagoToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Chicago" }).format(new Date());
+}
+
+function buildPrompt(): string {
+  return [
+    `You are transcribing a Chicago cultural event flyer for The Brown Line, a newsletter covering diaspora and immigrant community events. Today's date in Chicago is ${chicagoToday()}.`,
+    "",
+    "Read the attached image and extract one event. Rules:",
+    "- Transcribe only what the flyer supports. Never invent details. Use null for anything the image does not show.",
+    "- event_date: YYYY-MM-DD. If the flyer omits the year, choose the next occurrence of that date on or after today.",
+    "- start_time: 24-hour HH:MM. Use the event start, not doors, unless only a doors time is given.",
+    "- venue: the place name, plus the neighborhood after a comma if the flyer names one (example: \"Sleeping Village, Avondale\").",
+    "- neighborhood: the Chicago neighborhood or suburb name alone, if identifiable.",
+    "- cost_info: exactly what the flyer says about price, like \"Free\" or \"$15\", including \"Free\" when it says free. Null if no price appears.",
+    "- event_url: only a URL printed on the flyer, with https:// added if missing. Social handles like @name are not URLs; put those in organizer instead.",
+    "- organizer: the presenting group, collective, or host if named.",
+    "- description: 1 to 3 sentences summarizing the event in plain, factual language drawn from the flyer text. No hype words the flyer does not use.",
+    "- emoji: one single emoji that fits the event, or null.",
+    `- tags: pick from exactly these community categories: ${DIASPORA_TAGS.join(", ")}. Most events get exactly one tag, matching how the event or organizer identifies itself. Use multiple only when the event intentionally spans several of these communities. Use "Afro-Latine" only when the flyer explicitly centers that identity. Use an empty list when the event has no genuine connection to any of the nine.`,
+    "- is_giveaway: true only if the flyer is about winning or giving away tickets or prizes.",
+    "- scan_notes: one short sentence flagging anything you were unsure about (unreadable text, guessed year, ambiguous venue). Null if nothing was ambiguous.",
+  ].join("\n");
+}
+
+const RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    title: { type: "STRING" },
+    event_date: { type: "STRING", nullable: true, description: "YYYY-MM-DD" },
+    start_time: { type: "STRING", nullable: true, description: "24-hour HH:MM" },
+    venue: { type: "STRING", nullable: true },
+    neighborhood: { type: "STRING", nullable: true },
+    organizer: { type: "STRING", nullable: true },
+    cost_info: { type: "STRING", nullable: true },
+    event_url: { type: "STRING", nullable: true },
+    description: { type: "STRING", nullable: true },
+    emoji: { type: "STRING", nullable: true },
+    tags: { type: "ARRAY", items: { type: "STRING", enum: DIASPORA_TAGS } },
+    is_giveaway: { type: "BOOLEAN" },
+    scan_notes: { type: "STRING", nullable: true },
+  },
+  required: ["title", "tags", "is_giveaway"],
+};
+
+// Trust nothing from the model: re-validate every field against the same
+// constraints the database and admin form enforce.
+function sanitizeEvent(raw: Record<string, unknown>) {
+  const event_date = str(raw.event_date);
+  const start_time = str(raw.start_time);
+  const event_url = str(raw.event_url);
+  const tags = Array.isArray(raw.tags)
+    ? [...new Set(
+        raw.tags
+          .map((tag) => DIASPORA_TAGS.find((allowed) => allowed.toLowerCase() === str(tag).toLowerCase()))
+          .filter((tag): tag is string => Boolean(tag)),
+      )]
+    : [];
+
+  return {
+    title: clamp(raw.title, 300),
+    event_date: /^\d{4}-\d{2}-\d{2}$/.test(event_date) ? event_date : null,
+    start_time: /^([01]\d|2[0-3]):[0-5]\d$/.test(start_time) ? start_time : null,
+    venue: clamp(raw.venue, 300),
+    neighborhood: clamp(raw.neighborhood, 120),
+    organizer: clamp(raw.organizer, 300),
+    cost_info: clamp(raw.cost_info, 300),
+    event_url: /^https?:\/\//i.test(event_url) ? event_url.slice(0, 2000) : null,
+    description: clamp(raw.description, 6000),
+    emoji: clamp(raw.emoji, 16),
+    tags,
+    is_giveaway: raw.is_giveaway === true,
+    scan_notes: clamp(raw.scan_notes, 500),
+  };
+}
+
+// reached=false means the request never made it to Gemini, so the scan can be
+// refunded safely. Anything with reached=true may have counted at Google.
+type GeminiFailure = { ok: false; reached: boolean; status: number; message: string };
+
+async function callGemini(imageBase64: string, mimeType: string): Promise<
+  { ok: true; event: ReturnType<typeof sanitizeEvent> } | GeminiFailure
+> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    return {
+      ok: false,
+      reached: false,
+      status: 0,
+      message: "GEMINI_API_KEY is not configured on this function.",
+    };
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mimeType, data: imageBase64 } },
+              { text: buildPrompt() },
+            ],
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            response_mime_type: "application/json",
+            response_schema: RESPONSE_SCHEMA,
+          },
+        }),
+      },
+    );
+  } catch (_) {
+    return { ok: false, reached: false, status: 0, message: "Could not reach Gemini." };
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    console.error(`Gemini responded ${res.status}: ${detail.slice(0, 500)}`);
+    return {
+      ok: false,
+      reached: true,
+      status: res.status,
+      message: `Gemini responded with status ${res.status}.`,
+    };
+  }
+
+  const data = await res.json().catch(() => null);
+
+  const blockReason = data?.promptFeedback?.blockReason;
+  const finishReason = data?.candidates?.[0]?.finishReason;
+  if (blockReason || (finishReason && finishReason !== "STOP" && finishReason !== "MAX_TOKENS")) {
+    console.error(`Gemini declined: blockReason=${blockReason ?? "none"} finishReason=${finishReason ?? "none"}`);
+    return {
+      ok: false,
+      reached: true,
+      status: 200,
+      message: "Gemini declined to read this image (content filter). Try a different photo of the flyer.",
+    };
+  }
+
+  const parts = data?.candidates?.[0]?.content?.parts;
+  const text = Array.isArray(parts)
+    ? parts
+        .filter((part: Record<string, unknown>) => typeof part?.text === "string" && part?.thought !== true)
+        .map((part: { text: string }) => part.text)
+        .join("")
+    : "";
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch (_) {
+    console.error(`Gemini returned unparseable JSON: ${String(text).slice(0, 300)}`);
+    return {
+      ok: false,
+      reached: true,
+      status: 200,
+      message: "Gemini returned an unreadable result. Try again or use a clearer photo.",
+    };
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    console.error(`Gemini returned a non-object result: ${String(text).slice(0, 300)}`);
+    return {
+      ok: false,
+      reached: true,
+      status: 200,
+      message: "Gemini could not find an event in this image.",
+    };
+  }
+
+  const event = sanitizeEvent(parsed as Record<string, unknown>);
+  if (!event.title) {
+    return {
+      ok: false,
+      reached: true,
+      status: 200,
+      message: "Gemini could not find an event in this image.",
+    };
+  }
+  return { ok: true, event };
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
+
+  // Auth first: the password rides in a header, so nothing needs to buffer or
+  // parse an anonymous caller's body.
+  const password = str(req.headers.get("x-admin-password"));
+  if (!(await adminPasswordIsValid(password))) {
+    return json({ error: "Admin password check failed. Lock the portal and unlock it again." }, 401);
+  }
+
+  const contentLength = Number.parseInt(req.headers.get("content-length") ?? "0", 10);
+  if (contentLength > MAX_BASE64_LENGTH + 4096) {
+    return json({ error: "Image is too large. Use a photo under about 5 MB." }, 413);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch (_) {
+    return json({ error: "Invalid request." }, 400);
+  }
+
+  const service = serviceClient();
+  const action = str(body.action) || "parse";
+
+  if (action === "status") {
+    const { data, error } = await service.rpc("gemini_quota_status", { p_limit: DAILY_LIMIT });
+    if (error) return json({ error: "Could not read today's scan count." }, 500);
+    console.log(`action=status used=${data?.used ?? "?"} remaining=${data?.remaining ?? "?"}`);
+    return json({ quota: withLimit(data), model: GEMINI_MODEL });
+  }
+
+  if (action !== "parse") return json({ error: "Unknown action." }, 400);
+
+  const mimeType = str(body.mime_type).toLowerCase();
+  const imageBase64 = typeof body.image_base64 === "string" ? body.image_base64 : "";
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return json({ error: "Unsupported image type. Use a JPEG, PNG, WebP, or HEIC photo." }, 400);
+  }
+  if (!imageBase64) return json({ error: "No image received." }, 400);
+  if (imageBase64.length > MAX_BASE64_LENGTH) {
+    return json({ error: "Image is too large. Use a photo under about 5 MB." }, 400);
+  }
+
+  const { data: consumeData, error: consumeError } = await service.rpc("gemini_quota_consume", {
+    p_limit: DAILY_LIMIT,
+  });
+  if (consumeError) return json({ error: "Could not check today's scan count. Try again." }, 500);
+  if (consumeData?.allowed !== true) {
+    return json({
+      error: `Today's ${DAILY_LIMIT} flyer scans are used up (shared across all admins). The counter resets at midnight Chicago time.`,
+      quota: withLimit(consumeData),
+    }, 429);
+  }
+
+  console.log(
+    `action=parse consumed used=${consumeData?.used ?? "?"} remaining=${consumeData?.remaining ?? "?"} mime=${mimeType} b64len=${imageBase64.length}`,
+  );
+  const result = await callGemini(imageBase64, mimeType);
+
+  if (!result.ok) {
+    if (!result.reached) {
+      // The request never made it to Google, so the scan is safe to give back,
+      // credited to the exact date the consume charged.
+      await service.rpc("gemini_quota_refund", { p_usage_date: consumeData?.usage_date ?? null });
+      const { data: statusData } = await service.rpc("gemini_quota_status", { p_limit: DAILY_LIMIT });
+      return json({
+        error: `${result.message} This scan was not counted.`,
+        quota: withLimit(statusData),
+      }, 502);
+    }
+    // Gemini answered (even if unhelpfully), so the request may have counted
+    // against Google's own daily cap. Keep the charge so the shared counter
+    // never understates real usage.
+    if (result.status === 429) {
+      return json({
+        error: "Gemini is rate limited right now (too many requests per minute). Wait a minute and scan again. This attempt still used one of today's scans.",
+        quota: withLimit(consumeData),
+      }, 429);
+    }
+    return json({
+      error: `${result.message} This attempt still used one of today's scans.`,
+      quota: withLimit(consumeData),
+    }, 502);
+  }
+
+  return json({ event: result.event, quota: withLimit(consumeData), model: GEMINI_MODEL });
+});

@@ -3,3 +3,11 @@ project_id = "xuursvzrlbqiwcevzhao"
 # The public submit form posts here without a Supabase session; Turnstile is the gate.
 [functions.submit-event]
 verify_jwt = false
+
+# Admin portal endpoints. No Supabase session exists in the portal; the gate is
+# the x-admin-password header, verified against private.events_admin_credentials.
+[functions.parse-event-image]
+verify_jwt = false
+
+[functions.trigger-deploy]
+verify_jwt = false

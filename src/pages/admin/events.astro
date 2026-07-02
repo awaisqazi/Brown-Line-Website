@@ -60,6 +60,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     data-admin-events-app
     data-supabase-url={supabaseUrl}
     data-supabase-key={supabasePublishableKey}
+    data-functions-base={`${supabaseUrl}/functions/v1`}
     class="min-h-screen px-6 py-8 md:px-10 md:py-12"
   >
     <div class="mx-auto max-w-6xl">
@@ -73,7 +74,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             Events admin portal
           </h1>
           <p class="mt-5 max-w-2xl font-body text-base leading-relaxed text-darkWalnut/75 md:text-lg">
-            Add single events, import a spreadsheet, or review community submissions. The public events page refreshes automatically every 4 hours, so approved events should show up on the next refresh.
+            Add single events, scan a flyer, import a spreadsheet, review community submissions, or edit the full schedule. Every change saves to the database instantly; the public page rebuilds every 4 hours, or push it out right away with Publish live site.
           </p>
         </div>
 
@@ -118,6 +119,61 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           <button type="submit" data-login-submit class={buttonClass}>Unlock admin</button>
           <p data-login-status class="font-body text-sm font-bold text-cayenne" role="status" aria-live="polite"></p>
         </form>
+      </section>
+
+      <section data-scanner-section hidden class="mt-10 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+              Camera car
+            </p>
+            <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+              Scan a flyer
+            </h2>
+          </div>
+          <p
+            data-scan-quota
+            class="border-2 border-darkWalnut bg-seashell px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut"
+            role="status"
+            aria-live="polite"
+          >
+            Checking today's scans...
+          </p>
+        </div>
+
+        <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+          Upload a flyer photo and Gemini reads it into a draft event. The draft lands in the
+          Add one event form below, so review every field before saving. Scans come from a shared
+          daily pool across all admins and reset at midnight Chicago time.
+        </p>
+
+        <form data-scan-form class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <label class={labelClass} for="scan-file">
+            Flyer photo
+            <input
+              id="scan-file"
+              data-scan-file
+              type="file"
+              accept="image/*"
+              class="mt-2 w-full border-2 border-dashed border-darkWalnut bg-seashell px-3 py-6 font-body text-sm text-darkWalnut file:mr-4 file:border-2 file:border-darkWalnut file:bg-amber file:px-3 file:py-2 file:font-body file:text-xs file:font-bold file:uppercase file:tracking-widest file:text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              required
+            />
+          </label>
+          <button type="submit" data-scan-submit class={buttonClass}>Scan with Gemini</button>
+        </form>
+
+        <div data-scan-preview-wrap hidden class="mt-4 border-2 border-dashed border-darkWalnut/35 bg-seashell p-3">
+          <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/45">
+            Selected photo
+          </p>
+          <img
+            data-scan-preview
+            alt="Selected flyer"
+            class="mt-2 max-h-64 w-auto max-w-full border-2 border-darkWalnut object-contain"
+          />
+        </div>
+
+        <p data-scan-status class="mt-4 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
       </section>
 
       <section data-admin-portal hidden class="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
@@ -306,7 +362,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 When will it show up?
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                The public events page refreshes every 4 hours. Most new events will appear automatically within a few hours after you save or upload them.
+                Saves land in the database instantly. The public page rebuilds every 4 hours on its own, or press Publish live site in the schedule section to push everything out in a couple of minutes.
               </p>
             </div>
 
@@ -314,6 +370,57 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             <div data-csv-status class="font-body text-sm font-bold leading-relaxed text-darkWalnut" role="status" aria-live="polite"></div>
           </form>
         </div>
+      </section>
+
+      <section data-database-section hidden class="mt-12 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+              Control tower
+            </p>
+            <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+              The full schedule
+              <span data-db-count class="ml-2 align-middle font-body text-base font-bold text-darkWalnut/60"></span>
+            </h2>
+          </div>
+          <p data-db-live class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/45" role="status">
+            Live updates: connecting...
+          </p>
+        </div>
+
+        <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+          Every event in the database. Edits and deletes save to Supabase the moment you confirm
+          them, and this list refreshes by itself when anyone makes a change. The public page is a
+          static rebuild of this data: press Publish live site to push changes out in a couple of
+          minutes instead of waiting for the 4-hour refresh.
+        </p>
+
+        <div class="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,14rem)_minmax(0,1fr)_auto_auto] md:items-end">
+          <label class={labelClass} for="db-scope">
+            Show
+            <select id="db-scope" data-db-scope class={inputClass}>
+              <option value="upcoming" selected>Upcoming events</option>
+              <option value="all">All events, including past</option>
+            </select>
+          </label>
+          <label class={labelClass} for="db-search">
+            Search
+            <input
+              id="db-search"
+              data-db-search
+              type="search"
+              placeholder="Title, venue, organizer, tag..."
+              class={inputClass}
+            />
+          </label>
+          <button type="button" data-db-refresh class={secondaryButtonClass}>Refresh</button>
+          <button type="button" data-db-publish class={buttonClass}>Publish live site</button>
+        </div>
+
+        <p data-db-publish-status class="mt-3 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+        <p data-db-status class="mt-3 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+
+        <div data-db-list class="mt-6 space-y-3"></div>
       </section>
 
       <section data-submissions-section hidden class="mt-12 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
@@ -481,6 +588,135 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           </div>
         </article>
       </template>
+
+      <template data-event-row-template>
+        <article data-event-row class="border-2 border-darkWalnut bg-seashell shadow-[3px_3px_0_#642713]">
+          <div class="flex flex-wrap items-center gap-3 p-4">
+            <div class="min-w-[8.5rem] border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 text-center font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut">
+              <span data-row-date></span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-body text-sm font-bold text-darkWalnut">
+                <span data-row-emoji></span>
+                <span data-row-title></span>
+              </p>
+              <p class="truncate font-body text-xs text-darkWalnut/65">
+                <span data-row-venue></span>
+                <span data-row-meta class="ml-2 font-bold uppercase tracking-widest text-cayenne"></span>
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                data-row-edit
+                class="border-2 border-darkWalnut bg-amber px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >Edit</button>
+              <button
+                type="button"
+                data-row-delete
+                class="border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenne transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60"
+              >Delete</button>
+            </div>
+          </div>
+
+          <form data-row-editor hidden class="grid grid-cols-1 gap-4 border-t-2 border-dashed border-darkWalnut/35 p-4 md:grid-cols-2">
+            <label class={labelClass}>
+              Title<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="title" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Event date<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="event_date" type="date" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Venue<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="venue" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass}>
+              Start time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="start_time" type="time" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Neighborhood<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="neighborhood" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Organizer<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="organizer" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Cost info<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="cost_info" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
+              Emoji<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="emoji" type="text" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Event URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="event_url" type="url" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="image_url" type="url" class={inputClass} />
+            </label>
+
+            <fieldset class="md:col-span-2">
+              <legend class={labelClass}>
+                Community tags<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Pick any that apply</span>
+              </legend>
+              <div class="mt-2 flex flex-wrap gap-2">
+                {DIASPORA_TAGS.map((tag) => (
+                  <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut has-[:checked]:bg-amber">
+                    <input name="tags" value={tag} type="checkbox" class="h-4 w-4 accent-cayenne" />
+                    {tag}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Description<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea name="description" rows="4" class={inputClass}></textarea>
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`}>
+              Author note<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <textarea name="author_note" rows="2" class={inputClass}></textarea>
+            </label>
+
+            <div class="flex flex-wrap gap-3 md:col-span-2">
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input name="is_curated" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Conductor's pick
+              </label>
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input name="is_giveaway" type="checkbox" class="h-4 w-4 accent-cayenne" />
+                Giveaway
+              </label>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 border-t-2 border-dashed border-darkWalnut/35 pt-4 md:col-span-2">
+              <button type="submit" data-row-save class={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-60`}>Save changes</button>
+              <button
+                type="button"
+                data-row-cancel
+                class="border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >Cancel</button>
+              <p data-row-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </article>
+      </template>
     </div>
   </section>
 </Layout>
@@ -493,7 +729,11 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
 <script>
   import Papa from 'papaparse';
-  import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+  import {
+    createClient,
+    type RealtimeChannel,
+    type SupabaseClient,
+  } from '@supabase/supabase-js';
 
   type AdminEventRecord = {
     event_date: string;
@@ -533,7 +773,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
   if (app) {
     const supabaseUrl = app.dataset.supabaseUrl ?? '';
     const supabaseKey = app.dataset.supabaseKey ?? '';
+    const functionsBase = app.dataset.functionsBase ?? '';
     let adminSupabase: SupabaseClient | null = null;
+    // Kept in memory only, same threat model as the client above: the scanner
+    // and publish endpoints re-verify it server-side on every call.
+    let adminPassword = '';
+    let dbChannel: RealtimeChannel | null = null;
+    let dbReloadTimer: ReturnType<typeof setTimeout> | undefined;
+    let scanPreviewUrl: string | null = null;
 
     const loginPanel = app.querySelector('[data-login-panel]') as HTMLElement | null;
     const portal = app.querySelector('[data-admin-portal]') as HTMLElement | null;
@@ -554,18 +801,56 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     const submissionsCount = app.querySelector('[data-submissions-count]') as HTMLElement | null;
     const refreshSubmissionsButton = app.querySelector('[data-refresh-submissions]') as HTMLButtonElement | null;
     const submissionTemplate = app.querySelector('[data-submission-template]') as HTMLTemplateElement | null;
+    const scannerSection = app.querySelector('[data-scanner-section]') as HTMLElement | null;
+    const scanForm = app.querySelector('[data-scan-form]') as HTMLFormElement | null;
+    const scanFile = app.querySelector('[data-scan-file]') as HTMLInputElement | null;
+    const scanSubmit = app.querySelector('[data-scan-submit]') as HTMLButtonElement | null;
+    const scanStatus = app.querySelector('[data-scan-status]') as HTMLElement | null;
+    const scanQuota = app.querySelector('[data-scan-quota]') as HTMLElement | null;
+    const scanPreviewWrap = app.querySelector('[data-scan-preview-wrap]') as HTMLElement | null;
+    const scanPreview = app.querySelector('[data-scan-preview]') as HTMLImageElement | null;
+    const databaseSection = app.querySelector('[data-database-section]') as HTMLElement | null;
+    const dbList = app.querySelector('[data-db-list]') as HTMLElement | null;
+    const dbCount = app.querySelector('[data-db-count]') as HTMLElement | null;
+    const dbStatus = app.querySelector('[data-db-status]') as HTMLElement | null;
+    const dbLive = app.querySelector('[data-db-live]') as HTMLElement | null;
+    const dbScopeSelect = app.querySelector('[data-db-scope]') as HTMLSelectElement | null;
+    const dbSearch = app.querySelector('[data-db-search]') as HTMLInputElement | null;
+    const dbRefresh = app.querySelector('[data-db-refresh]') as HTMLButtonElement | null;
+    const dbPublish = app.querySelector('[data-db-publish]') as HTMLButtonElement | null;
+    const dbPublishStatus = app.querySelector('[data-db-publish-status]') as HTMLElement | null;
+    const eventRowTemplate = app.querySelector('[data-event-row-template]') as HTMLTemplateElement | null;
+    let dbEvents: Array<AdminEventRecord & { id: string }> = [];
 
     function setUnlocked(isUnlocked: boolean) {
       if (loginPanel) loginPanel.hidden = isUnlocked;
       if (portal) portal.hidden = !isUnlocked;
       if (logoutButton) logoutButton.hidden = !isUnlocked;
       if (submissionsSection) submissionsSection.hidden = !isUnlocked;
+      if (scannerSection) scannerSection.hidden = !isUnlocked;
+      if (databaseSection) databaseSection.hidden = !isUnlocked;
       if (isUnlocked) {
         void loadSubmissions();
-      } else if (submissionsList) {
-        submissionsList.innerHTML = '';
-        if (submissionsCount) submissionsCount.textContent = '';
-        if (submissionsStatus) submissionsStatus.textContent = '';
+        void loadDbEvents();
+        subscribeDbRealtime();
+        void refreshScanQuota();
+      } else {
+        teardownDbRealtime();
+        dbEvents = [];
+        if (dbList) dbList.innerHTML = '';
+        if (dbCount) dbCount.textContent = '';
+        if (dbStatus) dbStatus.textContent = '';
+        if (dbPublishStatus) dbPublishStatus.textContent = '';
+        if (dbSearch) dbSearch.value = '';
+        scanForm?.reset();
+        clearScanPreview();
+        if (scanQuota) scanQuota.textContent = "Checking today's scans...";
+        if (scanStatus) scanStatus.textContent = '';
+        if (submissionsList) {
+          submissionsList.innerHTML = '';
+          if (submissionsCount) submissionsCount.textContent = '';
+          if (submissionsStatus) submissionsStatus.textContent = '';
+        }
       }
     }
 
@@ -1013,10 +1298,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return card;
     }
 
+    // In-flight guard: overlapping loads would each append a full copy of the
+    // queue (duplicate cards mean a submission could be approved twice).
+    let submissionsLoading = false;
+
     async function loadSubmissions() {
-      if (!adminSupabase || !submissionsList) return;
+      if (!adminSupabase || !submissionsList || submissionsLoading) return;
+      submissionsLoading = true;
       setSubmissionsStatus('Loading submissions...');
-      submissionsList.innerHTML = '';
       try {
         const { data, error } = await adminSupabase
           .from('event_submissions')
@@ -1026,6 +1315,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         if (error) throw new Error(error.message);
 
         const rows = (data ?? []) as SubmissionRow[];
+        // Clear only after the fetch resolves so a failed load keeps the
+        // current cards instead of blanking the queue.
+        submissionsList.innerHTML = '';
         rows.forEach((submission) => {
           const card = buildSubmissionCard(submission);
           if (card) submissionsList.appendChild(card);
@@ -1035,11 +1327,496 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Could not load submissions.';
         setSubmissionsStatus(message);
+      } finally {
+        submissionsLoading = false;
       }
     }
 
     refreshSubmissionsButton?.addEventListener('click', () => {
       void loadSubmissions();
+    });
+
+    /* ---------- Database manager ---------- */
+    type DbEventRow = AdminEventRecord & { id: string };
+
+    function chicagoToday() {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
+    }
+
+    function dbScopeValue() {
+      return dbScopeSelect?.value === 'all' ? 'all' : 'upcoming';
+    }
+
+    function formatRowDate(dateStr: string, timeStr: string | null) {
+      const date = new Date(`${dateStr}T12:00:00`);
+      let label = Number.isNaN(date.getTime())
+        ? dateStr
+        : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const clean = (timeStr ?? '').slice(0, 5);
+      if (/^\d{2}:\d{2}$/.test(clean)) {
+        const [hour, minute] = clean.split(':').map(Number);
+        const hour12 = ((hour + 11) % 12) + 1;
+        label += ` · ${hour12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+      }
+      return label;
+    }
+
+    // A realtime change that arrives while a row editor is open waits here so
+    // the re-render cannot wipe unsaved edits.
+    let dbPendingReload = false;
+    // Generation counter: with overlapping loads (realtime + scope change +
+    // refresh), only the newest response may write the list.
+    let dbLoadGeneration = 0;
+
+    function dbEditorOpen() {
+      return Boolean(dbList?.querySelector('[data-row-editor]:not([hidden])'));
+    }
+
+    function runPendingDbReload() {
+      if (dbPendingReload && !dbEditorOpen()) {
+        void loadDbEvents();
+      }
+    }
+
+    async function loadDbEvents() {
+      if (!adminSupabase || !dbList) return;
+      dbPendingReload = false;
+      const generation = ++dbLoadGeneration;
+      setInlineStatus(dbStatus, 'Loading events...');
+      try {
+        let query = adminSupabase
+          .from('events')
+          .select('*')
+          .order('event_date', { ascending: true })
+          .order('start_time', { ascending: true, nullsFirst: false })
+          .order('title', { ascending: true });
+        if (dbScopeValue() === 'upcoming') {
+          query = query.gte('event_date', chicagoToday());
+        }
+        const { data, error } = await query;
+        if (generation !== dbLoadGeneration) return;
+        if (error) throw new Error(error.message);
+        dbEvents = (data ?? []) as DbEventRow[];
+        renderDbList();
+      } catch (error) {
+        if (generation !== dbLoadGeneration) return;
+        const message = error instanceof Error ? error.message : 'Unknown error.';
+        setInlineStatus(dbStatus, `Could not load events: ${message}`, true);
+      }
+    }
+
+    function matchesDbSearch(row: DbEventRow, needle: string) {
+      if (!needle) return true;
+      return [
+        row.title,
+        row.venue,
+        row.organizer,
+        row.neighborhood,
+        row.description,
+        (row.tags ?? []).join(' '),
+      ]
+        .map((value) => (value ?? '').toString().toLowerCase())
+        .join(' ')
+        .includes(needle);
+    }
+
+    function renderDbList() {
+      if (!dbList || !eventRowTemplate) return;
+      const needle = cleanText(dbSearch?.value).toLowerCase();
+      const rows = dbEvents.filter((row) => matchesDbSearch(row, needle));
+      const today = chicagoToday();
+      dbList.innerHTML = '';
+      rows.forEach((row) => {
+        const card = buildEventRow(row, today);
+        if (card) dbList.appendChild(card);
+      });
+      if (dbCount) {
+        const scopeLabel = dbScopeValue() === 'upcoming' ? 'upcoming' : 'total';
+        dbCount.textContent = needle
+          ? `(${rows.length} of ${dbEvents.length} ${scopeLabel})`
+          : `(${dbEvents.length} ${scopeLabel})`;
+      }
+      if (rows.length === 0) {
+        setInlineStatus(
+          dbStatus,
+          dbEvents.length === 0 ? 'No events in this view.' : 'No events match the search.'
+        );
+      } else {
+        setInlineStatus(dbStatus, '');
+      }
+    }
+
+    function fillRowEditor(editor: HTMLFormElement, row: DbEventRow) {
+      const setValue = (name: string, value: string) => {
+        const el = editor.querySelector(`[name="${name}"]`) as
+          | HTMLInputElement
+          | HTMLTextAreaElement
+          | null;
+        if (el) el.value = value;
+      };
+      setValue('title', row.title ?? '');
+      setValue('event_date', row.event_date ?? '');
+      setValue('venue', row.venue ?? '');
+      setValue('start_time', (row.start_time ?? '').slice(0, 5));
+      setValue('neighborhood', row.neighborhood ?? '');
+      setValue('organizer', row.organizer ?? '');
+      setValue('cost_info', row.cost_info ?? '');
+      setValue('event_url', row.event_url ?? '');
+      setValue('image_url', row.image_url ?? '');
+      setValue('emoji', row.emoji ?? '');
+      setValue('description', row.description ?? '');
+      setValue('author_note', row.author_note ?? '');
+      const rowTags = (row.tags ?? []).map((tag) => tag.toLowerCase());
+      (editor.querySelectorAll('input[name="tags"]') as NodeListOf<HTMLInputElement>).forEach((el) => {
+        el.checked = rowTags.includes(el.value.toLowerCase());
+      });
+      const setChecked = (name: string, checked: boolean) => {
+        const el = editor.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
+        if (el) el.checked = checked;
+      };
+      setChecked('is_curated', Boolean(row.is_curated));
+      setChecked('is_giveaway', Boolean(row.is_giveaway));
+    }
+
+    function buildEventRow(row: DbEventRow, today: string) {
+      if (!eventRowTemplate) return null;
+      const fragment = eventRowTemplate.content.cloneNode(true) as DocumentFragment;
+      const card = fragment.querySelector('[data-event-row]') as HTMLElement | null;
+      if (!card) return null;
+
+      const setText = (name: string, value: string) => {
+        const el = card.querySelector(`[data-row-${name}]`);
+        if (el) el.textContent = value;
+      };
+      setText('date', formatRowDate(row.event_date, row.start_time));
+      setText('title', row.title ?? '');
+      setText('emoji', row.emoji ?? '');
+      setText('venue', row.venue ?? '');
+      setText(
+        'meta',
+        [
+          ...(row.tags ?? []),
+          row.is_curated ? "Conductor's pick" : '',
+          row.is_giveaway ? 'Giveaway' : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      );
+      if (row.event_date < today) card.classList.add('opacity-60');
+
+      const editor = card.querySelector('[data-row-editor]') as HTMLFormElement | null;
+      const editButton = card.querySelector('[data-row-edit]') as HTMLButtonElement | null;
+      const deleteButton = card.querySelector('[data-row-delete]') as HTMLButtonElement | null;
+      const cancelButton = card.querySelector('[data-row-cancel]') as HTMLButtonElement | null;
+      const saveButton = card.querySelector('[data-row-save]') as HTMLButtonElement | null;
+      const rowStatus = card.querySelector('[data-row-status]') as HTMLElement | null;
+
+      editButton?.setAttribute('aria-label', `Edit ${row.title}`);
+      deleteButton?.setAttribute('aria-label', `Delete ${row.title}`);
+
+      editButton?.addEventListener('click', () => {
+        if (!editor) return;
+        if (!editor.hidden) {
+          editor.hidden = true;
+          runPendingDbReload();
+          return;
+        }
+        fillRowEditor(editor, row);
+        if (rowStatus) rowStatus.textContent = '';
+        editor.hidden = false;
+      });
+
+      cancelButton?.addEventListener('click', () => {
+        if (editor) editor.hidden = true;
+        if (rowStatus) rowStatus.textContent = '';
+        runPendingDbReload();
+      });
+
+      editor?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void withBusy(saveButton, 'Saving...', async () => {
+          try {
+            if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+            setInlineStatus(rowStatus, '');
+            const record = recordFromForm(editor);
+            // .select() so a silent zero-row update (stale password, deleted
+            // row) surfaces as an error instead of a fake success.
+            const { data, error } = await adminSupabase
+              .from('events')
+              .update(record)
+              .eq('id', row.id)
+              .select('id');
+            if (error) throw new Error(error.message);
+            if (!data || data.length === 0) {
+              throw new Error('The database rejected the change. Lock the portal, unlock it again, and retry.');
+            }
+            setInlineStatus(
+              dbPublishStatus,
+              `Saved "${record.title}". It is in the database now; press Publish live site to show it publicly, or wait for the scheduled rebuild.`
+            );
+            dbPublishStatus?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            await loadDbEvents();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error.';
+            setInlineStatus(rowStatus, `Could not save: ${message}`, true);
+          }
+        });
+      });
+
+      deleteButton?.addEventListener('click', () => {
+        if (
+          !window.confirm(
+            `Delete "${row.title}" from the database? This cannot be undone. The public page keeps showing it until the next publish.`
+          )
+        )
+          return;
+        void withBusy(deleteButton, 'Deleting...', async () => {
+          try {
+            if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+            const { data, error } = await adminSupabase
+              .from('events')
+              .delete()
+              .eq('id', row.id)
+              .select('id');
+            if (error) throw new Error(error.message);
+            if (!data || data.length === 0) {
+              throw new Error('The database rejected the delete. Lock the portal, unlock it again, and retry.');
+            }
+            setInlineStatus(
+              dbPublishStatus,
+              `Deleted "${row.title}". Press Publish live site to update the public page, or wait for the scheduled rebuild.`
+            );
+            dbPublishStatus?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            await loadDbEvents();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error.';
+            setInlineStatus(dbPublishStatus, `Could not delete: ${message}`, true);
+          }
+        });
+      });
+
+      return card;
+    }
+
+    function teardownDbRealtime() {
+      if (dbChannel) {
+        void dbChannel.unsubscribe();
+        dbChannel = null;
+      }
+      clearTimeout(dbReloadTimer);
+      if (dbLive) dbLive.textContent = 'Live updates: off';
+    }
+
+    function subscribeDbRealtime() {
+      if (!adminSupabase) return;
+      teardownDbRealtime();
+      if (dbLive) dbLive.textContent = 'Live updates: connecting...';
+      dbChannel = adminSupabase
+        .channel('admin-events-db')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+          // Debounced: a CSV import fires one change per row.
+          clearTimeout(dbReloadTimer);
+          dbReloadTimer = setTimeout(() => {
+            if (dbEditorOpen()) {
+              // Re-rendering now would destroy the open editor's unsaved
+              // edits. Reload once it closes.
+              dbPendingReload = true;
+              setInlineStatus(
+                dbStatus,
+                'The schedule changed elsewhere. It will refresh when you close the open editor.'
+              );
+              return;
+            }
+            void loadDbEvents();
+          }, 400);
+        })
+        .subscribe((status) => {
+          if (!dbLive) return;
+          dbLive.textContent =
+            status === 'SUBSCRIBED' ? 'Live updates: on' : 'Live updates: reconnecting...';
+        });
+    }
+
+    dbScopeSelect?.addEventListener('change', () => {
+      void loadDbEvents();
+    });
+    dbSearch?.addEventListener('input', () => {
+      renderDbList();
+    });
+    dbRefresh?.addEventListener('click', () => {
+      void loadDbEvents();
+    });
+
+    dbPublish?.addEventListener('click', () => {
+      void withBusy(dbPublish, 'Publishing...', async () => {
+        try {
+          setInlineStatus(dbPublishStatus, '');
+          const res = await fetch(`${functionsBase}/trigger-deploy`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-admin-password': adminPassword },
+            body: '{}',
+          });
+          const payload = await res.json().catch(() => null);
+          if (!res.ok) throw new Error(payload?.error ?? `Publish failed (status ${res.status}).`);
+          setInlineStatus(dbPublishStatus, payload?.message ?? 'Site rebuild started.');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(dbPublishStatus, message, true);
+        }
+      });
+    });
+
+    /* ---------- Flyer scanner (Gemini) ---------- */
+
+    function setScanQuota(quota: { remaining?: unknown; limit?: unknown } | null | undefined) {
+      if (!scanQuota) return;
+      if (!quota || typeof quota.remaining !== 'number' || typeof quota.limit !== 'number') {
+        scanQuota.textContent = 'Scan counter unavailable';
+        return;
+      }
+      scanQuota.textContent = `${quota.remaining} of ${quota.limit} scans left today`;
+    }
+
+    async function refreshScanQuota() {
+      if (!scanQuota) return;
+      scanQuota.textContent = "Checking today's scans...";
+      try {
+        const res = await fetch(`${functionsBase}/parse-event-image`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-admin-password': adminPassword },
+          body: JSON.stringify({ action: 'status' }),
+        });
+        const payload = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(payload?.error ?? 'Status check failed.');
+        setScanQuota(payload?.quota);
+      } catch (_) {
+        scanQuota.textContent = 'Scan counter unavailable';
+      }
+    }
+
+    function clearScanPreview() {
+      if (scanPreviewUrl) {
+        URL.revokeObjectURL(scanPreviewUrl);
+        scanPreviewUrl = null;
+      }
+      if (scanPreviewWrap) scanPreviewWrap.hidden = true;
+      if (scanPreview) scanPreview.removeAttribute('src');
+    }
+
+    // Downscale in the browser so uploads stay small for the edge function and
+    // Gemini. Falls back to the original bytes for formats canvas cannot
+    // decode (HEIC outside Safari); the server enforces its own size cap.
+    async function imageFileToPayload(file: File): Promise<{ data: string; mime: string }> {
+      try {
+        const bitmap = await createImageBitmap(file);
+        const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas unavailable.');
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const data = dataUrl.split(',')[1] ?? '';
+        if (!data) throw new Error('Could not encode the image.');
+        return { data, mime: 'image/jpeg' };
+      } catch (_) {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+        }
+        return { data: btoa(binary), mime: file.type || 'image/jpeg' };
+      }
+    }
+
+    function prefillSingleForm(eventDraft: Record<string, unknown>) {
+      if (!singleEventForm) return;
+      const setValue = (name: string, value: unknown) => {
+        const el = singleEventForm.querySelector(
+          `input[name="${name}"]:not([type="checkbox"]), textarea[name="${name}"]`
+        ) as HTMLInputElement | HTMLTextAreaElement | null;
+        if (el) el.value = typeof value === 'string' ? value : '';
+      };
+      setValue('title', eventDraft.title);
+      setValue('event_date', eventDraft.event_date);
+      setValue('venue', eventDraft.venue);
+      setValue('start_time', eventDraft.start_time);
+      setValue('neighborhood', eventDraft.neighborhood);
+      setValue('organizer', eventDraft.organizer);
+      setValue('cost_info', eventDraft.cost_info);
+      setValue('event_url', eventDraft.event_url);
+      setValue('image_url', '');
+      setValue('description', eventDraft.description);
+      setValue('author_note', '');
+      setValue('emoji', eventDraft.emoji);
+      const draftTags = Array.isArray(eventDraft.tags)
+        ? eventDraft.tags.map((tag) => cleanText(tag).toLowerCase())
+        : [];
+      (singleEventForm.querySelectorAll('input[name="tags"]') as NodeListOf<HTMLInputElement>).forEach(
+        (el) => {
+          el.checked = draftTags.includes(el.value.toLowerCase());
+        }
+      );
+      const setChecked = (name: string, checked: boolean) => {
+        const el = singleEventForm.querySelector(`input[name="${name}"]`) as HTMLInputElement | null;
+        if (el) el.checked = checked;
+      };
+      setChecked('is_giveaway', eventDraft.is_giveaway === true);
+      setChecked('is_curated', false);
+    }
+
+    scanFile?.addEventListener('change', () => {
+      clearScanPreview();
+      const file = scanFile.files?.[0];
+      if (file && scanPreview && scanPreviewWrap) {
+        scanPreviewUrl = URL.createObjectURL(file);
+        scanPreview.src = scanPreviewUrl;
+        scanPreviewWrap.hidden = false;
+      }
+      if (scanStatus) scanStatus.textContent = '';
+    });
+
+    scanForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const file = scanFile?.files?.[0];
+      if (!file) {
+        setInlineStatus(scanStatus, 'Choose a flyer photo first.', true);
+        return;
+      }
+      void withBusy(scanSubmit, 'Scanning...', async () => {
+        try {
+          setInlineStatus(scanStatus, 'Reading the flyer with Gemini...');
+          const payload = await imageFileToPayload(file);
+          const res = await fetch(`${functionsBase}/parse-event-image`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-admin-password': adminPassword },
+            body: JSON.stringify({
+              action: 'parse',
+              mime_type: payload.mime,
+              image_base64: payload.data,
+            }),
+          });
+          const body = await res.json().catch(() => null);
+          if (body?.quota) setScanQuota(body.quota);
+          if (!res.ok) throw new Error(body?.error ?? `Scan failed (status ${res.status}).`);
+          prefillSingleForm(body?.event ?? {});
+          const note = cleanText(body?.event?.scan_notes);
+          setInlineStatus(
+            scanStatus,
+            `Draft loaded into the Add one event form. Review every field, then press Add event.${
+              note ? ` Scanner note: ${note}` : ''
+            }`
+          );
+          singleEventForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(scanStatus, message, true);
+        }
+      });
     });
 
     passwordForm?.addEventListener('submit', (event) => {
@@ -1060,6 +1837,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             return;
           }
           adminSupabase = client;
+          adminPassword = password;
           passwordForm.reset();
           setUnlocked(true);
         } catch (error) {
@@ -1071,6 +1849,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
     logoutButton?.addEventListener('click', () => {
       adminSupabase = null;
+      adminPassword = '';
       setUnlocked(false);
     });
 
@@ -1084,7 +1863,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           singleEventForm.reset();
           setInlineStatus(
             singleStatus,
-            `Added "${record.title}". The public page refreshes every 4 hours, so it should appear soon.`
+            `Added "${record.title}". Press Publish live site in the schedule section to show it publicly now, or wait for the scheduled rebuild.`
           );
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error.';
@@ -1165,7 +1944,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                   csvForm.reset();
                   setInlineStatus(
                     csvStatus,
-                    `${records.length} ${records.length === 1 ? 'event' : 'events'} added. The public page refreshes every 4 hours, so they should appear soon.`
+                    `${records.length} ${records.length === 1 ? 'event' : 'events'} added. Press Publish live site in the schedule section to show them publicly now, or wait for the scheduled rebuild.`
                   );
                 } catch (error) {
                   const message = error instanceof Error ? error.message : 'Unknown error.';
