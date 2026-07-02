@@ -113,9 +113,14 @@ function splitGiveawayDescription(description: string | null) {
 
 const startTime = showTime ? formatStartTime(event.start_time) : '';
 
-// One meta line under the title: venue, neighborhood, date range, and time
-// joined together so the time never dangles in a row of its own.
-const metaLine = [venueLine, recurrenceLabel, startTime].filter(Boolean).join(' · ');
+// One meta line under the title: venue, neighborhood, and date range joined
+// together. The start time renders as its own amber chip beside this line so
+// it stands out instead of blending into the venue text.
+const metaLine = [venueLine, recurrenceLabel].filter(Boolean).join(' · ');
+
+// Amber time chip, matching the homepage departure tag's time segment.
+const timeChipClass =
+  'border-2 border-[#62361B] bg-amber px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-[11px]';
 
 const giveawayDescription = splitGiveawayDescription(description);
 const giveawayRules =
@@ -156,9 +161,12 @@ const shareBtnClass =
         <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.05]">
           {title}
         </h3>
-        <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
-          {metaLine}
-        </p>
+        <div class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          {startTime && <span class={timeChipClass}>{startTime}</span>}
+          <p class="font-body text-sm md:text-base text-darkWalnut font-bold">
+            {metaLine}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -230,9 +238,12 @@ const shareBtnClass =
         <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.1]">
           {title}
         </h3>
-        <p class="font-body text-sm md:text-base text-darkWalnut font-bold mt-2">
-          {metaLine}
-        </p>
+        <div class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          {startTime && <span class={timeChipClass}>{startTime}</span>}
+          <p class="font-body text-sm md:text-base text-darkWalnut font-bold">
+            {metaLine}
+          </p>
+        </div>
       </div>
     </div>
 
