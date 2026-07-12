@@ -12,7 +12,7 @@ const fallbackItems: TickerItem[] = [
   { label: 'The Brown Line', text: 'Always moving' },
   { label: 'The Brown Line', text: 'Always above ground' },
   { label: 'Next stop', text: 'Chicago' },
-  { label: 'The Brown Line', text: "Chicago's Global South culture, in motion" },
+  { label: 'The Brown Line', text: 'Underground culture, elevated' },
 ];
 
 const {
@@ -40,7 +40,7 @@ const pixelsPerSecond = Math.max(10, providedPixelsPerSecond ?? DEFAULT_PIXELS_P
   data-marquee
   data-marquee-speed={pixelsPerSecond}
   role={decorative ? undefined : 'group'}
-  aria-label={decorative ? undefined : 'Latest issue and upcoming events ticker'}
+  aria-label={decorative ? undefined : 'Upcoming events ticker'}
   aria-hidden={decorative ? 'true' : undefined}
 >
   {!decorative && <p class="sr-only">{screenReaderText}</p>}

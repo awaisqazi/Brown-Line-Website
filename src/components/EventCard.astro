@@ -28,6 +28,7 @@ const title = fixSpelling(event.title);
 const description = event.description ? fixSpelling(event.description) : event.description;
 const venue = fixSpelling(event.venue);
 const organizer = event.organizer ? fixSpelling(event.organizer) : '';
+const authorNote = event.author_note ? fixSpelling(event.author_note) : event.author_note;
 
 const isGiveaway = event.is_giveaway;
 const isCurated = event.is_curated;
@@ -59,14 +60,26 @@ const venueLine = event.neighborhood ? `${displayVenue} · ${event.neighborhood}
 // Organizer, once. Many listings repeat the venue as the organizer (e.g. a museum
 // hosting its own program), which printed the same name twice. Only surface the
 // organizer when it adds new information.
-const organizerDisplay = organizer && organizer !== venue && organizer !== displayVenue ? organizer : '';
+const organizerDisplay =
+  organizer &&
+  organizer !== venue &&
+  organizer !== displayVenue &&
+  !/surfaced through|not inspected|in this pass|roundup|listing\b/i.test(organizer)
+    ? organizer
+    : '';
 
 // Safety net: internal research phrasing must never render on a card, even if a
 // row slips past data review.
 const rawPriceLabel = event.cost_info?.trim() ?? '';
-const priceLabel = /not (reviewed|inspected|shown)|reviewed (listing|page|snippet)/i.test(rawPriceLabel)
+const priceLabel = /not (reviewed|inspected|shown)|reviewed (listing|page|snippet)|not fully visible|no registration requirement visible/i.test(rawPriceLabel)
   ? 'See organizer for details'
   : rawPriceLabel;
+
+// When the action row falls back to its mono "See organizer for details" line
+// (no shareable URL), suppress an identical priceLabel in the left meta cluster
+// so the same phrase never prints twice on one card.
+const priceLabelInCluster =
+  priceLabel && !(!safeEventUrl && priceLabel === 'See organizer for details') ? priceLabel : '';
 
 // Shareable anchor for this card on the events board. When an event has no URL
 // of its own, sharing copies a deep link to the card instead of a bare page URL.
@@ -124,7 +137,7 @@ const timeChipClass =
 
 const giveawayDescription = splitGiveawayDescription(description);
 const giveawayRules =
-  giveawayDescription.rules || event.author_note || 'Follow the newsletter instructions to enter.';
+  giveawayDescription.rules || authorNote || 'Follow the newsletter instructions to enter.';
 
 // Shared button styling for the card action row.
 const detailsBtnClass =
@@ -186,9 +199,9 @@ const shareBtnClass =
     </div>
 
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-      {(priceLabel || organizerDisplay) && (
+      {(priceLabelInCluster || organizerDisplay) && (
         <div class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
-          {priceLabel && <span>{priceLabel}</span>}
+          {priceLabelInCluster && <span>{priceLabelInCluster}</span>}
           {organizerDisplay && <span>{organizerDisplay}</span>}
         </div>
       )}
@@ -221,11 +234,6 @@ const shareBtnClass =
           {tag}
         </span>
       ))}
-      {priceLabel && (
-        <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-darkWalnut bg-amber border-2 border-darkWalnut px-2 py-1">
-          {priceLabel}
-        </span>
-      )}
     </div>
 
     <div class="mt-4 flex items-start gap-3 md:gap-4">
@@ -264,22 +272,23 @@ const shareBtnClass =
       </p>
     )}
 
-    {event.author_note && (
+    {authorNote && (
       <div class="mt-4 border-l-4 border-mayaBlue pl-4">
         <p class="font-body text-[10px] font-bold uppercase tracking-[0.2em] text-cayenne">
           Conductor&rsquo;s note
         </p>
         <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-1.5 break-words">
-          {event.author_note}
+          {authorNote}
         </p>
       </div>
     )}
 
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-      {organizerDisplay && (
-        <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/65 font-bold">
-          {organizerDisplay}
-        </span>
+      {(priceLabelInCluster || organizerDisplay) && (
+        <div class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
+          {priceLabelInCluster && <span>{priceLabelInCluster}</span>}
+          {organizerDisplay && <span>{organizerDisplay}</span>}
+        </div>
       )}
       <div class="ml-auto flex flex-wrap items-center gap-2">
         {safeEventUrl ? (

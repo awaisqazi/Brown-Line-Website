@@ -1,4 +1,3 @@
-import { getRecentIssues } from './issues';
 import { formatStopDate, getChicagoDateString } from './dates';
 import type { TransitEvent } from './supabase';
 
@@ -24,16 +23,8 @@ export function getTickerItems() {
 }
 
 async function buildTickerItems() {
-  const [issues, events] = await Promise.all([getRecentIssues(), getUpcomingEvents()]);
-  const latestIssue = issues[0];
+  const events = await getUpcomingEvents();
   const items: TickerItem[] = [];
-
-  if (latestIssue) {
-    items.push({
-      label: 'Latest Issue',
-      text: latestIssue.title,
-    });
-  }
 
   const highlights = pickHighlights(events);
 
@@ -100,8 +91,7 @@ async function getUpcomingEvents() {
 }
 
 function formatEventDetail(event: TickerEvent) {
-  const venue = event.venue?.trim();
-  return venue ? `${event.title} at ${venue}` : event.title;
+  return event.title.replace(/\bTurkiye\b/g, 'Türkiye').replace(/\bTURKIYE\b/g, 'TÜRKIYE');
 }
 
 function addDaysToDateString(dateString: string, days: number) {

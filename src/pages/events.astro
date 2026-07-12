@@ -31,6 +31,26 @@ if (error) {
 
 const events = data ?? [];
 
+// Rolling 60-day archive of stops that have already departed. A second build-time
+// snapshot so the "View past stops" drawer has content, while the upcoming board
+// (and its filters and count) never includes old dates.
+const PAST_WINDOW_DAYS = 60;
+const { data: pastData, error: pastError } = await supabase
+  .from('events')
+  .select('*')
+  .lt('event_date', today)
+  .gte('event_date', addDays(today, -PAST_WINDOW_DAYS))
+  .order('event_date', { ascending: false })
+  .order('is_curated', { ascending: false })
+  .order('title', { ascending: true })
+  .returns<TransitEvent[]>();
+
+if (pastError) {
+  throw new Error(`Failed to load past events: ${pastError.message}`);
+}
+
+const pastEvents = pastData ?? [];
+
 function getTodayChicago() {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Chicago',
@@ -47,6 +67,15 @@ function monthDay(dateString: string) {
   const [y, m, d] = dateString.split('-').map(Number);
   if (!y || !m || !d) return dateString;
   return `${MONTHS_SHORT[m - 1]} ${d}`;
+}
+
+// Shift a YYYY-MM-DD date by a number of days (UTC math so the calendar day never
+// drifts across time zones). Sizes the past-stops look-back window.
+function addDays(dateString: string, days: number) {
+  const [y, m, d] = dateString.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + days));
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
 }
 
 // Collapse identical recurring / multi-day events (same title + venue) into a
@@ -87,6 +116,44 @@ const groupedByDate = eventGroups.reduce<Record<string, EventGroup[]>>((groups, 
 // One segment per calendar day; curated picks lead within a day.
 const groupedEventEntries = Object.entries(groupedByDate)
   .sort(([a], [b]) => a.localeCompare(b))
+  .map(([eventDate, dayGroups]) => ({
+    eventDate,
+    label: formatStopDate(eventDate),
+    dayGroups: dayGroups.sort((a, b) => {
+      if (a.rep.is_curated !== b.rep.is_curated) return a.rep.is_curated ? -1 : 1;
+      return a.rep.title.localeCompare(b.rep.title);
+    }),
+  }));
+
+// Same series-collapse + day-grouping as the upcoming board, but ordered most
+// recent first and anchored on each series' last date so a just-finished run
+// surfaces at the top of the archive.
+const pastSeriesMap = new Map<string, TransitEvent[]>();
+for (const event of pastEvents) {
+  const key = `${event.title}||${event.venue}`;
+  const bucket = pastSeriesMap.get(key);
+  if (bucket) bucket.push(event);
+  else pastSeriesMap.set(key, [event]);
+}
+
+const pastEventGroups: EventGroup[] = Array.from(pastSeriesMap.values()).map((rows) => {
+  const dates = rows.map((r) => r.event_date).filter(Boolean).sort();
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const sortDate = end;
+  const rep = rows.find((r) => r.event_date === sortDate) ?? rows[0];
+  const recurrenceLabel = start !== end ? `${monthDay(start)} – ${monthDay(end)}` : '';
+  return { rep, start, end, recurrenceLabel, sortDate };
+});
+
+const pastGroupedByDate = pastEventGroups.reduce<Record<string, EventGroup[]>>((groups, group) => {
+  (groups[group.sortDate] ??= []).push(group);
+  return groups;
+}, {});
+
+// Most-recent day first for the archive.
+const pastGroupedEventEntries = Object.entries(pastGroupedByDate)
+  .sort(([a], [b]) => b.localeCompare(a))
   .map(([eventDate, dayGroups]) => ({
     eventDate,
     label: formatStopDate(eventDate),
@@ -188,7 +255,7 @@ function getEventSearchText(event: TransitEvent) {
         </div>
         <div class="max-w-xl">
           <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed">
-            Curated events across Chicago's Global South diaspora: film screenings and artist talks, food pop-ups, fundraisers, dance floors, workshops, and more.
+            Curated events across Chicago's Global South diaspora — from film screenings and artist talks to food pop-ups, fundraisers, dance floors, workshops and more.
           </p>
           <a
             href={`${base}submit-event`}
@@ -229,7 +296,7 @@ function getEventSearchText(event: TransitEvent) {
         <div class="flex items-start justify-between gap-3 md:items-center">
           <div class="min-w-0">
             <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">
-              Route controls
+              Filter the route
             </p>
             <p
               data-event-result-count
@@ -293,130 +360,6 @@ function getEventSearchText(event: TransitEvent) {
         </div>
       </div>
     </section>
-  )}
-
-  {events.length > 0 && (
-    <div
-      data-floating-event-controls
-      class="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-40 md:left-auto md:right-6 md:bottom-6 md:w-[min(31rem,calc(100vw-3rem))]"
-      aria-label="Floating event filters"
-      aria-hidden="true"
-      inert
-    >
-      <div
-        data-floating-panel-shell
-        class="floating-event-panel max-h-[calc(100vh-7rem)] overflow-y-auto border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro md:max-h-[calc(100vh-2rem)]"
-      >
-        <div class="h-1 bg-[linear-gradient(to_right,#F79CD0_0_20%,#5BC3FF_20%_40%,#90D393_40%_60%,#FFBC29_60%_80%,#F35A0F_80%_100%)]"></div>
-
-        <div class="p-3">
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <p class="font-body text-[9px] font-bold uppercase tracking-[0.28em] text-cayenne">
-                Filter the route
-              </p>
-              <p
-                data-event-result-count
-                class="font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut/70"
-              >
-                {events.length} stops
-              </p>
-            </div>
-
-            <div class="flex shrink-0 items-center gap-2">
-              <button
-                type="button"
-                data-floating-minimize
-                aria-label="Hide floating filters"
-                class="inline-flex h-10 w-10 items-center justify-center border-2 border-darkWalnut bg-seashell font-body text-lg font-bold leading-none text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-              >
-                <span aria-hidden="true">&rarr;</span>
-              </button>
-
-              <button
-                type="button"
-                data-floating-filter-toggle
-                aria-expanded="false"
-                aria-controls="floating-event-filters"
-                class="inline-flex h-10 w-10 items-center justify-center border-2 border-darkWalnut bg-amber font-body text-xl font-bold leading-none text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-              >
-                <span data-floating-toggle-symbol aria-hidden="true">+</span>
-                <span data-floating-toggle-label class="sr-only">Open event filters</span>
-              </button>
-            </div>
-          </div>
-
-          <label class="mt-3 block">
-            <span class="sr-only">Search events</span>
-            <input
-              data-event-search-input
-              type="search"
-              placeholder="Search the route"
-              class="w-full min-w-0 border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm"
-            />
-          </label>
-
-          <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
-            <button type="button" data-quick-filter="week" data-ga-event="events_filter" data-ga-label="this_week" class="quick-chip" aria-pressed="false">This week</button>
-            <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
-            <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip is-active" aria-pressed="true">All upcoming</button>
-            <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
-          </div>
-
-          <div
-            id="floating-event-filters"
-            data-floating-filter-panel
-            hidden
-            class="mt-3 border-t-2 border-dashed border-darkWalnut/35 pt-3"
-          >
-            <div class="grid grid-cols-1 gap-3">
-              <div class="block min-w-0">
-                <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  Date
-                </span>
-                <EventDatePicker inline />
-              </div>
-
-              <div class="block min-w-0">
-                <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                  Category
-                </span>
-                <EventSelect field="category-filter" label="Category" placeholder="All categories" options={categories} inline />
-              </div>
-
-              {neighborhoods.length > 0 && (
-                <div class="block min-w-0">
-                  <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/65">
-                    Neighborhood
-                  </span>
-                  <EventSelect field="neighborhood-filter" label="Neighborhood" placeholder="All neighborhoods" options={neighborhoods} inline />
-                </div>
-              )}
-            </div>
-
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                data-reset-filters
-                class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut bg-seashell px-3 py-2 transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        data-floating-restore
-        hidden
-        aria-label="Show floating filters"
-        class="floating-event-restore-tab"
-      >
-        <span aria-hidden="true">&larr;</span>
-      </button>
-    </div>
   )}
 
   <section class="px-6 py-16 md:py-24">
@@ -503,6 +446,61 @@ function getEventSearchText(event: TransitEvent) {
       )}
     </div>
   </section>
+
+  {pastGroupedEventEntries.length > 0 && (
+    <section class="px-6 pb-16 md:pb-24">
+      <div class="max-w-5xl mx-auto">
+        <button
+          type="button"
+          data-past-toggle
+          aria-expanded="false"
+          aria-controls="past-stops"
+          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-4 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+        >
+          <span data-past-toggle-label>View past stops</span>
+          <span data-past-toggle-icon aria-hidden="true">&darr;</span>
+        </button>
+
+        <div id="past-stops" hidden class="mt-12 space-y-14 md:space-y-16">
+          {pastGroupedEventEntries.map(({ label, dayGroups }, sectionIndex) => (
+            <section class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] gap-8 md:gap-10">
+              <div>
+                {sectionIndex === 0 && (
+                  <>
+                    <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mb-3">
+                      Previous departures
+                    </p>
+                    <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/55 mb-3">
+                      Where we've stopped these past 60 days.
+                    </p>
+                  </>
+                )}
+                <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none">
+                  {label}
+                </h2>
+              </div>
+
+              <ol class="events-route relative space-y-6">
+                {dayGroups.map(({ rep, recurrenceLabel }, index) => (
+                  <li class="relative pl-12 md:pl-14 opacity-70">
+                    <span
+                      class:list={[
+                        'event-stop absolute left-0 top-7 h-[22px] w-[22px] rounded-full border-2 border-darkWalnut shadow-[2px_2px_0_#642713]',
+                        stopColors[index % stopColors.length],
+                      ]}
+                      aria-hidden="true"
+                    ></span>
+
+                    <EventCard event={rep} recurrenceLabel={recurrenceLabel} />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
 </Layout>
 
 <style>
@@ -572,99 +570,25 @@ function getEventSearchText(event: TransitEvent) {
     filter: grayscale(1);
   }
 
-  [data-floating-event-controls] {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(1rem);
-    transition:
-      opacity 180ms ease,
-      transform 180ms ease;
-  }
-
-  [data-floating-event-controls].is-visible {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateY(0);
-  }
-
-  .floating-event-panel {
-    transition:
-      opacity 180ms ease,
-      transform 180ms ease;
-  }
-
-  .floating-event-restore-tab {
-    position: absolute;
-    right: -0.25rem;
-    bottom: 0;
-    z-index: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    height: 3rem;
-    border: 2px solid #642713;
-    background: #FFBC29;
-    color: #642713;
-    font-family: 'Montserrat', system-ui, sans-serif;
-    font-size: 1.35rem;
-    font-weight: 700;
-    line-height: 1;
-    box-shadow: 2px 2px 0 #642713;
-    pointer-events: auto;
-  }
-
-  .floating-event-restore-tab[hidden] {
-    display: none;
-  }
-
-  [data-floating-event-controls].is-minimized .floating-event-panel {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(calc(100% + 1rem));
-  }
-
-  /* One filter block per breakpoint: the inline "Route controls" serve desktop,
-     the floating "Filter the route" panel serves mobile/tablet. Hide the floating
-     copy on large screens so the two never appear at once. */
-  @media (min-width: 1024px) {
-    [data-floating-event-controls] {
-      display: none !important;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    [data-floating-event-controls],
-    .floating-event-panel {
-      transition: none;
-    }
-  }
 </style>
 
 <script>
   const controls = document.querySelector('[data-event-controls]');
-  const floatingControls = document.querySelector('[data-floating-event-controls]');
-  const controlScopes = [controls, floatingControls].filter(Boolean);
 
-  if (controlScopes.length > 0) {
-    const getControlFields = (selector) =>
-      controlScopes.flatMap((scope) => Array.from(scope.querySelectorAll(selector)));
-    const searchInputs = getControlFields('[data-event-search-input]');
-    const categorySelects = getControlFields('[data-category-filter]');
-    const neighborhoodSelects = getControlFields('[data-neighborhood-filter]');
+  if (controls) {
+    const getControlFields = (selector) => Array.from(controls.querySelectorAll(selector));
+    const searchInput = controls.querySelector('[data-event-search-input]');
+    const categorySelect = controls.querySelector('[data-category-filter]');
+    const neighborhoodSelect = controls.querySelector('[data-neighborhood-filter]');
     const resetButtons = getControlFields('[data-reset-filters]');
     const resultCounts = getControlFields('[data-event-result-count]');
     const calendarRoots = getControlFields('[data-calendar]');
     const quickFilterButtons = getControlFields('[data-quick-filter]');
-    const floatingToggle = floatingControls?.querySelector('[data-floating-filter-toggle]');
-    const floatingMinimize = floatingControls?.querySelector('[data-floating-minimize]');
-    const floatingRestore = floatingControls?.querySelector('[data-floating-restore]');
-    const floatingToggleSymbol = floatingControls?.querySelector('[data-floating-toggle-symbol]');
-    const floatingToggleLabel = floatingControls?.querySelector('[data-floating-toggle-label]');
-    const floatingPanel = floatingControls?.querySelector('[data-floating-filter-panel]');
-    const floatingPanelShell = floatingControls?.querySelector('[data-floating-panel-shell]');
-    const eventCards = Array.from(document.querySelectorAll('[data-event-card]'));
-    const daySections = Array.from(document.querySelectorAll('[data-event-day-section]'));
+    // Scope the filterable set to the upcoming board so the static past-stops
+    // archive is never hidden, counted, or re-ordered by the client filters.
+    const board = document.querySelector('[data-events-board]');
+    const eventCards = board ? Array.from(board.querySelectorAll('[data-event-card]')) : [];
+    const daySections = board ? Array.from(board.querySelectorAll('[data-event-day-section]')) : [];
     const noMatches = document.querySelector('[data-no-event-matches]');
 
     let eventDates = [];
@@ -677,8 +601,6 @@ function getEventSearchText(event: TransitEvent) {
 
     let selectedDate = '';
     let pendingScrollDate = null;
-    let controlsAreOutOfView = false;
-    let floatingIsMinimized = false;
     // Date-range mode: 'all' (default) | 'week' | 'weekend'. 'free' is a separate
     // toggle. The board defaults to All upcoming so the full slate is visible;
     // the This week / This weekend chips narrow it.
@@ -693,16 +615,6 @@ function getEventSearchText(event: TransitEvent) {
       const [y, m, d] = dateString.split('-').map(Number);
       const next = new Date(Date.UTC(y, m - 1, d + days));
       return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
-    }
-
-    function getSyncedValue(inputs) {
-      return inputs.find((input) => input.value)?.value ?? '';
-    }
-
-    function setSyncedValue(inputs, value, source = null) {
-      inputs.forEach((input) => {
-        if (input !== source) input.value = value;
-      });
     }
 
     function getChicagoDateString() {
@@ -1082,65 +994,11 @@ function getEventSearchText(event: TransitEvent) {
       themedSelects.push({ root, close, isOpen, sync });
     }
 
-    /* ---------- Floating panel ---------- */
-    function setFloatingExpanded(isExpanded) {
-      if (!floatingPanel || !floatingToggle) return;
-      floatingPanel.hidden = !isExpanded;
-      floatingToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-      if (floatingToggleSymbol) {
-        floatingToggleSymbol.textContent = isExpanded ? '-' : '+';
-      }
-      if (floatingToggleLabel) {
-        floatingToggleLabel.textContent = isExpanded ? 'Close event filters' : 'Open event filters';
-      }
-    }
-
-    function setFloatingVisible(isVisible) {
-      if (!floatingControls) return;
-      floatingControls.classList.toggle('is-visible', isVisible);
-      floatingControls.toggleAttribute('inert', !isVisible);
-      floatingControls.setAttribute('aria-hidden', isVisible ? 'false' : 'true');
-    }
-
-    function setFloatingMinimized(isMinimized) {
-      if (!floatingControls) return;
-
-      floatingIsMinimized = isMinimized;
-      floatingControls.classList.toggle('is-minimized', isMinimized);
-      floatingPanelShell?.toggleAttribute('inert', isMinimized);
-      floatingPanelShell?.setAttribute('aria-hidden', isMinimized ? 'true' : 'false');
-
-      if (floatingRestore) {
-        floatingRestore.hidden = !isMinimized;
-      }
-
-      if (isMinimized) {
-        setFloatingExpanded(false);
-      }
-
-      syncFloatingVisibility();
-    }
-
-    // Pin only while the panel is in use (focus) or minimized to its tab. Active
-    // filters alone must not pin it: while the inline "Route controls" are still
-    // on screen the floating copy would cover card content.
-    function shouldPinFloatingControls() {
-      return Boolean(
-        floatingControls?.contains(document.activeElement) ||
-        floatingIsMinimized
-      );
-    }
-
-    function syncFloatingVisibility() {
-      if (!floatingControls) return;
-      setFloatingVisible(controlsAreOutOfView || shouldPinFloatingControls());
-    }
-
     /* ---------- Filtering ---------- */
     function eventMatches(card) {
-      const query = normalize(getSyncedValue(searchInputs));
-      const category = getSyncedValue(categorySelects);
-      const neighborhood = getSyncedValue(neighborhoodSelects);
+      const query = normalize(searchInput?.value ?? '');
+      const category = categorySelect?.value ?? '';
+      const neighborhood = neighborhoodSelect?.value ?? '';
       const cardStart = card.dataset.eventStart || card.dataset.eventDate || '';
       const cardEnd = card.dataset.eventEnd || card.dataset.eventDate || '';
       const cardTags = (card.dataset.eventTags ?? '').split('|').filter(Boolean);
@@ -1165,8 +1023,6 @@ function getEventSearchText(event: TransitEvent) {
     }
 
     function renderFilters() {
-      const shouldPreserveScroll = Boolean(floatingControls?.contains(document.activeElement));
-      const previousScrollY = window.scrollY;
       let visibleCount = 0;
 
       eventCards.forEach((card) => {
@@ -1195,11 +1051,9 @@ function getEventSearchText(event: TransitEvent) {
         noMatches.hidden = visibleCount > 0;
       }
 
-      syncFloatingVisibility();
-
       if (pendingScrollDate) {
         // Jump to the chosen day (or the first stop on/after it) without hiding
-        // the rest of the route. This wins over scroll preservation.
+        // the rest of the route.
         const targetDate = pendingScrollDate;
         pendingScrollDate = null;
         window.requestAnimationFrame(() => {
@@ -1207,24 +1061,14 @@ function getEventSearchText(event: TransitEvent) {
             (section) => !section.hidden && (section.dataset.eventDate ?? '') >= targetDate
           );
           target?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-          syncFloatingVisibility();
-        });
-      } else if (shouldPreserveScroll) {
-        window.requestAnimationFrame(() => {
-          const maxScrollY = Math.max(
-            0,
-            document.documentElement.scrollHeight - window.innerHeight
-          );
-          window.scrollTo({ top: Math.min(previousScrollY, maxScrollY), behavior: 'auto' });
-          syncFloatingVisibility();
         });
       }
     }
 
     function resetFilters() {
-      setSyncedValue(searchInputs, '');
-      setSyncedValue(categorySelects, '');
-      setSyncedValue(neighborhoodSelects, '');
+      if (searchInput) searchInput.value = '';
+      if (categorySelect) categorySelect.value = '';
+      if (neighborhoodSelect) neighborhoodSelect.value = '';
       refreshThemed();
       dateMode = DEFAULT_DATE_MODE;
       freeOnly = false;
@@ -1254,27 +1098,18 @@ function getEventSearchText(event: TransitEvent) {
       });
     });
 
-    searchInputs.forEach((input) => {
-      input.addEventListener('input', () => {
-        setSyncedValue(searchInputs, input.value, input);
-        renderFilters();
-      });
+    searchInput?.addEventListener('input', () => {
+      renderFilters();
     });
 
-    categorySelects.forEach((select) => {
-      select.addEventListener('change', () => {
-        setSyncedValue(categorySelects, select.value, select);
-        refreshThemed();
-        renderFilters();
-      });
+    categorySelect?.addEventListener('change', () => {
+      refreshThemed();
+      renderFilters();
     });
 
-    neighborhoodSelects.forEach((select) => {
-      select.addEventListener('change', () => {
-        setSyncedValue(neighborhoodSelects, select.value, select);
-        refreshThemed();
-        renderFilters();
-      });
+    neighborhoodSelect?.addEventListener('change', () => {
+      refreshThemed();
+      renderFilters();
     });
 
     resetButtons.forEach((button) => button.addEventListener('click', resetFilters));
@@ -1293,46 +1128,36 @@ function getEventSearchText(event: TransitEvent) {
       }
     });
 
-    floatingToggle?.addEventListener('click', () => {
-      setFloatingExpanded(floatingToggle.getAttribute('aria-expanded') !== 'true');
-      syncFloatingVisibility();
-    });
-    floatingMinimize?.addEventListener('click', () => {
-      setFloatingMinimized(true);
-    });
-    floatingRestore?.addEventListener('click', () => {
-      setFloatingMinimized(false);
-      setFloatingVisible(true);
-    });
-    floatingControls?.addEventListener('focusin', syncFloatingVisibility);
-    floatingControls?.addEventListener('focusout', () => {
-      window.setTimeout(syncFloatingVisibility, 0);
-    });
-
     eventCards.forEach((card) => {
       card.classList.toggle('is-past-event', (card.dataset.eventDate ?? '') < today);
     });
 
-    setSyncedValue(searchInputs, getSyncedValue(searchInputs));
-    setSyncedValue(categorySelects, getSyncedValue(categorySelects));
-    setSyncedValue(neighborhoodSelects, getSyncedValue(neighborhoodSelects));
     syncQuickFilters();
-    setFloatingExpanded(false);
-
-    if (floatingControls && controls && 'IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          controlsAreOutOfView = !entry.isIntersecting;
-          syncFloatingVisibility();
-        },
-        { rootMargin: '-80px 0px 0px 0px' }
-      );
-      observer.observe(controls);
-    } else {
-      controlsAreOutOfView = true;
-      syncFloatingVisibility();
-    }
 
     renderFilters();
+  }
+</script>
+
+<script>
+  // Past-stops drawer. Kept independent of the filter script above so the archive
+  // still opens on pages with no upcoming stops (where the filter panel, and its
+  // guard, never render).
+  const pastToggle = document.querySelector('[data-past-toggle]');
+  const pastPanel = document.getElementById('past-stops');
+  const pastToggleLabel = pastToggle?.querySelector('[data-past-toggle-label]');
+  const pastToggleIcon = pastToggle?.querySelector('[data-past-toggle-icon]');
+
+  if (pastToggle && pastPanel) {
+    pastToggle.addEventListener('click', () => {
+      const willOpen = pastPanel.hidden;
+      pastPanel.hidden = !willOpen;
+      pastToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      if (pastToggleLabel) {
+        pastToggleLabel.textContent = willOpen ? 'Hide past stops' : 'View past stops';
+      }
+      if (pastToggleIcon) {
+        pastToggleIcon.textContent = willOpen ? '↑' : '↓';
+      }
+    });
   }
 </script>

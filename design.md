@@ -106,9 +106,9 @@ Interaction details:
 - Horizontal wheel or shift-wheel input also scrubs the ticker. Manual movement pauses motion briefly, then resumes unless the user pressed pause.
 - A compact pause/play button sits at the right edge, uses `aria-pressed`, and changes label between "Pause ticker" and "Resume ticker".
 - Under `prefers-reduced-motion`, the ticker starts paused and leaves the controls visible.
-- The same ticker items render near the top of the site chrome and above the footer. Minimal pages skip ticker data entirely.
+- The ticker renders above the footer only (`Footer.astro`, `decorative`). The top-of-chrome ticker was removed from `Layout.astro` on 2026-07-11; the footer instance is the sole site-wide ticker. Minimal pages skip ticker data entirely. (The homepage's own "Upcoming Stops" marquee, § 9, is a separate local instance and is unaffected.)
 
-Content source: `Layout.astro` calls `getTickerItems()` from `src/lib/ticker.ts`. The ticker combines the latest Beehiiv issue from `src/lib/issues.ts` with a curated set of up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title) drawn from the next 21 days, so it no longer dumps the full multi-week list.
+Content source: `Layout.astro` calls `getTickerItems()` from `src/lib/ticker.ts`. The ticker is events-only: it draws a curated set of up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title) from the next 21 days, so it no longer dumps the full multi-week list. The former "Latest Issue" ticker item (sourced from Beehiiv) was removed in the same 2026-07-11 pass; each remaining item is the event title only (no venue suffix), with Türkiye/TÜRKIYE spelling normalized to match `EventCard.astro`.
 
 ### Paper-Grain Noise Overlay (`Layout.astro`)
 A single fixed div with an inline SVG noise texture (`feTurbulence` `baseFrequency=0.85`, `numOctaves=3`, `stitchTiles=stitch`) at `opacity: 0.04` with `mix-blend-mode: multiply`. `pointer-events-none`, `aria-hidden="true"`, `z-[999]` so it never blocks clicks and applies texture site-wide (including over the splash and mobile drawer). The result reads as recycled newsprint, not visual noise.
@@ -124,15 +124,16 @@ The Link-in-Bio page reuses the Mobile Drawer Route Map pattern as its primary a
 
 ### Events Route Board (`/events`)
 The public events page is a static Supabase-powered route board. It should feel like a transit guide, not a generic card directory.
-- Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl`, plus an Amber "Submit an event" button linking to `/submit-event`.
-- Main controls: bordered Seashell panel with result count, a row of quick-filter chips, a search box, a single-date calendar, a themed Category dropdown, a Neighborhood dropdown, and Reset. The older line-type radios, "Has link" toggle, and start/end date selects were removed in favor of this simpler bar.
-- **Quick-filter chips:** `All upcoming` (default), `This week`, `This weekend` (mutually exclusive date windows), plus a `Free` toggle (matches `cost_info` containing "free"). `This week` = today through +6 days; `This weekend` = the upcoming Sat/Sun; `All upcoming` = today onward, unbounded. A search query widens the window to all upcoming (search is global). Chips appear in both the main panel and the floating panel and stay synced. Reset returns to `All upcoming` (`DEFAULT_DATE_MODE`).
+- Hero: left/right split at `lg+`, H1 with a Cayenne `<em>` accent, supporting copy capped to `max-w-xl` (subhead is owner-locked copy as of 2026-07-11, carrying the intentional em dash §7 calls out: "Curated events across Chicago's Global South diaspora — from film screenings and artist talks to food pop-ups, fundraisers, dance floors, workshops and more."), plus an Amber "Submit an event" button linking to `/submit-event`.
+- Main controls: one bordered Seashell panel, eyebrow **"Filter the route"** (renamed from "Route controls" on 2026-07-11 so the same label describes the one panel at every breakpoint), with result count, a row of quick-filter chips, a search box, a single-date calendar, a themed Category dropdown, a Neighborhood dropdown, and Reset. The older line-type radios, "Has link" toggle, and start/end date selects were removed in favor of this simpler bar. Search and select fields use 16px mobile text (`text-base`, stepping down at `md+`) to avoid iOS focus zoom.
+- **Quick-filter chips:** `All upcoming` (default), `This week`, `This weekend` (mutually exclusive date windows), plus a `Free` toggle (matches `cost_info` containing "free"). `This week` = today through +6 days; `This weekend` = the upcoming Sat/Sun; `All upcoming` = today onward, unbounded. A search query widens the window to all upcoming (search is global). Reset returns to `All upcoming` (`DEFAULT_DATE_MODE`).
 - **Recurring/multi-day collapse:** identical events (same `title` + `venue`) are collapsed into one card with a date-range label, so a 25-day camp shows once. The card is placed on its first still-relevant date, and filtering uses each card's `[start, end]` range overlapping the active window (so an ongoing series surfaces even if it began before today).
 - Event groups: collapsed events are grouped by their representative date and the day heading is derived via `formatStopDate` (`src/lib/dates.ts`, e.g. "Sun. Jun 28"). The "Platform" eyebrow renders once (above the first day group only). Day headings are `font-semibold` at ~40px (section-head scale, not hero scale).
 - Stop colors rotate Baby Pink → Maya Blue → Celadon → Amber → Cayenne.
-- **Upcoming only (server-side):** the build-time Supabase query filters `.gte('event_date', today)` (America/Chicago), mirroring the homepage/ticker queries, so the static HTML never ships past stops and no-JS visitors and the initial result count are correct. The board defaults to the `All upcoming` quick filter (`DEFAULT_DATE_MODE = 'all'`); `This week` / `This weekend` narrow within that upcoming set. The legacy `.is-past-event` dimming styles remain as a harmless backstop.
+- **Upcoming only (server-side):** the build-time Supabase query filters `.gte('event_date', today)` (America/Chicago), mirroring the homepage/ticker queries, so the static HTML never ships past stops in the main board and no-JS visitors and the initial result count are correct. The board defaults to the `All upcoming` quick filter (`DEFAULT_DATE_MODE = 'all'`); `This week` / `This weekend` narrow within that upcoming set. The legacy `.is-past-event` dimming styles remain as a harmless backstop.
 - Picking a date in the calendar is a jump: it switches to `All upcoming`, scrolls to that day, and keeps surrounding events visible. Days with events are marked with a dot in the calendar; today is ringed.
-- **One filter block per breakpoint:** the inline "Route controls" serve desktop; the floating "Filter the route" panel is hidden at `lg+` (`min-width: 1024px`) so the two never appear at once. (Renamed from "Line signal" per master doc §2a so the label says what the box does.)
+- **Single filter panel (2026-07-11):** the page now has exactly one filter panel, used at every breakpoint. The previously separate floating/pinned panel that appeared once the inline controls scrolled off-screen was removed entirely, along with its own `IntersectionObserver`, minimize/restore affordance, and the dual-scope sync logic that kept two copies of each control matched. `EventDatePicker.astro` and `EventSelect.astro` still support the `inline`/floating-oriented props that pattern needed, but `events.astro` now only instantiates the one inline set.
+- **View past stops (2026-07-11):** below the upcoming board, a bordered "View past stops" toggle (same visual idiom as "Submit an event") expands a hidden archive of the last 60 days, most-recent-day-first, anchored on each collapsed series' last date. It reuses the day-section + `EventCard` markup (with `recurrenceLabel`) but carries none of the `data-event-*` filter hooks, so quick-filter chips, search, Category, and Neighborhood never touch it and the upcoming board's result count stays accurate. Past cards render at `opacity-70` (a slight dim, distinct from the heavier `.is-past-event` grayscale) and keep the normal hover-lift. The toggle swaps its label ("View past stops" / "Hide past stops") and arrow glyph and sets `aria-expanded`; the whole block only renders when the past-events query returns rows.
 - **Neighborhood data:** the `neighborhood` column is backfilled from the trailing `, Neighborhood` segment of each venue (see § 11), so the Neighborhood filter is populated.
 - The Category dropdown is themed on desktop (a custom listbox built in the page script) and falls back to the native OS `<select>` on mobile; both drive the same hidden native select.
 - The no-results state is a bordered Seashell panel reading "Try a different route."
@@ -148,16 +149,6 @@ The homepage includes an `Upcoming Stops` section between the credibility strip 
 - Event content is rendered by the shared `EventCard.astro` component, with a small monospace date label above each card. The terminus link reads "See all stops" and points to `/events` (which now defaults to All upcoming).
 - If Supabase returns zero upcoming events, the section shows a "Route status" empty state instead of dummy content.
 - A `TransitDivider` closes the section.
-
-### Floating Event Controls (`/events`)
-When the main route controls scroll out of view, a compact fixed filter panel appears near the bottom edge.
-- Uses `IntersectionObserver` with a top root margin so it appears after the full controls have left the viewport.
-- Mirrors the controls through shared `data-*` selectors: search, the date calendar (rendered inline here so its popover cannot be clipped by the panel), the Category dropdown, the Neighborhood dropdown, and reset.
-- Collapsed by default with a plus button; expanded state uses `aria-expanded`, `aria-controls`, and a hidden panel.
-- Search and select fields use 16px mobile text to avoid iOS focus zoom.
-- Stays pinned while focused or while filters are active, preserving scroll position when filtering from the floating panel.
-- Includes a hide button that slides the panel aside and leaves an Amber restore tab on the edge.
-- Uses `inert` and `aria-hidden` while invisible so keyboard focus does not land in offscreen controls.
 
 ### Event Card (`EventCard.astro`)
 Every event uses **one** bordered card template (the former "Conductor's Pick" feature card), so the board reads as finished and consistent. There is no longer a separate bare/transfer-row treatment.
@@ -198,10 +189,10 @@ The admin portal is intentionally utilitarian but still brand-native.
 
 ## 7. Writing Style
 
-### No em dashes
-Do not use em dashes (`—`, U+2014) anywhere: not in UI copy, not in meta descriptions, not in alt text, not in code comments, not in commit messages or PR descriptions.
+### Em dashes
+Default posture for any copy you write yourself: avoid em dashes and reach for the substitutions below. This is not an absolute ban, though. When the owner hands down locked copy that specifies an em dash (`—`, U+2014), keep it exactly as written; do not "clean it up" into a comma or colon. As of the 2026-07-11 Round 3 pass, three locked strings carry an intentional em dash: the events page subhead (§ 9, `events.astro`), the support page solidarity paragraph (§ 12), and the homepage About-teaser / closing brand statement (§ 10). Do not add em dashes anywhere else in the site, and do not remove the ones the owner specified in those three strings.
 
-Use these instead:
+Use these instead for anything not dictated by owner copy:
 - A comma, for a parenthetical or apposition: `journalist, editor, and founder`.
 - A colon, for elaboration: `Reserved for editorial moments: hero H1s, brand wordmark, large numerals.`
 - A period, to split into two sentences.
@@ -209,7 +200,7 @@ Use these instead:
 - Semicolons, when joining related independent clauses.
 - The word "and" or "with" or "plus."
 
-Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-business`) are fine. En dashes (`–`) are also out unless used for true number ranges.
+Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-business`) are fine. En dashes (`–`) stay reserved for true number/date ranges (e.g. a collapsed recurring event's date range).
 
 ### Voice
 - First-person plural ("we ride," "join us") for the publication's voice.
@@ -241,10 +232,10 @@ Components live in `src/components/`:
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts optional `caption` and `class` props.
 - `IssueCard.astro`: archive card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
 - `EventCard.astro`: Supabase event renderer. One unified bordered card for all events (Conductor's Pick is a badge, not a separate layout) plus a dashed giveaway ticket-stub. Venue-once, organizer dedupe, a labeled "Conductor's note" author-note pull-quote, `break-words` blurbs, `fixSpelling()` Türkiye normalization, `Details / RSVP` link + `Share` button, optional `recurrenceLabel` for collapsed series.
-- `EventDatePicker.astro`: brand-styled single-date calendar used by the events filter. Renders as a popover by default (main controls) or open-in-place with the `inline` prop (floating panel); the events page script drives both instances.
-- `EventSelect.astro`: themed filter dropdown. Renders a native `<select>` on mobile and a custom listbox on desktop (`md+`), both backed by the same hidden native select. Used for the Category and Neighborhood filters. Props: `field`, `label`, `placeholder`, `options`, `inline`.
+- `EventDatePicker.astro`: brand-styled single-date calendar used by the events filter, rendered as a popover. Still supports an `inline` (open-in-place) prop from the retired floating-panel pattern, but `events.astro` (2026-07-11) only instantiates the one popover instance now.
+- `EventSelect.astro`: themed filter dropdown. Renders a native `<select>` on mobile and a custom listbox on desktop (`md+`), both backed by the same hidden native select. Used for the Category and Neighborhood filters. Props: `field`, `label`, `placeholder`, `options`, `inline` (the `inline` prop is likewise unused since the floating panel was removed).
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
-- `TrainSplash.jsx`: React splash overlay (auto-dismiss, respects `prefers-reduced-motion`, static LED destination sign with dynamic next-stop copy, including `/events` as `EVENTS`). The audio toggle uses base-aware `/audio/` asset URLs and a 7s sequence watchdog at both the audio-engine and splash-overlay levels so stalled media events cannot strand visitors on the splash. **No-JS fail-safe:** a pure-CSS `splash-failsafe-hide` animation on `.train-splash-root` (present in the server-rendered HTML) fades the overlay out and drops `pointer-events` at 9s, so a visitor is never trapped if the script fails to hydrate. JS normally unmounts the splash (~2.5s) long before this fires.
+- `TrainSplash.jsx`: React intro-gate overlay. As of 2026-07-11 (owner request) the train illustration, rails, sparks, speed lines, motion keyframes, and the entire audio engine are gone; the gate itself stays: seashell full-screen overlay with the wordmark block, a static "NEXT STOP: [destination]" LED sign (dynamic next-stop copy, including `/events` as `EVENTS`), an "Enter the platform" button, tap/Space/B/Escape dismissal, and the `brownLineIntroSeen` localStorage memory (returning visitors skip via the `splash-done` head script). Auto-dismisses after about 1.5s when the visitor is not interacting; manual skips fade in about 220ms; respects `prefers-reduced-motion`. **No-JS fail-safe:** a pure-CSS `splash-failsafe-hide` animation on `.train-splash-root` (present in the server-rendered HTML) fades the overlay out and drops `pointer-events` at 9s, so a visitor is never trapped if the script fails to hydrate.
 
 Pages live in `src/pages/`:
 - `index.astro`: hero, shared `CredibilityStrip`, Supabase-powered Upcoming Stops (leads with a Conductor's Pick), two-sided Browse/Submit band, optional Testimonials section (renders only when real quotes exist), RSS-powered recent dispatches grid, Support band, closing brand statement.
@@ -260,7 +251,7 @@ Pages live in `src/pages/`:
 Library modules live in `src/lib/`:
 - `issues.ts`: fetches and parses Beehiiv RSS, formats dates, alternates issue card accents, and falls back to a static issue list.
 - `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface (which includes `neighborhood` and `start_time`; the free-text `display_date` column was removed).
-- `ticker.ts`: composes ticker items from the latest issue plus up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title so a recurring series shows once) drawn from the next 21 days; derives its date labels from `event_date` via `dates.ts`.
+- `ticker.ts`: composes ticker items from up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title so a recurring series shows once) drawn from the next 21 days; no longer includes a "Latest Issue" item. Derives its date labels from `event_date` via `dates.ts`; item text is the event title only (no venue), Türkiye/TÜRKIYE-normalized.
 - `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped.
 - `locations.ts`: dropdown data for the submit form (the diaspora `DIASPORA_TAGS`, the four `LOCATION_TYPES`, the 77 Chicago `NEIGHBORHOOD_GROUPS` by side, and `SUBURBS`).
 
@@ -307,19 +298,19 @@ Stop colors on `/links` lead with Cayenne (the latest issue, primary CTA token) 
 
 ### Events (`/events`)
 Public events page with full site chrome. Structure:
-1. Hero with `Now boarding` eyebrow, H1, and Supabase rebuild explanation.
+1. Hero with `Now boarding` eyebrow, H1, and the owner-locked diaspora subhead.
 2. `<TransitDivider />`.
-3. Route controls panel when events exist (search, date calendar, Category, Neighborhood, Reset).
-4. Floating controls panel, hidden until the main controls scroll away.
-5. Events board grouped by `event_date`, each group rendered as a platform with route-line stop dots and a `formatStopDate` heading.
-6. Empty state if Supabase returns zero events.
+3. "Filter the route" panel when events exist (search, date calendar, Category, Neighborhood, Reset). Single panel, all breakpoints (2026-07-11: the separate floating/pinned panel was removed).
+4. Events board grouped by `event_date`, each group rendered as a platform with route-line stop dots and a `formatStopDate` heading.
+5. Empty state if Supabase returns zero events.
+6. "View past stops" toggle (only rendered when the past-events query returns rows) revealing a hidden 60-day archive, most-recent-day-first, outside the filter engine's reach.
 
 Client-side filter behavior:
 - Search indexes title, description, venue, organizer, cost, neighborhood, and tags.
 - Date is a single-date calendar. By default the board shows events from today (America/Chicago) onward. Picking a date scrolls to that day and keeps the surrounding events visible (it does not collapse to a single day); a past pick lowers the floor so those events appear.
 - Category filters by a single diaspora tag, chosen from a themed dropdown (custom listbox on desktop, native select on mobile). Options are derived from the tags present in the data and ordered by the canonical diaspora taxonomy.
 - Neighborhood filters by exact match; the control only appears once some events have a neighborhood.
-- Result counts update in both the main and floating controls, and the main and floating instances of each control stay in sync.
+- Result count reflects the upcoming board only; the past-stops archive is static and unfiltered, so it carries no `data-event-*` hooks and never moves the count.
 
 ### Events Admin (`/admin/events`)
 Internal page using `<Layout minimal noindex>`. Structure:
@@ -387,7 +378,7 @@ The site deploys through `.github/workflows/deploy.yml`.
 ### Data Freshness
 - `/events` is static. New rows do not appear until the next build.
 - The homepage issue grid is fetched from Beehiiv RSS at build time and falls back to bundled data.
-- The marquee is also static per build, combining latest issue plus next-7-days events.
+- The footer marquee is also static per build, drawing event highlights from the next 21 days (no Beehiiv content in it anymore; the top-of-chrome ticker was removed).
 - Admin inserts/edits/deletes write to Supabase immediately (and the admin portal's schedule view reflects them in realtime), but public visibility waits for a rebuild: the 4-hour cron, a push, or the portal's "Publish live site" button (via `trigger-deploy`), which makes changes public in about 2 to 3 minutes.
 
 ### Dependencies Added
@@ -404,6 +395,16 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-07-11 (Round 3 review pass):** Owner's Round 3 checklist, applied to the website and mirrored in the iOS app in the same pass.
+  - **Brand line swap:** "Chicago's Global South culture, in motion" became "Underground culture, elevated" everywhere it appeared (homepage hero eyebrow, mobile drawer tagline, marquee fallback item, `/links` tagline). The app's home masthead eyebrow (formerly "All stops, all stories") now matches.
+  - **"Board here":** every Subscribe CTA button label became "Board here" (desktop nav, mobile drawer, the support page's free-tier card, and the app's subscribe tab). The Beehiiv form's no-JS fallback link keeps its descriptive label.
+  - **Ticker consolidation:** the top-of-chrome ticker was removed; the footer marquee is the only site-wide ticker and now carries upcoming events only (no newsletter subject line), title-only, Türkiye-normalized. The homepage NEXT STOP marquee is unchanged.
+  - **Intro gate, trainless:** the splash train animation and audio were removed on both platforms; the gate (wordmark, NEXT STOP sign, Enter the platform, skip shortcuts, seen-once memory) stays and auto-dismisses after about 1.5s.
+  - **Events board:** one "Filter the route" panel at every breakpoint (the floating duplicate was removed); a new "View past stops" 60-day archive toggle outside the filter engine; subhead replaced with owner-locked copy. The app mirrors all three and also gained the Platform-eyebrow-once fix the website already had.
+  - **Event cards:** the price chip left the tag row and renders as a mono footer line so the category tag reads as primary; `fixSpelling()` now also covers `author_note`; the backstage-language safety nets widened (`cost_info` regex plus a new `organizer` net for research phrasing such as "surfaced through" and "listing").
+  - **Em-dash policy amended** (see § 7): three owner-locked strings carry intentional em dashes; the default posture for new copy is unchanged.
+  - **Data cleanup (2026-07-12):** the events-table rows behind the backstage-language and Türkiye items were fixed at the source via the authenticated CLI: six `organizer` research-phrasing values nulled, the IndigeHouse organizer restored to "IndigeHub", and the TACA Watch Party row re-spelled "Türkiye" in all three text fields. The render-time nets stay as the safety layer.
+  - **Still open (owner actions):** repoint the $7/mo Stripe link (still resolves to the retired $9 product) and collect real testimonials for the homepage section (renders only when the array in `index.astro` has entries).
 - **2026-07-02 (admin database manager + Gemini flyer scanner):** Two new admin portal capabilities, both live-tested end to end.
   - **The full schedule (database manager):** every `public.events` row is now viewable and editable inside the portal. Defaults to upcoming events with an all-events scope option and client-side search; each row expands to a full inline editor; Save/Delete run RLS-gated `UPDATE`/`DELETE` (new policies mirroring the insert gate, with `.select('id')` so silent zero-row writes surface as errors). The list auto-refreshes via a new Supabase realtime subscription on `public.events` (table added to the `supabase_realtime` publication), so concurrent edits appear without reloading. A "Publish live site" button calls the new `trigger-deploy` edge function (GitHub `workflow_dispatch`), replacing "wait up to 4 hours" with "live in about 2 minutes"; it needs the `GITHUB_DEPLOY_TOKEN` secret (owner action) and explains itself until then.
   - **Scan a flyer (Gemini):** upload a flyer photo and the new `parse-event-image` edge function (Gemini `gemini-3.5-flash`, structured JSON output) drafts the event and prefills the Add one event form for human review. The browser downscales photos client-side; the function re-validates everything (dates, times, URLs, nine-tag taxonomy) before it reaches the form. Free-tier protection: a shared cross-admin daily cap (default 20) in `private.gemini_usage`, consumed atomically via service-role-only SQL functions, surfaced as a "X of 20 scans left today" chip, refunded when a scan never reaches Gemini, and reset at midnight Chicago time. The Gemini API key lives only in Supabase function secrets.
