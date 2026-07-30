@@ -13,13 +13,21 @@
 // Refunds credit the exact date that was charged, not "today".
 //
 // Secrets:
-//   GEMINI_API_KEY      required
-//   GEMINI_MODEL        optional, default gemini-3.5-flash
-//   GEMINI_DAILY_LIMIT  optional, default 20
+//   GEMINI_API_KEY        required
+//   GEMINI_MODEL          optional, default gemini-3.5-flash
+//   GEMINI_FALLBACK_MODEL optional, default gemini-3.5-flash-lite. Also
+//                         covers the primary model's own Google quota being
+//                         exhausted (HTTP 429), not just server overload.
+//   GEMINI_DAILY_LIMIT    optional, default 20
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash";
+// Google's overload errors (500/503/504) are transient and usually clear in a
+// second or two, but a run of bad luck on the primary model should not fail
+// the whole scan. This model only gets used after the primary has already
+// been retried a few times.
+const GEMINI_FALLBACK_MODEL = Deno.env.get("GEMINI_FALLBACK_MODEL") ?? "gemini-3.5-flash-lite";
 const DAILY_LIMIT = Number.parseInt(Deno.env.get("GEMINI_DAILY_LIMIT") ?? "20", 10) || 20;
 
 const DIASPORA_TAGS = [
@@ -101,6 +109,7 @@ function buildPrompt(): string {
     "- Transcribe only what the flyer supports. Never invent details. Use null for anything the image does not show.",
     "- event_date: YYYY-MM-DD. If the flyer omits the year, choose the next occurrence of that date on or after today.",
     "- start_time: 24-hour HH:MM. Use the event start, not doors, unless only a doors time is given.",
+    "- end_time: 24-hour HH:MM. Only when the flyer clearly shows an end time, like \"7-10 PM\" or \"until 10\". Null otherwise. Never guess.",
     "- venue: the place name, plus the neighborhood after a comma if the flyer names one (example: \"Sleeping Village, Avondale\").",
     "- neighborhood: the Chicago neighborhood or suburb name alone, if identifiable.",
     "- cost_info: exactly what the flyer says about price, like \"Free\" or \"$15\", including \"Free\" when it says free. Null if no price appears.",
@@ -120,6 +129,7 @@ const RESPONSE_SCHEMA = {
     title: { type: "STRING" },
     event_date: { type: "STRING", nullable: true, description: "YYYY-MM-DD" },
     start_time: { type: "STRING", nullable: true, description: "24-hour HH:MM" },
+    end_time: { type: "STRING", nullable: true, description: "24-hour HH:MM" },
     venue: { type: "STRING", nullable: true },
     neighborhood: { type: "STRING", nullable: true },
     organizer: { type: "STRING", nullable: true },
@@ -139,6 +149,7 @@ const RESPONSE_SCHEMA = {
 function sanitizeEvent(raw: Record<string, unknown>) {
   const event_date = str(raw.event_date);
   const start_time = str(raw.start_time);
+  const end_time = str(raw.end_time);
   const event_url = str(raw.event_url);
   const tags = Array.isArray(raw.tags)
     ? [...new Set(
@@ -152,6 +163,7 @@ function sanitizeEvent(raw: Record<string, unknown>) {
     title: clamp(raw.title, 300),
     event_date: /^\d{4}-\d{2}-\d{2}$/.test(event_date) ? event_date : null,
     start_time: /^([01]\d|2[0-3]):[0-5]\d$/.test(start_time) ? start_time : null,
+    end_time: /^([01]\d|2[0-3]):[0-5]\d$/.test(end_time) ? end_time : null,
     venue: clamp(raw.venue, 300),
     neighborhood: clamp(raw.neighborhood, 120),
     organizer: clamp(raw.organizer, 300),
@@ -168,24 +180,34 @@ function sanitizeEvent(raw: Record<string, unknown>) {
 // reached=false means the request never made it to Gemini, so the scan can be
 // refunded safely. Anything with reached=true may have counted at Google.
 type GeminiFailure = { ok: false; reached: boolean; status: number; message: string };
+type GeminiSuccess = { ok: true; event: ReturnType<typeof sanitizeEvent>; model: string };
 
-async function callGemini(imageBase64: string, mimeType: string): Promise<
-  { ok: true; event: ReturnType<typeof sanitizeEvent> } | GeminiFailure
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Statuses worth retrying on the SAME model: they mean Google's infrastructure
+// had a moment, not that the request itself was bad. 429 is handled on its
+// own below, since retrying the same model against its own quota is pointless
+// but switching models is not.
+const RETRYABLE_STATUSES = new Set([500, 503, 504]);
+
+// Shown when the primary and backup model were both tried and both came back
+// 429: either Google's per-minute rate limit or the daily free-tier quota is
+// exhausted, and only time fixes either one. The no-backup-configured case
+// gets its own wording where it is handled.
+const QUOTA_EXHAUSTED_MESSAGE =
+  "Gemini's primary model and backup model are both out of quota or rate limited right now. " +
+  "Wait a minute if this is a per-minute limit, or until tomorrow if today's quota is used up.";
+
+// Raw HTTP call for one model, one attempt. Kept tiny on purpose so the retry
+// and fallback logic in callGemini can stay linear and easy to follow.
+async function fetchGemini(model: string, apiKey: string, imageBase64: string, mimeType: string): Promise<
+  { kind: "response"; res: Response } | { kind: "network-error" }
 > {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) {
-    return {
-      ok: false,
-      reached: false,
-      status: 0,
-      message: "GEMINI_API_KEY is not configured on this function.",
-    };
-  }
-
-  let res: Response;
   try {
-    res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
       {
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
@@ -204,27 +226,22 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<
         }),
       },
     );
+    return { kind: "response", res };
   } catch (_) {
-    return { ok: false, reached: false, status: 0, message: "Could not reach Gemini." };
+    return { kind: "network-error" };
   }
+}
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    console.error(`Gemini responded ${res.status}: ${detail.slice(0, 500)}`);
-    return {
-      ok: false,
-      reached: true,
-      status: res.status,
-      message: `Gemini responded with status ${res.status}.`,
-    };
-  }
-
+// Turns a successful HTTP response into either a parsed event or a
+// content-level failure (blocked, unparseable, empty). These are not
+// retried: the model answered, it just did not give us something usable.
+async function readGeminiResponse(res: Response, model: string): Promise<GeminiSuccess | GeminiFailure> {
   const data = await res.json().catch(() => null);
 
   const blockReason = data?.promptFeedback?.blockReason;
   const finishReason = data?.candidates?.[0]?.finishReason;
   if (blockReason || (finishReason && finishReason !== "STOP" && finishReason !== "MAX_TOKENS")) {
-    console.error(`Gemini declined: blockReason=${blockReason ?? "none"} finishReason=${finishReason ?? "none"}`);
+    console.error(`Gemini declined: model=${model} blockReason=${blockReason ?? "none"} finishReason=${finishReason ?? "none"}`);
     return {
       ok: false,
       reached: true,
@@ -245,7 +262,7 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<
   try {
     parsed = JSON.parse(text);
   } catch (_) {
-    console.error(`Gemini returned unparseable JSON: ${String(text).slice(0, 300)}`);
+    console.error(`Gemini returned unparseable JSON: model=${model} text=${String(text).slice(0, 300)}`);
     return {
       ok: false,
       reached: true,
@@ -255,7 +272,7 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    console.error(`Gemini returned a non-object result: ${String(text).slice(0, 300)}`);
+    console.error(`Gemini returned a non-object result: model=${model} text=${String(text).slice(0, 300)}`);
     return {
       ok: false,
       reached: true,
@@ -273,7 +290,158 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<
       message: "Gemini could not find an event in this image.",
     };
   }
-  return { ok: true, event };
+  return { ok: true, event, model };
+}
+
+async function callGemini(imageBase64: string, mimeType: string): Promise<GeminiSuccess | GeminiFailure> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    return {
+      ok: false,
+      reached: false,
+      status: 0,
+      message: "GEMINI_API_KEY is not configured on this function.",
+    };
+  }
+
+  const usesFallback = GEMINI_FALLBACK_MODEL !== GEMINI_MODEL;
+  // Primary model gets three tries with a short backoff (Google's overload
+  // errors usually clear within a couple seconds). Total sleep stays around
+  // 3 seconds so the admin waiting on this request is not stuck long.
+  const primaryDelaysMs = [0, 1000, 2000];
+
+  let reachedGoogle = false;
+  let lastRetryableStatus = 0;
+  let primaryQuotaExhausted = false;
+
+  for (let i = 0; i < primaryDelaysMs.length; i++) {
+    const delayMs = primaryDelaysMs[i];
+    if (delayMs > 0) await sleep(delayMs);
+
+    const fetched = await fetchGemini(GEMINI_MODEL, apiKey, imageBase64, mimeType);
+
+    if (fetched.kind === "network-error") {
+      console.error(`Gemini fetch failed: model=${GEMINI_MODEL} attempt=${i + 1}`);
+      if (!reachedGoogle) {
+        // Nothing from Google yet on this whole request, so it is safe to
+        // refund the scan.
+        return { ok: false, reached: false, status: 0, message: "Could not reach Gemini." };
+      }
+      // We already got at least one HTTP response earlier in this request,
+      // so it may have counted at Google even though this attempt failed
+      // before getting a response.
+      continue;
+    }
+
+    const res = fetched.res;
+    reachedGoogle = true;
+
+    if (res.status === 429) {
+      // The primary model's own quota (daily free-tier cap or per-minute
+      // rate limit) is exhausted. Retrying the same model within this
+      // request would just get the same answer, so stop the primary
+      // attempts here and fall through to the fallback model below.
+      const detail = await res.text().catch(() => "");
+      console.error(`Gemini responded 429: model=${GEMINI_MODEL} attempt=${i + 1} body=${detail.slice(0, 500)}`);
+      primaryQuotaExhausted = true;
+      break;
+    }
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(`Gemini responded ${res.status}: model=${GEMINI_MODEL} attempt=${i + 1} body=${detail.slice(0, 500)}`);
+      if (RETRYABLE_STATUSES.has(res.status)) {
+        lastRetryableStatus = res.status;
+        continue;
+      }
+      // Not a retryable status: the same request would fail the same way
+      // again, so return immediately instead of burning the rest of the
+      // attempt budget.
+      return {
+        ok: false,
+        reached: true,
+        status: res.status,
+        message: `Gemini responded with status ${res.status}.`,
+      };
+    }
+
+    return await readGeminiResponse(res, GEMINI_MODEL);
+  }
+
+  if (!usesFallback) {
+    // No distinct fallback configured, so behave the same as before: report
+    // whichever failure ended the primary attempts. The wording must not
+    // claim a backup model was tried, because none exists in this setup.
+    if (primaryQuotaExhausted) {
+      return {
+        ok: false,
+        reached: true,
+        status: 429,
+        message:
+          "Gemini is out of quota or rate limited right now. " +
+          "Wait a minute if this is a per-minute limit, or until tomorrow if today's quota is used up.",
+      };
+    }
+    return {
+      ok: false,
+      reached: true,
+      status: lastRetryableStatus || 503,
+      message: "Gemini's servers are overloaded right now.",
+    };
+  }
+
+  // Single fallback attempt, no delay: either the primary ran out of quota
+  // (jumped straight here) or exhausted its 500/503/504 retries.
+  const fallbackFetch = await fetchGemini(GEMINI_FALLBACK_MODEL, apiKey, imageBase64, mimeType);
+
+  if (fallbackFetch.kind === "network-error") {
+    console.error(`Gemini fetch failed: model=${GEMINI_FALLBACK_MODEL} attempt=fallback`);
+    if (!reachedGoogle) {
+      return { ok: false, reached: false, status: 0, message: "Could not reach Gemini." };
+    }
+    return {
+      ok: false,
+      reached: true,
+      status: primaryQuotaExhausted ? 429 : (lastRetryableStatus || 503),
+      message: primaryQuotaExhausted
+        ? QUOTA_EXHAUSTED_MESSAGE
+        : "Gemini's servers are overloaded right now (tried a backup model too).",
+    };
+  }
+
+  const fallbackRes = fallbackFetch.res;
+  reachedGoogle = true;
+
+  if (fallbackRes.status === 429) {
+    const detail = await fallbackRes.text().catch(() => "");
+    console.error(`Gemini responded 429: model=${GEMINI_FALLBACK_MODEL} attempt=fallback body=${detail.slice(0, 500)}`);
+    return { ok: false, reached: true, status: 429, message: QUOTA_EXHAUSTED_MESSAGE };
+  }
+
+  if (!fallbackRes.ok) {
+    const detail = await fallbackRes.text().catch(() => "");
+    console.error(`Gemini responded ${fallbackRes.status}: model=${GEMINI_FALLBACK_MODEL} attempt=fallback body=${detail.slice(0, 500)}`);
+    if (RETRYABLE_STATUSES.has(fallbackRes.status)) {
+      // Every attempt (primary retries plus the fallback) came back
+      // 500/503/504, or the primary was 429 and the fallback overloaded too.
+      return {
+        ok: false,
+        reached: true,
+        status: fallbackRes.status,
+        message: primaryQuotaExhausted
+          ? "Gemini's primary model is out of quota right now, and the backup model's servers are overloaded too. Try again shortly."
+          : "Gemini's servers are overloaded right now (tried a backup model too).",
+      };
+    }
+    return {
+      ok: false,
+      reached: true,
+      status: fallbackRes.status,
+      message: `Gemini responded with status ${fallbackRes.status}.`,
+    };
+  }
+
+  return await readGeminiResponse(fallbackRes, GEMINI_FALLBACK_MODEL);
 }
 
 Deno.serve(async (req: Request) => {
@@ -352,8 +520,11 @@ Deno.serve(async (req: Request) => {
     // against Google's own daily cap. Keep the charge so the shared counter
     // never understates real usage.
     if (result.status === 429) {
+      // callGemini already worded the message for whichever case applied
+      // (backup model tried, backup also limited, or no backup configured),
+      // so pass it through instead of restating it here.
       return json({
-        error: "Gemini is rate limited right now (too many requests per minute). Wait a minute and scan again. This attempt still used one of today's scans.",
+        error: `${result.message} This attempt still used one of today's scans.`,
         quota: withLimit(consumeData),
       }, 429);
     }
@@ -363,5 +534,5 @@ Deno.serve(async (req: Request) => {
     }, 502);
   }
 
-  return json({ event: result.event, quota: withLimit(consumeData), model: GEMINI_MODEL });
+  return json({ event: result.event, quota: withLimit(consumeData), model: result.model });
 });
