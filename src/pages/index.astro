@@ -8,7 +8,7 @@ import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
 import { supabase } from '../lib/supabase';
-import { formatStartTime, formatStopDate, getChicagoDateString } from '../lib/dates';
+import { formatTimeRange, formatStopDate, getChicagoDateString } from '../lib/dates';
 import type { TickerItem } from '../lib/ticker';
 import type { TransitEvent } from '../lib/supabase';
 
@@ -137,9 +137,9 @@ const upcomingStopsTicker: TickerItem[] = [
                     <span class="border-2 border-[#62361B] bg-seashell px-2.5 py-1">
                       {formatStopDate(event.event_date)}
                     </span>
-                    {formatStartTime(event.start_time) && (
+                    {formatTimeRange(event.start_time, event.end_time) && (
                       <span class="flex items-center border-2 border-l-0 border-[#62361B] bg-amber px-2.5 py-1">
-                        {formatStartTime(event.start_time)}
+                        {formatTimeRange(event.start_time, event.end_time)}
                       </span>
                     )}
                   </div>

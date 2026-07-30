@@ -35,6 +35,7 @@ const csvHeaders = [
   'title',
   'venue',
   'start_time',
+  'end_time',
   'neighborhood',
   'description',
   'organizer',
@@ -188,7 +189,10 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             Fill the fields marked Required. Optional fields can stay blank if we do not have that detail yet.
           </p>
 
-          <form data-single-event-form class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* novalidate: native validation stops at the first empty required field.
+              The submit handler collects every missing one and names them all in a
+              single message instead. */}
+          <form data-single-event-form novalidate class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label class={labelClass} for="event-title">
               Title
               <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
@@ -211,6 +215,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               Start time
               <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
               <input id="event-start-time" name="start_time" type="time" class={inputClass} />
+            </label>
+
+            <label class={labelClass} for="event-end-time">
+              End time
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="event-end-time" name="end_time" type="time" class={inputClass} />
             </label>
 
             <label class={labelClass} for="event-neighborhood">
@@ -293,7 +303,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <div class="md:col-span-2">
               <button type="submit" data-single-submit class={buttonClass}>Add event</button>
-              <p data-single-status class="mt-3 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+              {/* A div, not a p: the success confirmation renders a block-level
+                  banner inside this same live region so it is announced. */}
+              <div data-single-status class="mt-3 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></div>
             </div>
           </form>
         </div>
@@ -333,7 +345,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Optional columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                start_time, neighborhood, description, organizer, cost_info, event_url, image_url, author_note, emoji, tags, is_curated, is_giveaway
+                start_time, end_time, neighborhood, description, organizer, cost_info, event_url, image_url, author_note, emoji, tags, is_curated, is_giveaway
               </p>
             </div>
           </div>
@@ -341,7 +353,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           <p class="mt-4 font-body text-sm leading-relaxed text-darkWalnut/75">
             Tags can be comma-separated inside one cell and must come from the fixed community tag
             list: {DIASPORA_TAGS.join(', ')}. For pick or giveaway columns, use true, false, yes,
-            no, 1, or 0. Start time uses 24-hour HH:MM.
+            no, 1, or 0. Start time and end time both use 24-hour HH:MM. An end time may be
+            earlier than its start time when the event runs past midnight.
           </p>
 
           <form data-csv-form class="mt-7 space-y-5">
@@ -506,6 +519,11 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
+              End time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input data-field="end_time" type="time" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
               Venue<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
               <input data-field="venue" type="text" class={inputClass} required />
             </label>
@@ -641,6 +659,11 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
+              End time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input name="end_time" type="time" class={inputClass} />
+            </label>
+
+            <label class={labelClass}>
               Neighborhood<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
               <input name="neighborhood" type="text" class={inputClass} />
             </label>
@@ -740,6 +763,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     title: string;
     venue: string;
     start_time: string | null;
+    end_time: string | null;
     neighborhood: string | null;
     description: string | null;
     organizer: string | null;
@@ -900,11 +924,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return clean;
     }
 
-    function normalizeStartTime(value: unknown) {
+    // Shared by start_time and end_time. An end time is never compared against
+    // its start time: events that run past midnight legitimately end earlier in
+    // clock terms than they begin.
+    function normalizeTimeOfDay(value: unknown, fieldName: string) {
       const clean = nullableText(value);
       if (!clean) return null;
       if (!/^\d{2}:\d{2}(:\d{2})?$/.test(clean)) {
-        throw new Error('start_time must use 24-hour HH:MM format.');
+        throw new Error(`${fieldName} must use 24-hour HH:MM format.`);
       }
       return clean.slice(0, 5);
     }
@@ -955,6 +982,30 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       el.classList.toggle('text-darkWalnut', !isError);
     }
 
+    // The single-add form confirms with a themed banner rather than a text line.
+    // It is built inside the existing status element so the same live region
+    // announces it, and so the next setInlineStatus call wipes it.
+    function setSingleSuccessBanner(title: string) {
+      if (!singleStatus) return;
+      singleStatus.textContent = '';
+      singleStatus.classList.remove('text-cayenne');
+      singleStatus.classList.add('text-darkWalnut');
+
+      const banner = document.createElement('div');
+      banner.className = 'border-2 border-darkWalnut bg-celadon p-4 shadow-retro';
+
+      const heading = document.createElement('p');
+      heading.className = 'font-body text-[10px] font-bold uppercase tracking-[0.3em] text-darkWalnut';
+      heading.textContent = 'Now boarding';
+
+      const body = document.createElement('p');
+      body.className = 'mt-2 font-body text-sm font-normal leading-relaxed text-darkWalnut';
+      body.textContent = `"${title}" is on the schedule. Press Publish live site to show it publicly now, or wait for the scheduled rebuild.`;
+
+      banner.append(heading, body);
+      singleStatus.appendChild(banner);
+    }
+
     // Disable a button and show progress text while `work` runs.
     async function withBusy<T>(button: HTMLButtonElement | null, busyLabel: string, work: () => Promise<T>) {
       const restore = button?.textContent ?? '';
@@ -989,7 +1040,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         title: requiredText(getFormValue(formData, 'title'), 'title'),
         event_date: requiredDate(getFormValue(formData, 'event_date')),
         venue: requiredText(getFormValue(formData, 'venue'), 'venue'),
-        start_time: normalizeStartTime(getFormValue(formData, 'start_time')),
+        start_time: normalizeTimeOfDay(getFormValue(formData, 'start_time'), 'start_time'),
+        end_time: normalizeTimeOfDay(getFormValue(formData, 'end_time'), 'end_time'),
         neighborhood: nullableText(getFormValue(formData, 'neighborhood')),
         organizer: nullableText(getFormValue(formData, 'organizer')),
         cost_info: nullableText(getFormValue(formData, 'cost_info')),
@@ -1004,13 +1056,30 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       };
     }
 
+    // Only the single-add form runs this pass. The review cards and the row
+    // editor keep their native validation, which is fine on a form the admin is
+    // correcting one field at a time.
+    const SINGLE_REQUIRED_FIELDS = [
+      { name: 'title', label: 'Title' },
+      { name: 'event_date', label: 'Event date' },
+      { name: 'venue', label: 'Venue' },
+    ];
+
+    function missingRequiredLabels(form: HTMLFormElement) {
+      const formData = new FormData(form);
+      return SINGLE_REQUIRED_FIELDS.filter(
+        (field) => !cleanText(getFormValue(formData, field.name))
+      ).map((field) => field.label);
+    }
+
     function recordFromCsvRow(row: CsvRow, rowNumber: number): AdminEventRecord {
       try {
         return {
           event_date: requiredDate(row.event_date),
           title: requiredText(row.title, 'title'),
           venue: requiredText(row.venue, 'venue'),
-          start_time: normalizeStartTime(row.start_time),
+          start_time: normalizeTimeOfDay(row.start_time, 'start_time'),
+          end_time: normalizeTimeOfDay(row.end_time, 'end_time'),
           neighborhood: nullableText(row.neighborhood),
           description: nullableText(row.description),
           organizer: nullableText(row.organizer),
@@ -1107,7 +1176,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         title: requiredText(cardFieldValue(card, 'title'), 'title'),
         event_date: requiredDate(cardFieldValue(card, 'event_date')),
         venue: requiredText(cardFieldValue(card, 'venue'), 'venue'),
-        start_time: normalizeStartTime(cardFieldValue(card, 'start_time')),
+        start_time: normalizeTimeOfDay(cardFieldValue(card, 'start_time'), 'start_time'),
+        end_time: normalizeTimeOfDay(cardFieldValue(card, 'end_time'), 'end_time'),
         neighborhood: nullableText(cardFieldValue(card, 'neighborhood')),
         organizer: nullableText(cardFieldValue(card, 'organizer')),
         cost_info: nullableText(cardFieldValue(card, 'cost_info')),
@@ -1253,6 +1323,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setFieldValue(card, 'title', cleanText(submission.title));
       setFieldValue(card, 'event_date', cleanText(submission.event_date));
       setFieldValue(card, 'start_time', cleanText(submission.start_time).slice(0, 5));
+      setFieldValue(card, 'end_time', cleanText(submission.end_time).slice(0, 5));
       setFieldValue(card, 'venue', cleanText(submission.venue));
       setFieldValue(card, 'neighborhood', cleanText(submission.neighborhood));
       setFieldValue(card, 'organizer', cleanText(submission.organizer));
@@ -1347,16 +1418,27 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return dbScopeSelect?.value === 'all' ? 'all' : 'upcoming';
     }
 
-    function formatRowDate(dateStr: string, timeStr: string | null) {
+    // Returns a 12-hour clock label, or an empty string when the value is not a
+    // usable HH:MM time.
+    function formatClockTime(timeStr: string | null) {
+      const clean = (timeStr ?? '').slice(0, 5);
+      if (!/^\d{2}:\d{2}$/.test(clean)) return '';
+      const [hour, minute] = clean.split(':').map(Number);
+      const hour12 = ((hour + 11) % 12) + 1;
+      return `${hour12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+    }
+
+    // An end time only appears alongside a start time: "9:00 PM" on its own
+    // would read as the moment the event begins.
+    function formatRowDate(dateStr: string, timeStr: string | null, endTimeStr: string | null = null) {
       const date = new Date(`${dateStr}T12:00:00`);
       let label = Number.isNaN(date.getTime())
         ? dateStr
         : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-      const clean = (timeStr ?? '').slice(0, 5);
-      if (/^\d{2}:\d{2}$/.test(clean)) {
-        const [hour, minute] = clean.split(':').map(Number);
-        const hour12 = ((hour + 11) % 12) + 1;
-        label += ` · ${hour12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+      const start = formatClockTime(timeStr);
+      if (start) {
+        const end = formatClockTime(endTimeStr);
+        label += ` · ${start}${end ? ` to ${end}` : ''}`;
       }
       return label;
     }
@@ -1458,6 +1540,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setValue('event_date', row.event_date ?? '');
       setValue('venue', row.venue ?? '');
       setValue('start_time', (row.start_time ?? '').slice(0, 5));
+      setValue('end_time', (row.end_time ?? '').slice(0, 5));
       setValue('neighborhood', row.neighborhood ?? '');
       setValue('organizer', row.organizer ?? '');
       setValue('cost_info', row.cost_info ?? '');
@@ -1488,7 +1571,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         const el = card.querySelector(`[data-row-${name}]`);
         if (el) el.textContent = value;
       };
-      setText('date', formatRowDate(row.event_date, row.start_time));
+      setText('date', formatRowDate(row.event_date, row.start_time, row.end_time));
       setText('title', row.title ?? '');
       setText('emoji', row.emoji ?? '');
       setText('venue', row.venue ?? '');
@@ -1745,6 +1828,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setValue('event_date', eventDraft.event_date);
       setValue('venue', eventDraft.venue);
       setValue('start_time', eventDraft.start_time);
+      // The scanner may not return an end_time yet; setValue blanks the field
+      // for anything that is not a string, so an absent key is safe.
+      setValue('end_time', eventDraft.end_time);
       setValue('neighborhood', eventDraft.neighborhood);
       setValue('organizer', eventDraft.organizer);
       setValue('cost_info', eventDraft.cost_info);
@@ -1858,13 +1944,19 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       void withBusy(singleSubmit, 'Saving...', async () => {
         try {
           setInlineStatus(singleStatus, '');
+          const missing = missingRequiredLabels(singleEventForm);
+          if (missing.length > 0) {
+            setInlineStatus(
+              singleStatus,
+              `Still needed before this event can board: ${missing.join(', ')}.`,
+              true
+            );
+            return;
+          }
           const record = recordFromForm(singleEventForm);
           await insertEvents([record]);
           singleEventForm.reset();
-          setInlineStatus(
-            singleStatus,
-            `Added "${record.title}". Press Publish live site in the schedule section to show it publicly now, or wait for the scheduled rebuild.`
-          );
+          setSingleSuccessBanner(record.title);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error.';
           setInlineStatus(singleStatus, `Could not add event: ${message}`, true);

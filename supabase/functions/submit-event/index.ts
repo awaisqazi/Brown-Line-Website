@@ -160,6 +160,9 @@ Deno.serve(async (req: Request) => {
   const event_time = str(body.event_time);
   const start_time = /^\d{2}:\d{2}/.test(event_time) ? event_time : null;
 
+  const event_time_end = str(body.event_time_end);
+  const end_time = /^\d{2}:\d{2}/.test(event_time_end) ? event_time_end : null;
+
   const neighborhood = location_type === "Chicago"
     ? chicago_neighborhood
     : location_type === "Suburb"
@@ -172,6 +175,7 @@ Deno.serve(async (req: Request) => {
     title: title.slice(0, 300),
     event_date,
     start_time,
+    end_time,
     venue: venue.slice(0, 300),
     organizer: nullable(body.organizer),
     cost_info: nullable(body.cost),

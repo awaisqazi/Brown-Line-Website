@@ -43,6 +43,21 @@ export function formatStartTime(value: string | null | undefined): string {
 }
 
 /**
+ * Time label for a start/end pair, e.g. "7 PM to 9 PM". Falls back to the
+ * single start-time label (via formatStartTime) when there is no end time.
+ */
+export function formatTimeRange(
+  start: string | null | undefined,
+  end: string | null | undefined
+): string {
+  const startLabel = formatStartTime(start);
+  const endLabel = formatStartTime(end);
+  if (!endLabel) return startLabel;
+  if (!startLabel) return endLabel;
+  return `${startLabel} to ${endLabel}`;
+}
+
+/**
  * Today's calendar date in America/Chicago as `YYYY-MM-DD`, so "upcoming"
  * queries stay anchored to the site's home time zone no matter where the
  * build runs. Falls back to the UTC date if the Intl parts are missing.

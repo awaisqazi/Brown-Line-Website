@@ -122,6 +122,11 @@ const pageDescription =
           <input id="event-time" name="event_time" type="time" class={inputClass} />
         </label>
 
+        <label class={labelClass} for="event-time-end">
+          End time<span class={optClass}>Optional</span>
+          <input id="event-time-end" name="event_time_end" type="time" class={inputClass} />
+        </label>
+
         <label class={labelClass} for="event-venue">
           Venue name<span class={reqClass}>Required</span>
           <input id="event-venue" name="venue" type="text" maxlength="300" class={inputClass} required />
@@ -365,6 +370,7 @@ const pageDescription =
         title: String(data.get('title') ?? ''),
         event_date: String(data.get('event_date') ?? ''),
         event_time: String(data.get('event_time') ?? ''),
+        event_time_end: String(data.get('event_time_end') ?? ''),
         venue: String(data.get('venue') ?? ''),
         address: String(data.get('address') ?? ''),
         organizer: String(data.get('organizer') ?? ''),

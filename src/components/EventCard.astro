@@ -1,6 +1,6 @@
 ---
 import type { TransitEvent } from '../lib/supabase';
-import { formatStartTime } from '../lib/dates';
+import { formatTimeRange } from '../lib/dates';
 
 interface Props {
   event: TransitEvent;
@@ -124,7 +124,7 @@ function splitGiveawayDescription(description: string | null) {
   };
 }
 
-const startTime = showTime ? formatStartTime(event.start_time) : '';
+const startTime = showTime ? formatTimeRange(event.start_time, event.end_time) : '';
 
 // One meta line under the title: venue, neighborhood, and date range joined
 // together. The start time renders as its own amber chip beside this line so
