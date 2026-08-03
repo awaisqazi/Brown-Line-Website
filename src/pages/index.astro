@@ -12,7 +12,7 @@ import { formatTimeRange, formatStopDate, getChicagoDateString } from '../lib/da
 import type { TickerItem } from '../lib/ticker';
 import type { TransitEvent } from '../lib/supabase';
 
-const HOMEPAGE_EVENTS_LIMIT = 3;
+const HOMEPAGE_EVENTS_LIMIT = 5;
 
 // Real testimonials only (reader + organizer/partner mix). Leave empty until
 // quotes are collected via DM/form, then fill in here. The section renders only
@@ -37,15 +37,15 @@ const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-
 
 const issues = await getRecentIssues();
 const todayDateString = getChicagoDateString();
-// Lead with editorial priority, not date: a Conductor's Pick surfaces first so
-// the homepage always opens with a strong example (Conductor's Picks first, then
-// soonest date).
+// The rail shows the next stops in date order, curated or not, so the homepage
+// always reflects what is actually coming up soonest. Conductor's Picks still
+// lead within a same-day tie.
 const { data: upcomingEventsData, error: upcomingEventsError } = await supabase
   .from('events')
   .select('*')
   .gte('event_date', todayDateString)
-  .order('is_curated', { ascending: false, nullsFirst: false })
   .order('event_date', { ascending: true })
+  .order('is_curated', { ascending: false, nullsFirst: false })
   .order('title', { ascending: true })
   .limit(HOMEPAGE_EVENTS_LIMIT)
   .returns<TransitEvent[]>();
@@ -55,9 +55,9 @@ if (upcomingEventsError) {
 }
 
 const upcomingEvents = upcomingEventsData ?? [];
-// The scrolling NEXT STOP banner leads with the next Conductor's Pick (the query
-// above already sorts curated picks first), so the brand always shows its best.
-const firstUpcomingEvent = upcomingEvents.find((event) => event.is_curated) ?? upcomingEvents[0];
+// The scrolling NEXT STOP banner leads with the soonest upcoming event, matching
+// the date-ordered rail below.
+const firstUpcomingEvent = upcomingEvents[0];
 const upcomingStopsTicker: TickerItem[] = [
   {
     label: 'NEXT STOP',
