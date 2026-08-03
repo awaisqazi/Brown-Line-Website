@@ -1,6 +1,7 @@
 ---
 import type { TransitEvent } from '../lib/supabase';
 import { formatTimeRange } from '../lib/dates';
+import { buildGoogleCalendarUrl, buildIcsDataUri, buildIcsFileName } from '../lib/calendar';
 
 interface Props {
   event: TransitEvent;
@@ -88,6 +89,16 @@ const shareUrl = safeEventUrl || new URL(`${import.meta.env.BASE_URL}events#${an
 
 const sentencePattern = /[^.!?]+[.!?]+|[^.!?]+$/g;
 
+// Splits a text block into paragraphs on blank lines, trimming each and
+// dropping any that end up empty. Used to turn the plain-text formatting
+// entered in the admin textarea into real paragraph breaks on the card.
+function splitParagraphs(value: string) {
+  return value
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+}
+
 function protectAbbreviations(value: string) {
   return value
     .replace(/\b([ap])\.m\./gi, '$1__MERIDIEM__')
@@ -118,6 +129,18 @@ function splitGiveawayDescription(description: string | null) {
     return { body: description, rules: '' };
   }
 
+  // Slice the original string at the start of the rule sentence so the body
+  // and rules keep their original line breaks, instead of the sentence-array
+  // join below which flattens everything onto one line.
+  const ruleSentence = sentences[ruleIndex];
+  const sliceIndex = ruleSentence ? description.indexOf(ruleSentence) : -1;
+  if (sliceIndex !== -1) {
+    return {
+      body: description.slice(0, sliceIndex).trim(),
+      rules: description.slice(sliceIndex).trim(),
+    };
+  }
+
   return {
     body: sentences.slice(0, ruleIndex).join(' '),
     rules: sentences.slice(ruleIndex).join(' '),
@@ -144,6 +167,22 @@ const detailsBtnClass =
   'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-amber px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
 const shareBtnClass =
   'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+
+// "Add to cal" menu. Both links are generated at build time from the event row,
+// so the dropdown needs no JavaScript to work: Google gets a prefilled template
+// URL, Apple and friends get a downloadable .ics data URI. Recurring series that
+// collapse to one card use the representative event's own date, which is what
+// its date chip already shows.
+const googleCalendarUrl = buildGoogleCalendarUrl(event);
+const icsDataUri = buildIcsDataUri(event);
+const icsFileName = buildIcsFileName(event);
+const hasCalendarLinks = Boolean(googleCalendarUrl && icsDataUri);
+
+// The <summary> carries the same look as the Share button, minus the default
+// disclosure triangle.
+const calendarSummaryClass = `${shareBtnClass} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`;
+const calendarItemClass =
+  'block px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut hover:bg-amber focus-visible:outline-none focus-visible:bg-amber';
 ---
 
 {isGiveaway ? (
@@ -184,9 +223,13 @@ const shareBtnClass =
     </div>
 
     {giveawayDescription.body && (
-      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
-        {giveawayDescription.body}
-      </p>
+      <div class="mt-4 space-y-2">
+        {splitParagraphs(giveawayDescription.body).map((paragraph) => (
+          <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed break-words whitespace-pre-line">
+            {paragraph}
+          </p>
+        ))}
+      </div>
     )}
 
     <div class="mt-5 border-t-2 border-dashed border-darkWalnut pt-4">
@@ -214,6 +257,21 @@ const shareBtnClass =
           <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
             See organizer for details
           </span>
+        )}
+        {hasCalendarLinks && (
+          <details class="relative" data-calendar-menu>
+            <summary class={calendarSummaryClass} aria-label={`Add ${title} to a calendar`}>
+              Add to cal <span aria-hidden="true">▾</span>
+            </summary>
+            <div class="absolute right-0 top-[calc(100%+0.375rem)] z-30 w-52 border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro">
+              <a href={googleCalendarUrl} target="_blank" rel="noopener noreferrer" class={calendarItemClass} data-ga-event="calendar_click" data-ga-label={title}>
+                Google Calendar
+              </a>
+              <a href={icsDataUri} download={icsFileName} class={`${calendarItemClass} border-t-2 border-darkWalnut`} data-ga-event="calendar_click" data-ga-label={title}>
+                Apple Calendar (.ics)
+              </a>
+            </div>
+          </details>
         )}
         <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
@@ -267,9 +325,13 @@ const shareBtnClass =
     )}
 
     {description && (
-      <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed mt-4 break-words">
-        {description}
-      </p>
+      <div class="mt-4 space-y-2">
+        {splitParagraphs(description).map((paragraph) => (
+          <p class="font-body text-darkWalnut/90 text-sm md:text-base leading-relaxed break-words whitespace-pre-line">
+            {paragraph}
+          </p>
+        ))}
+      </div>
     )}
 
     {authorNote && (
@@ -277,7 +339,7 @@ const shareBtnClass =
         <p class="font-body text-[10px] font-bold uppercase tracking-[0.2em] text-cayenne">
           Conductor&rsquo;s note
         </p>
-        <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-1.5 break-words">
+        <p class="font-body italic text-darkWalnut text-base md:text-lg leading-relaxed mt-1.5 break-words whitespace-pre-line">
           {authorNote}
         </p>
       </div>
@@ -299,6 +361,21 @@ const shareBtnClass =
           <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/65 font-bold">
             See organizer for details
           </span>
+        )}
+        {hasCalendarLinks && (
+          <details class="relative" data-calendar-menu>
+            <summary class={calendarSummaryClass} aria-label={`Add ${title} to a calendar`}>
+              Add to cal <span aria-hidden="true">▾</span>
+            </summary>
+            <div class="absolute right-0 top-[calc(100%+0.375rem)] z-30 w-52 border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro">
+              <a href={googleCalendarUrl} target="_blank" rel="noopener noreferrer" class={calendarItemClass} data-ga-event="calendar_click" data-ga-label={title}>
+                Google Calendar
+              </a>
+              <a href={icsDataUri} download={icsFileName} class={`${calendarItemClass} border-t-2 border-darkWalnut`} data-ga-event="calendar_click" data-ga-label={title}>
+                Apple Calendar (.ics)
+              </a>
+            </div>
+          </details>
         )}
         <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
@@ -337,6 +414,29 @@ const shareBtnClass =
 </style>
 
 <script>
+  // The "Add to cal" dropdowns are native <details>, so they open and close on
+  // their own. This only adds the two conveniences the element lacks: clicking
+  // elsewhere (or pressing Escape) closes whatever is open, and opening one
+  // menu closes any other.
+  if (!(window as any).__brownLineCalendarMenuWired) {
+    (window as any).__brownLineCalendarMenuWired = true;
+
+    const closeMenus = (except?: Element | null) => {
+      document.querySelectorAll('details[data-calendar-menu][open]').forEach((menu) => {
+        if (menu !== except) menu.removeAttribute('open');
+      });
+    };
+
+    document.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement | null;
+      closeMenus(target?.closest('details[data-calendar-menu]'));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeMenus();
+    });
+  }
+
   // One delegated handler for every card's Share button. Astro includes this
   // module once per page no matter how many EventCards render.
   if (!(window as any).__brownLineShareWired) {

@@ -143,18 +143,6 @@ body {
   }
 }
 
-/* ---------- Splash gate ---------- */
-/* The inline <head> script in Layout.astro sets this class on <html> for
-   returning visitors so the React splash component never paints. */
-html.splash-done .train-splash-root {
-  display: none !important;
-}
-
-/* Lock scroll while the splash is on screen so the homepage doesn't peek through. */
-html:not(.splash-done) body.splash-active {
-  overflow: hidden;
-}
-
 /* ---------- Focus visibility ---------- */
 :focus-visible {
   outline: 2px solid #5BC3FF;

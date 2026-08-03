@@ -3,7 +3,6 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import Footer from '../components/Footer.astro';
-import TrainSplash from '../components/TrainSplash.jsx';
 import { getTickerItems } from '../lib/ticker';
 
 interface Props {
@@ -88,20 +87,6 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content={ogImageAlt} />
 
-    {/* Intro gate memory: returning visitors (and anyone opening a shared link a
-        second time) skip the splash entirely. Setting splash-done in <head>,
-        before the body paints, means the React splash is never shown, no flash.
-        Also auto-skip for reduced-motion users. */}
-    <script is:inline>
-      try {
-        var seen = localStorage.getItem('brownLineIntroSeen') === '1';
-        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (seen || reduced) {
-          document.documentElement.classList.add('splash-done');
-        }
-      } catch (_) {}
-    </script>
-
     {gaMeasurementId && (
       <Fragment>
         {/* Google Analytics 4 with Consent Mode v2. Analytics storage defaults to
@@ -134,7 +119,6 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
   </head>
 
   <body class="font-body bg-seashell text-darkWalnut min-h-screen flex flex-col">
-    {!minimal && <TrainSplash client:load />}
     {!minimal && <Nav />}
     {!minimal && <TransitDivider />}
 

@@ -1,6 +1,5 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-import react from '@astrojs/react';
 
 // Set this to your production origin (no trailing slash). Used to build
 // absolute URLs for Open Graph / Twitter share cards and canonical links.
@@ -13,6 +12,5 @@ export default defineConfig({
   base: BASE,
   integrations: [
     tailwind({ applyBaseStyles: false }),
-    react(),
   ],
 });
