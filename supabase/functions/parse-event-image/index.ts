@@ -192,6 +192,17 @@ function sleep(ms: number): Promise<void> {
 // but switching models is not.
 const RETRYABLE_STATUSES = new Set([500, 503, 504]);
 
+// Google answers a generic INVALID_ARGUMENT 400 when the image bytes do not
+// decode cleanly (a malformed JPEG from the client downscaler, an odd color
+// profile). The status alone reads like our bug, so translate it into advice
+// the admin can act on.
+function nonRetryableMessage(status: number): string {
+  if (status === 400) {
+    return "Gemini could not read this image file. Try re-taking the photo or uploading it as a plain JPEG.";
+  }
+  return `Gemini responded with status ${status}.`;
+}
+
 // Shown when the primary and backup model were both tried and both came back
 // 429: either Google's per-minute rate limit or the daily free-tier quota is
 // exhausted, and only time fixes either one. The no-backup-configured case
@@ -361,7 +372,7 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<Gemini
         ok: false,
         reached: true,
         status: res.status,
-        message: `Gemini responded with status ${res.status}.`,
+        message: nonRetryableMessage(res.status),
       };
     }
 
@@ -437,7 +448,7 @@ async function callGemini(imageBase64: string, mimeType: string): Promise<Gemini
       ok: false,
       reached: true,
       status: fallbackRes.status,
-      message: `Gemini responded with status ${fallbackRes.status}.`,
+      message: nonRetryableMessage(fallbackRes.status),
     };
   }
 
