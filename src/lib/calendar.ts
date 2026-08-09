@@ -37,8 +37,12 @@ interface LocalDateTime {
 
 const pad2 = (value: number) => String(value).padStart(2, '0');
 
-/** Parse a `YYYY-MM-DD` column value. Returns null when it is missing or malformed. */
-function parseEventDate(value: string | null | undefined) {
+/**
+ * Parse a `YYYY-MM-DD` column value. Returns null when it is missing or
+ * malformed. Exported so the structured-data builders in `seo.ts` read event
+ * dates exactly the way the calendar links do.
+ */
+export function parseEventDate(value: string | null | undefined) {
   if (!value) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
   if (!match) return null;
@@ -52,9 +56,10 @@ function parseEventDate(value: string | null | undefined) {
 /**
  * Parse a Postgres `time` string like "18:30:00" into minutes past midnight.
  * Seconds are intentionally dropped: no listing is precise to the second, and
- * dropping them keeps the generated stamps tidy.
+ * dropping them keeps the generated stamps tidy. Exported alongside
+ * `parseEventDate` for the structured-data builders in `seo.ts`.
  */
-function parseEventTime(value: string | null | undefined): number | null {
+export function parseEventTime(value: string | null | undefined): number | null {
   if (!value) return null;
   const match = /^(\d{1,2}):(\d{2})/.exec(value.trim());
   if (!match) return null;

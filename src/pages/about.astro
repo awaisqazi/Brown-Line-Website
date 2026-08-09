@@ -5,6 +5,144 @@ import CredibilityStrip from '../components/CredibilityStrip.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 
 const base = import.meta.env.BASE_URL;
+const EMAIL = 'hi@thebrownlinechi.com';
+
+// Stripe payment links (amounts confirmed 2026-06-25 from the live checkout pages).
+const STRIPE_LINKS = {
+  fare:    'https://buy.stripe.com/6oUcN65DS5iJcFa5vlasg00', // $20 one-time
+  stop:    'https://buy.stripe.com/4gM5kEeaodPfdJe5vlasg02', // $50 one-time
+  track:   'https://buy.stripe.com/6oUaEYeao26xdJe7Dtasg03', // $100 one-time
+  monthly: 'https://buy.stripe.com/7sY00k1nC4eF8oUg9Zasg04', // $7 / month (UPDATE STRIPE LINK: still the old $9 product)
+};
+
+const oneTimeTiers = [
+  {
+    amount: '$20',
+    name: 'Buy a fare',
+    blurb: 'Chip in for the ride and help keep the guide free.',
+    href: STRIPE_LINKS.fare,
+    accent: 'mayaBlue',
+    popular: false,
+  },
+  {
+    amount: '$50',
+    name: 'Cover a stop',
+    blurb: 'Help fund a neighborhood guide.',
+    href: STRIPE_LINKS.stop,
+    accent: 'celadon',
+    popular: false,
+  },
+  {
+    amount: '$100',
+    name: 'Lay the track',
+    blurb: 'Power a full month of coverage.',
+    href: STRIPE_LINKS.track,
+    accent: 'amber',
+    popular: true,
+  },
+];
+
+const accentBar: Record<string, string> = {
+  mayaBlue: 'bg-mayaBlue',
+  celadon: 'bg-celadon',
+  amber: 'bg-amber',
+};
+
+// Standards & Ethics: selection criteria cards.
+const criteria = [
+  {
+    n: '01',
+    label: 'Community & Cultural Relevance',
+    accent: 'cayenne',
+    points: [
+      'Rooted in Global South diaspora communities',
+      'Community-centered, solidarity-driven, or culturally significant',
+    ],
+  },
+  {
+    n: '02',
+    label: 'Accessibility & Inclusion',
+    accent: 'mayaBlue',
+    points: [
+      'Affordable (free or low-cost whenever possible)',
+      'Accessible within the city of Chicago',
+      'Designed to be welcoming and inclusive',
+    ],
+  },
+  {
+    n: '03',
+    label: 'Depth & Intent',
+    accent: 'celadon',
+    points: [
+      'Educational, intellectually engaging, or culturally enriching',
+      'Supportive of holistic community wellness',
+    ],
+  },
+  {
+    n: '04',
+    label: 'Independence & Integrity',
+    accent: 'amber',
+    points: [
+      'Independent or underpromoted',
+      'Ethically organized, not exploitative or extractive',
+    ],
+  },
+] as const;
+
+const accentText: Record<string, string> = {
+  cayenne:  'text-cayenne',
+  mayaBlue: 'text-mayaBlue',
+  celadon:  'text-celadon',
+  amber:    'text-amber',
+};
+
+// The prose sections of the ethics policy, rendered as a compact stack. The
+// criteria grid is interleaved after "Scope & Format" in the markup below.
+const ethicsSections = [
+  {
+    heading: 'Editorial Independence',
+    paragraphs: [
+      "The Brown Line is editorially independent. No advertiser, sponsor, event organizer, or community member has any influence over what gets featured, how it's covered, or what gets left out. All coverage decisions are made based on The Brown Line's editorial criteria and my own judgment.",
+    ],
+  },
+  {
+    heading: 'Scope & Format',
+    paragraphs: [
+      'The Brown Line is a curated cultural guide, not a reviewing or rating platform. Inclusion is not an endorsement, and absence is not a judgment. The goal is to surface meaningful cultural programming, not to evaluate or rank it.',
+    ],
+  },
+  {
+    heading: 'No Pay-to-Play',
+    paragraphs: [
+      "I don't accept payment, gifts, or compensation in exchange for coverage or mentions. If something is featured here, it's because I genuinely believe it's worth your time. I may occasionally attend events using complimentary access, but that never guarantees coverage or influences what I choose to include.",
+    ],
+  },
+  {
+    heading: 'Sponsored Content & Advertising',
+    paragraphs: [
+      "The Brown Line does not currently run ads or sponsored content. If that changes, any sponsorships will be clearly labeled and only accepted from organizations that align with The Brown Line's values. They won't influence editorial decisions.",
+    ],
+  },
+  {
+    heading: 'Conflicts of Interest',
+    paragraphs: [
+      "I work full-time as an editor at a national nonprofit newsroom. The Brown Line is a separate, independent project. Because this work is community-rooted, I may have personal or professional connections to some of the people or spaces featured. Those relationships don't determine coverage. When context matters, I'll share it.",
+      "The Brown Line has a perspective, not a political agenda. The Brown Line intentionally centers Global South diaspora communities in Chicago. The politics you'll find here live in the communities I cover, in the events, the organizers, and the cultural work being documented, not in advocacy or activism on my part.",
+    ],
+  },
+  {
+    heading: 'Accuracy & Corrections',
+    paragraphs: [
+      "I do my best to verify event details (dates, times, locations, and ticket info) before publishing. Things can change, so it's always worth double-checking with organizers directly. If I get something wrong, I'll fix it. For smaller errors, I may update and flag on social. For something more significant, I'll clearly acknowledge and correct it in the next issue.",
+    ],
+  },
+  {
+    heading: 'Accountability',
+    paragraphs: [
+      "I welcome feedback, critique, and conversation from the communities this work is for. That's part of keeping this project honest and useful.",
+    ],
+  },
+];
 
 const affiliations = [
   { label: 'Editor, National Nonprofit Newsroom',            accent: 'amber'    },
@@ -76,7 +214,7 @@ const description =
 
       <p class="mt-8">
         <a
-          href={`${base}standards`}
+          href="#ethics"
           data-ga-event="standards_click"
           data-ga-label="about_page"
           class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
@@ -111,7 +249,7 @@ const description =
               width="800"
               height="800"
               decoding="async"
-              loading="eager"
+              loading="lazy"
             />
             <div
               class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48"
@@ -215,8 +353,195 @@ const description =
     </div>
   </section>
 
+  {/* ---------- Support the line (moved here from /support) ---------- */}
+  <section id="support" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-16 md:py-24 bg-seashell">
+    <div class="max-w-5xl mx-auto">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
+        Fund the line
+      </p>
+      <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
+        Keep the line running.
+      </h2>
+      <p class="font-body text-darkWalnut/85 text-lg leading-relaxed mt-5 max-w-2xl">
+        The Brown Line newsletter, social media, and curated events calendar are free for everyone,
+        always. If you're able, $7/month helps keep it that way, for you and for the next rider who
+        can't pay anything at all.
+      </p>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-10">
+        {oneTimeTiers.map((tier) => (
+          <a
+            href={tier.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="support_checkout"
+            data-ga-label={tier.name}
+            class:list={[
+              'group relative flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-6 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue',
+              tier.popular ? 'shadow-retro' : '',
+            ]}
+          >
+            <span class:list={['absolute inset-x-0 top-0 h-1.5', accentBar[tier.accent]]} aria-hidden="true"></span>
+            {tier.popular && (
+              <span class="absolute -top-3 right-4 font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-0.5">
+                Most popular
+              </span>
+            )}
+            <span class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-2">{tier.amount}</span>
+            <span class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm mt-3">{tier.name}</span>
+            <span class="font-body text-darkWalnut/80 text-sm leading-relaxed mt-2 flex-1">{tier.blurb}</span>
+            <span class="mt-5 inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-cayenne">
+              Give {tier.amount} <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-1">&rarr;</span>
+            </span>
+          </a>
+        ))}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-7 flex flex-col">
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-darkWalnut/60 font-bold">Street Level</p>
+          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">Free</p>
+          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
+            The weekly newsletter, always free. Subscribe and ride along.
+          </p>
+          <a
+            href="#subscribe"
+            data-ga-event="subscribe_click"
+            data-ga-label="about_support"
+            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-seashell px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Board here <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+
+        <div class="relative border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 shadow-retro flex flex-col">
+          <span class="absolute inset-x-0 top-0 h-1.5 bg-cayenne" aria-hidden="true"></span>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mt-1">Solidarity Fare</p>
+          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">$7<span class="text-base align-middle font-body font-bold">/mo</span></p>
+          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
+            This is a solidarity-fare model, not a paywall. Everything stays free regardless of payment;
+            monthly riders subsidize free access for everyone else. Cancel any time.
+          </p>
+          <a
+            href={STRIPE_LINKS.monthly}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="support_checkout"
+            data-ga-label="Monthly $7"
+            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-cayenne px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Pay the solidarity fare <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+      <p class="font-body text-darkWalnut/70 text-sm mt-6 leading-relaxed">
+        Your support funds reporting and curation, community events, and keeping the guide free for
+        everyone. Payments are processed securely by Stripe. Want to give a different amount?
+        <a href={`mailto:${EMAIL}`} class="link-transit font-bold">Email us</a> and we'll sort it out.
+      </p>
+    </div>
+  </section>
+
+  {/* ---------- Standards & Ethics (moved here from /standards) ---------- */}
+  <section id="ethics" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-16 md:py-24">
+    <div class="max-w-5xl mx-auto">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
+        How we work
+      </p>
+      <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
+        Standards &amp; Ethics
+      </h2>
+      <p class="font-body text-darkWalnut/85 text-lg leading-relaxed mt-5 max-w-2xl">
+        These principles shape how I operate and how I decide what gets featured.
+      </p>
+
+      <div class="mt-12 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 max-w-4xl">
+        {ethicsSections.slice(0, 2).map((s) => (
+          <div>
+            <h3 class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm md:text-base mb-4">
+              {s.heading}
+            </h3>
+            {s.paragraphs.map((p) => (
+              <p class="font-body text-darkWalnut text-base leading-relaxed mt-3 first:mt-0">{p}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* How coverage is selected */}
+      <div class="mt-14">
+        <h3 class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm md:text-base mb-4">
+          How Coverage Is Selected
+        </h3>
+        <p class="font-body text-darkWalnut text-base leading-relaxed max-w-3xl">
+          I spotlight events and cultural programming based on these core criteria:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          {criteria.map((c) => (
+            <div class="bg-seashell border-2 border-darkWalnut p-6 md:p-8 flex flex-col">
+              <p class:list={['font-heading text-5xl md:text-6xl leading-none', accentText[c.accent]]}>
+                {c.n}
+              </p>
+              <h4 class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-base md:text-lg mt-4">
+                {c.label}
+              </h4>
+              <ul class="mt-4 space-y-2 font-body text-darkWalnut/85 text-base leading-relaxed list-disc pl-5 marker:text-darkWalnut/50">
+                {c.points.map((p) => <li>{p}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <p class="font-body text-darkWalnut text-base leading-relaxed mt-8 max-w-3xl">
+          Meeting these criteria doesn't guarantee coverage. I receive more submissions than I can
+          feature, and final decisions come down to editorial judgment and space. Community members and
+          event organizers can submit events through the
+          <a href={`${base}submit-event`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">event submission form</a>,
+          or by email at
+          <a href={`mailto:${EMAIL}`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">{EMAIL}</a>.
+          Submitting an event doesn't guarantee it will be featured.
+        </p>
+      </div>
+
+      <div class="mt-14 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 max-w-4xl">
+        {ethicsSections.slice(2).map((s) => (
+          <div>
+            <h3 class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm md:text-base mb-4">
+              {s.heading}
+            </h3>
+            {s.paragraphs.map((p) => (
+              <p class="font-body text-darkWalnut text-base leading-relaxed mt-3 first:mt-0">{p}</p>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <p class="font-body text-darkWalnut/70 text-sm mt-10 uppercase tracking-widest">
+        To flag an error or ask a question:
+        <a href={`mailto:${EMAIL}`} class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne normal-case tracking-normal">{EMAIL}</a>
+      </p>
+    </div>
+  </section>
+
+  {/* ---------- A note on perspective ---------- */}
+  <section class="px-6 py-16 md:py-24 bg-darkWalnut text-seashell">
+    <div class="max-w-3xl mx-auto">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-amber font-bold mb-6">
+        A note on perspective
+      </p>
+      <div class="font-body text-seashell text-lg md:text-xl leading-relaxed space-y-5">
+        <p>
+          Every publication has a lens. Mine is shaped by my identity as a South Asian American Muslim woman, journalist, and Chicagoan. That lens influences what gets spotlighted: more transit-accessible than suburban, more culture-focused than consumption-driven, more community-rooted than trend-chasing.
+        </p>
+        <p>
+          The Brown Line isn't a neutral aggregator. It's a curated publication with a clear point of view and stated values. You deserve to know that, and to decide for yourself whether this ride is for you.
+        </p>
+      </div>
+    </div>
+  </section>
+
   {/* ---------- CTA ---------- */}
-  <section id="subscribe" class="px-6 py-20 md:py-28 bg-seashell">
+  <section id="subscribe" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-20 md:py-28 bg-seashell">
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[0.95] tracking-tight">
         Ride with us.
@@ -230,7 +555,7 @@ const description =
       <p class="font-body text-darkWalnut/70 text-sm mt-8 uppercase tracking-widest">
         Want to do more?
         <a
-          href={`${base}support`}
+          href="#support"
           class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne"
         >
           Support The Brown Line

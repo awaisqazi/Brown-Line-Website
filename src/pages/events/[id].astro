@@ -1,0 +1,151 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TransitDivider from '../../components/TransitDivider.astro';
+import EventCard from '../../components/EventCard.astro';
+import { supabase } from '../../lib/supabase';
+import type { TransitEvent } from '../../lib/supabase';
+import {
+  addDays,
+  formatStopDate,
+  formatTimeRange,
+  getChicagoDateString,
+  PAST_EVENT_WINDOW_DAYS,
+} from '../../lib/dates';
+import {
+  BRAND_NAME,
+  buildBreadcrumbJsonLd,
+  buildEventJsonLd,
+  buildEventMetaDescription,
+  buildEventSlug,
+  stringifyJsonLd,
+} from '../../lib/seo';
+
+/**
+ * One page per stop, so each event has a real address on the web (something to
+ * link, share, and index) instead of only an anchor on the board.
+ *
+ * The window matches `/events` exactly: everything upcoming plus the same
+ * rolling 60-day archive the "View past stops" drawer shows, so no card on the
+ * board can ever link to a page that was not built.
+ */
+export async function getStaticPaths() {
+  const today = getChicagoDateString();
+
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .gte('event_date', addDays(today, -PAST_EVENT_WINDOW_DAYS))
+    .order('event_date', { ascending: true })
+    .order('title', { ascending: true })
+    .returns<TransitEvent[]>();
+
+  if (error) {
+    throw new Error(`Failed to load events for detail pages: ${error.message}`);
+  }
+
+  return (data ?? []).map((event) => ({
+    params: { id: buildEventSlug(event) },
+    props: { event },
+  }));
+}
+
+interface Props {
+  event: TransitEvent;
+}
+
+const { event } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
+const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const boardUrl = new URL(`${base}events`, siteUrl).toString();
+
+// Matches EventCard: only http(s) art renders, and only then does it become the
+// share card and the Event schema's image.
+const imageUrl = event.image_url?.trim() ?? '';
+const safeImageUrl = /^https?:\/\//i.test(imageUrl) ? imageUrl : '';
+
+const title = event.title?.trim() || 'Brown Line event';
+const pageDescription = buildEventMetaDescription(event);
+const dateLabel = formatStopDate(event.event_date);
+const timeLabel = formatTimeRange(event.start_time, event.end_time);
+
+// Back to the exact card on the board, using the anchor every card already carries.
+const boardAnchorHref = `${base}events#event-${event.id}`;
+
+const eventJsonLd = buildEventJsonLd(event, {
+  url: canonicalUrl,
+  image: safeImageUrl || undefined,
+});
+const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+  { name: 'Home', url: new URL(base, siteUrl).toString() },
+  { name: 'Events', url: boardUrl },
+  { name: title, url: canonicalUrl },
+]);
+
+const backLinkClass =
+  'inline-flex items-center gap-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none';
+---
+<Layout
+  title={`${title} | Events | ${BRAND_NAME}`}
+  description={pageDescription}
+  ogImage={safeImageUrl || undefined}
+  ogImageAlt={safeImageUrl ? `Flyer for ${title}` : undefined}
+>
+  <script type="application/ld+json" set:html={stringifyJsonLd(eventJsonLd)} />
+  <script type="application/ld+json" set:html={stringifyJsonLd(breadcrumbJsonLd)} />
+
+  <section class="px-6 pt-10 pb-16 md:pt-14 md:pb-24">
+    <div class="max-w-3xl mx-auto">
+      <a href={boardAnchorHref} class={backLinkClass}>
+        <span aria-hidden="true">&larr;</span>
+        Back to the board
+      </a>
+
+      <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenne font-bold mt-8">
+        This stop
+      </p>
+
+      {/* Departure tag: date and time as one two-segment chip, matching the
+          homepage rail, so the card below never has to repeat the time. */}
+      <div class="mt-4 inline-flex items-stretch font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-xs">
+        <span class="border-2 border-[#62361B] bg-seashell px-2.5 py-1">
+          {dateLabel}
+        </span>
+        {timeLabel && (
+          <span class="flex items-center border-2 border-l-0 border-[#62361B] bg-amber px-2.5 py-1">
+            {timeLabel}
+          </span>
+        )}
+      </div>
+
+      <div class="mt-5">
+        <EventCard event={event} showTime={false} linkTitle={false} headingLevel="h1" />
+      </div>
+
+      <div class="mt-12">
+        <TransitDivider />
+      </div>
+
+      <div class="mt-10 flex flex-wrap items-center gap-4">
+        <a
+          href={`${base}events`}
+          data-ga-event="browse_click"
+          data-ga-label="event_detail"
+          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-mayaBlue px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+        >
+          See all stops <span aria-hidden="true">&rarr;</span>
+        </a>
+        <a
+          href={`${base}submit-event`}
+          data-ga-event="submit_click"
+          data-ga-label="event_detail"
+          class={backLinkClass}
+        >
+          Hosting something? Submit an event
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

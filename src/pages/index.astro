@@ -1,12 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
-import IssueCard from '../components/IssueCard.astro';
 import EventCard from '../components/EventCard.astro';
-import CredibilityStrip from '../components/CredibilityStrip.astro';
 import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
-import { getRecentIssues } from '../lib/issues';
 import { supabase } from '../lib/supabase';
 import { formatTimeRange, formatStopDate, getChicagoDateString } from '../lib/dates';
 import type { TickerItem } from '../lib/ticker';
@@ -29,13 +26,10 @@ const testimonialAccent: Record<string, string> = {
   babyPink: 'border-babyPink',
 };
 
-// The credibility strip (Supported by / Featured in) is a shared component,
-// used here and on the About page so the two never drift (see CredibilityStrip.astro).
 // Cycle the brand palette across stops so the homepage route reads like the
 // colorful line on the full events board (src/pages/events.astro).
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 
-const issues = await getRecentIssues();
 const todayDateString = getChicagoDateString();
 // The rail shows the next stops in date order, curated or not, so the homepage
 // always reflects what is actually coming up soonest. Conductor's Picks still
@@ -85,13 +79,8 @@ const upcomingStopsTicker: TickerItem[] = [
     </div>
   </section>
 
-  {/* ---------- Credibility strip ---------- */}
-  <section class="px-6 pt-2">
-    <CredibilityStrip />
-  </section>
-
   {/* ---------- Scroll cue: sits right above the Upcoming Stops section ---------- */}
-  <div class="px-6 pt-10 pb-10 md:pt-12 md:pb-12 text-center">
+  <div class="px-6 pt-4 pb-10 md:pt-6 md:pb-12 text-center">
     <a
       href="#upcoming-stops"
       class="scroll-cue-link group inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
@@ -260,38 +249,24 @@ const upcomingStopsTicker: TickerItem[] = [
     </section>
   )}
 
-  {/* ---------- Recent Rides ---------- */}
-  <section id="newsletter" class="px-6 py-20 md:py-28">
-    <div class="max-w-5xl mx-auto">
-      <div class="flex items-end justify-between flex-wrap gap-4 mb-12">
-        <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] tracking-tight leading-none">
-          Recent dispatches
+  {/* ---------- Newsletter band ---------- */}
+  <section class="px-6 pb-16 md:pb-24">
+    <div class="max-w-5xl mx-auto border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-10 shadow-retro flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+      <div class="max-w-xl">
+        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The newsletter</p>
+        <h2 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
+          Catch up on recent dispatches.
         </h2>
-        <a
-          href="https://www.thebrownline.co"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="link-transit font-body text-darkWalnut text-sm font-bold uppercase tracking-widest"
-        >
-          View all &nearr;
-        </a>
+        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
+          Weekly guides, spotlights, and reporting from Chicago&rsquo;s Global South diasporas.
+        </p>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {issues.map((issue, i) => (
-          <div class:list={[i === 0 ? 'md:col-span-2' : '']}>
-            <IssueCard
-              category={issue.category}
-              date={issue.date}
-              datetime={issue.publishedAt ? new Date(issue.publishedAt).toISOString().slice(0, 10) : undefined}
-              title={issue.title}
-              href={issue.href}
-              accent={issue.accent as 'amber' | 'cayenne'}
-              featured={i === 0}
-            />
-          </div>
-        ))}
-      </div>
+      <a
+        href={`${import.meta.env.BASE_URL}newsletter`}
+        class="shrink-0 inline-flex items-center gap-2 border-2 border-darkWalnut bg-celadon px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+      >
+        Read the newsletter <span aria-hidden="true">&rarr;</span>
+      </a>
     </div>
   </section>
 
@@ -308,7 +283,7 @@ const upcomingStopsTicker: TickerItem[] = [
         </p>
       </div>
       <a
-        href={`${import.meta.env.BASE_URL}support`}
+        href={`${import.meta.env.BASE_URL}about#support`}
         data-ga-event="support_click"
         data-ga-label="homepage_band"
         class="shrink-0 inline-flex items-center gap-2 border-2 border-amber bg-amber px-6 py-3 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0_#FAF1EC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seashell"

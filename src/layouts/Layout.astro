@@ -3,7 +3,9 @@ import '../styles/global.css';
 import Nav from '../components/Nav.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import Footer from '../components/Footer.astro';
+import Marquee from '../components/Marquee.astro';
 import { getTickerItems } from '../lib/ticker';
+import { buildSiteJsonLd, stringifyJsonLd } from '../lib/seo';
 
 interface Props {
   title?: string;
@@ -43,6 +45,13 @@ const ogImageUrl = ogImage.startsWith('http') ? ogImage : new URL(`${base}${ogIm
 // Only the default card has known dimensions; overrides may be any size.
 const isDefaultOgImage = ogImage === DEFAULT_OG_IMAGE;
 const tickerItems = minimal ? [] : await getTickerItems();
+
+// Publisher identity (Organization + WebSite), rendered on every page so the
+// same brand, logo, and Instagram profile back every URL a crawler finds.
+const siteJsonLd = buildSiteJsonLd({
+  siteUrl: new URL(base, baseUrl).toString(),
+  logoUrl: new URL(faviconUrl, baseUrl).toString(),
+});
 
 // Google Analytics 4. Loads only when PUBLIC_GA_MEASUREMENT_ID (a "G-XXXXXXXXXX"
 // id) is set, so the site never ships a non-collecting tracker. Uses Consent
@@ -87,6 +96,10 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta name="twitter:image" content={ogImageUrl} />
     <meta name="twitter:image:alt" content={ogImageAlt} />
 
+    {/* Publisher structured data. Page-specific schemas (Event, Article,
+        ItemList, BreadcrumbList) are rendered by the pages themselves. */}
+    <script type="application/ld+json" set:html={stringifyJsonLd(siteJsonLd)} />
+
     {gaMeasurementId && (
       <Fragment>
         {/* Google Analytics 4 with Consent Mode v2. Analytics storage defaults to
@@ -121,12 +134,13 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
   <body class="font-body bg-seashell text-darkWalnut min-h-screen flex flex-col">
     {!minimal && <Nav />}
     {!minimal && <TransitDivider />}
+    {!minimal && <Marquee items={tickerItems} />}
 
     <main class="flex-1">
       <slot />
     </main>
 
-    {!minimal && <Footer tickerItems={tickerItems} />}
+    {!minimal && <Footer />}
 
     {gaMeasurementId && (
       <Fragment>

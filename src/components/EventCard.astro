@@ -2,6 +2,7 @@
 import type { TransitEvent } from '../lib/supabase';
 import { formatTimeRange } from '../lib/dates';
 import { buildGoogleCalendarUrl, buildIcsDataUri, buildIcsFileName } from '../lib/calendar';
+import { buildEventPath } from '../lib/seo';
 
 interface Props {
   event: TransitEvent;
@@ -15,9 +16,25 @@ interface Props {
    * this off because it shows the time next to each stop's date chip instead.
    */
   showTime?: boolean;
+  /**
+   * Link the card title to the event's own page. The detail page itself turns
+   * this off, since the title there is the page heading, not a link to it.
+   */
+  linkTitle?: boolean;
+  /**
+   * Heading level for the card title. Cards on a board are `h3` under the day
+   * heading; the event detail page renders its card title as the page `h1`.
+   */
+  headingLevel?: 'h1' | 'h2' | 'h3';
 }
 
-const { event, recurrenceLabel = '', showTime = true } = Astro.props;
+const {
+  event,
+  recurrenceLabel = '',
+  showTime = true,
+  linkTitle = true,
+  headingLevel = 'h3',
+} = Astro.props;
 
 // Defensive spelling normalization for text that comes straight from the DB.
 // Currently just restores the umlaut on the occasional "Turkiye" so a series
@@ -86,6 +103,16 @@ const priceLabelInCluster =
 // of its own, sharing copies a deep link to the card instead of a bare page URL.
 const anchorId = `event-${event.id}`;
 const shareUrl = safeEventUrl || new URL(`${import.meta.env.BASE_URL}events#${anchorId}`, Astro.site).href;
+
+// Every stop also has its own page (`/events/<slug>`), which is what the title
+// links to. The footer's "Details / RSVP ↗" link still points off-site to the
+// organizer, so the two destinations stay clearly distinct: words in, arrow out.
+const detailHref = linkTitle ? buildEventPath(event, import.meta.env.BASE_URL) : '';
+const Title = headingLevel;
+const titleSizeClass =
+  headingLevel === 'h1' ? 'text-[1.75rem] sm:text-4xl md:text-[2.5rem]' : 'text-2xl md:text-[1.75rem]';
+const titleLinkClass =
+  'link-transit transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none';
 
 const sentencePattern = /[^.!?]+[.!?]+|[^.!?]+$/g;
 
@@ -210,9 +237,15 @@ const calendarItemClass =
         </span>
       )}
       <div class="min-w-0">
-        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.05]">
-          {title}
-        </h3>
+        <Title class:list={['font-heading font-semibold text-darkWalnut leading-[1.05]', titleSizeClass]}>
+          {detailHref ? (
+            <a href={detailHref} class={titleLinkClass} data-ga-event="event_detail_click" data-ga-label={title}>
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+        </Title>
         <div class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           {startTime && <span class={timeChipClass}>{startTime}</span>}
           <p class="font-body text-sm md:text-base text-darkWalnut font-bold">
@@ -301,9 +334,15 @@ const calendarItemClass =
         </span>
       )}
       <div class="min-w-0">
-        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-[1.75rem] leading-[1.1]">
-          {title}
-        </h3>
+        <Title class:list={['font-heading font-semibold text-darkWalnut leading-[1.1]', titleSizeClass]}>
+          {detailHref ? (
+            <a href={detailHref} class={titleLinkClass} data-ga-event="event_detail_click" data-ga-label={title}>
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+        </Title>
         <div class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           {startTime && <span class={timeChipClass}>{startTime}</span>}
           <p class="font-body text-sm md:text-base text-darkWalnut font-bold">

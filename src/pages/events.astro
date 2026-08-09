@@ -6,9 +6,11 @@ import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
 import { supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
-import { formatStopDate } from '../lib/dates';
+import { addDays, formatStopDate, PAST_EVENT_WINDOW_DAYS } from '../lib/dates';
+import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
+const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
 
 // Only fetch upcoming events. The board is a build-time snapshot, so filtering
 // server-side (mirroring the homepage query) keeps the static HTML from shipping
@@ -34,12 +36,11 @@ const events = data ?? [];
 // Rolling 60-day archive of stops that have already departed. A second build-time
 // snapshot so the "View past stops" drawer has content, while the upcoming board
 // (and its filters and count) never includes old dates.
-const PAST_WINDOW_DAYS = 60;
 const { data: pastData, error: pastError } = await supabase
   .from('events')
   .select('*')
   .lt('event_date', today)
-  .gte('event_date', addDays(today, -PAST_WINDOW_DAYS))
+  .gte('event_date', addDays(today, -PAST_EVENT_WINDOW_DAYS))
   .order('event_date', { ascending: false })
   .order('is_curated', { ascending: false })
   .order('title', { ascending: true })
@@ -67,15 +68,6 @@ function monthDay(dateString: string) {
   const [y, m, d] = dateString.split('-').map(Number);
   if (!y || !m || !d) return dateString;
   return `${MONTHS_SHORT[m - 1]} ${d}`;
-}
-
-// Shift a YYYY-MM-DD date by a number of days (UTC math so the calendar day never
-// drifts across time zones). Sizes the past-stops look-back window.
-function addDays(dateString: string, days: number) {
-  const [y, m, d] = dateString.split('-').map(Number);
-  const next = new Date(Date.UTC(y, m - 1, d + days));
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
 }
 
 // Collapse identical recurring / multi-day events (same title + venue) into a
@@ -124,6 +116,16 @@ const groupedEventEntries = Object.entries(groupedByDate)
       return a.rep.title.localeCompare(b.rep.title);
     }),
   }));
+
+// ItemList structured data for the board, in the order the page prints it and
+// pointing at each stop's own page, so a crawler can walk from the board into
+// the individual events instead of treating them as one blob of page text.
+const boardItemListJsonLd = buildItemListJsonLd(
+  `Upcoming stops on ${BRAND_NAME}`,
+  groupedEventEntries.flatMap(({ dayGroups }) =>
+    dayGroups.map(({ rep }) => ({ name: rep.title, url: buildEventUrl(rep, base, siteUrl) }))
+  )
+);
 
 // Same series-collapse + day-grouping as the upcoming board, but ordered most
 // recent first and anchored on each series' last date so a just-finished run
@@ -241,6 +243,10 @@ function getEventSearchText(event: TransitEvent) {
   title="Events | The Brown Line"
   description={pageDescription}
 >
+  {events.length > 0 && (
+    <script type="application/ld+json" set:html={stringifyJsonLd(boardItemListJsonLd)} />
+  )}
+
   <section class="px-6 py-16 md:py-24 lg:py-28">
     <div class="max-w-5xl mx-auto">
       <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
@@ -268,7 +274,7 @@ function getEventSearchText(event: TransitEvent) {
           </a>
           <p class="mt-4">
             <a
-              href={`${base}standards`}
+              href={`${base}about#ethics`}
               data-ga-event="standards_click"
               data-ga-label="events_hero"
               class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
@@ -1134,7 +1140,25 @@ function getEventSearchText(event: TransitEvent) {
 
     syncQuickFilters();
 
-    renderFilters();
+    // Deep link: /events?date=YYYY-MM-DD (used by the nav mini calendar)
+    // preselects that day and jumps to it, same as picking it in the filter
+    // calendar. setSelectedDate re-renders, so skip the plain renderFilters.
+    const paramDate = new URLSearchParams(window.location.search).get('date') ?? '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(paramDate)) {
+      setSelectedDate(paramDate);
+      // The browser's own load-time scrolling cancels the smooth scroll that
+      // setSelectedDate queues, so re-jump instantly once the page settles.
+      const jumpToParamDate = () => {
+        const target = daySections.find(
+          (section) => !section.hidden && (section.dataset.eventDate ?? '') >= paramDate
+        );
+        target?.scrollIntoView({ block: 'start' });
+      };
+      if (document.readyState === 'complete') jumpToParamDate();
+      else window.addEventListener('load', jumpToParamDate, { once: true });
+    } else {
+      renderFilters();
+    }
   }
 </script>
 

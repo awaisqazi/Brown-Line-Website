@@ -107,7 +107,24 @@ function parseIssueRss(xmlText: string): Issue[] {
 // Issues live on the .co (Beehiiv) domain; normalize any .com the feed emits so
 // the "Recent dispatches" links always point at the newsletter (see design.md §5).
 function normalizeIssueHref(href: string) {
-  return href.replace(/\/\/(?:www\.)?thebrownline\.com/i, '//www.thebrownline.co');
+  const normalized = href.replace(/\/\/(?:www\.)?thebrownline\.com/i, '//www.thebrownline.co');
+  return rewriteMigratedIssueHref(normalized);
+}
+
+// 2026+ issues are being migrated onto the site itself; older issues stay on
+// Beehiiv. Map each migrated issue's /p/ slug to its local path so both the
+// RSS-parsed list and any future entries link to the on-site version.
+const MIGRATED_ISSUES: Record<string, string> = {
+  'geopolitical-f-tbol-the-brown-line-guide-to-the-world-cup-in-chicago': 'newsletter/whose-world-cup',
+  'back-in-service-for-good': 'newsletter/back-in-service-for-good',
+};
+
+function rewriteMigratedIssueHref(href: string) {
+  const match = href.match(/\/p\/([^/?#]+)/);
+  const slug = match?.[1];
+  if (!slug || !(slug in MIGRATED_ISSUES)) return href;
+
+  return `${import.meta.env.BASE_URL}${MIGRATED_ISSUES[slug]}`;
 }
 
 function getFirstXmlValue(xml: string, tagName: string) {

@@ -1,0 +1,391 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TransitDivider from '../components/TransitDivider.astro';
+import SubscribeForm from '../components/SubscribeForm.astro';
+import {
+  formatArticleDate,
+  getArticle,
+  getPrevNext,
+  getSimilar,
+  renderArticleBody,
+} from '../lib/articles';
+import { buildArticleJsonLd, buildBreadcrumbJsonLd, stringifyJsonLd } from '../lib/seo';
+
+interface Props {
+  /** Row key in public.articles. Header, hero, tags, and neighbors come from there. */
+  slug: string;
+  /** Stored body markup, divider markers included. */
+  bodyHtml: string;
+}
+
+const { slug, bodyHtml } = Astro.props;
+
+const article = await getArticle(slug);
+if (!article) {
+  throw new Error(`No article row for "${slug}". Publish it from /admin/articles first.`);
+}
+
+const { category, title, description, pubDate, heroImage, heroAlt, heroCreditHtml = '', tags } = article;
+const { prev, next } = await getPrevNext(slug);
+const similar = await getSimilar(slug, 3);
+
+const base = import.meta.env.BASE_URL;
+const renderedBody = renderArticleBody(bodyHtml, base);
+const articleHref = (entry: { slug: string }) => `${base}newsletter/${entry.slug}`;
+const published = new Date(pubDate);
+const displayDate = published.toLocaleDateString('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+// Structured data for the issue. Hero art is stored either as an absolute URL
+// or as a path under public/, so it is resolved against the site the same way
+// Layout resolves the Open Graph image.
+const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
+const heroImageUrl = heroImage.startsWith('http')
+  ? heroImage
+  : new URL(`${base}${heroImage.replace(/^\//, '')}`, siteUrl).toString();
+const articleJsonLd = buildArticleJsonLd({
+  headline: title,
+  description,
+  url: canonicalUrl,
+  image: heroImageUrl,
+  datePublished: published.toISOString(),
+  siteUrl: new URL(base, siteUrl).toString(),
+  logoUrl: new URL(`${base}logos/logo.png`, siteUrl).toString(),
+  section: category,
+  keywords: tags,
+});
+const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+  { name: 'Home', url: new URL(base, siteUrl).toString() },
+  { name: 'Newsletter', url: new URL(`${base}newsletter`, siteUrl).toString() },
+  { name: title, url: canonicalUrl },
+]);
+
+// Chips reuse the site's mono uppercase stub styling (homepage departure tag,
+// event card meta) so tags read as transit signage rather than blog labels.
+const chipClass =
+  'inline-flex items-center border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#62361B] md:text-[11px]';
+
+// Neighbor blocks: same hard border and lift as the issue cards.
+const railCardClass =
+  'group flex h-full flex-col border-2 border-darkWalnut bg-seashell p-5 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:-translate-y-1 focus-visible:-translate-x-1 focus-visible:shadow-retro';
+
+// One card sits at reading width, two split, three run across the line.
+const similarGridClass =
+  similar.length === 1
+    ? 'grid gap-6 max-w-md'
+    : similar.length === 2
+      ? 'grid gap-6 sm:grid-cols-2'
+      : 'grid gap-6 sm:grid-cols-2 lg:grid-cols-3';
+---
+<Layout
+  title={`${title} · The Brown Line`}
+  description={description}
+  ogImage={heroImage}
+  ogImageAlt={heroAlt}
+  ogType="article"
+>
+  <script type="application/ld+json" set:html={stringifyJsonLd(articleJsonLd)} />
+  <script type="application/ld+json" set:html={stringifyJsonLd(breadcrumbJsonLd)} />
+
+  <article>
+    {/* ---------- Article header ---------- */}
+    <header class="px-6 pt-14 md:pt-20 pb-10">
+      <div class="max-w-3xl mx-auto">
+        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+          {category}
+        </p>
+        <h1 class="font-heading text-darkWalnut text-3xl md:text-5xl leading-[1.08] tracking-tight text-balance">
+          {title}
+        </h1>
+        <p class="font-body text-darkWalnut/70 text-sm font-bold uppercase tracking-widest mt-6">
+          <time datetime={published.toISOString()}>{displayDate}</time>
+        </p>
+
+        {tags.length > 0 && (
+          <ul class="mt-6 flex flex-wrap gap-2 list-none p-0" aria-label="Topics in this issue">
+            {tags.map((tag) => (
+              <li class={chipClass}>{tag}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div class="max-w-3xl mx-auto mt-10">
+        <div class="relative">
+          <img
+            src={`${base}${heroImage}`}
+            alt={heroAlt}
+            class="w-full h-auto border-2 border-darkWalnut shadow-retro"
+            width="1600"
+            height="837"
+            decoding="async"
+            loading="eager"
+            fetchpriority="high"
+          />
+          <div class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48" aria-hidden="true"></div>
+        </div>
+        {heroCreditHtml && (
+          <p class="article-credit font-body text-darkWalnut/60 text-xs italic mt-6" set:html={heroCreditHtml} />
+        )}
+      </div>
+    </header>
+
+    {/* ---------- Body ---------- */}
+    <div class="px-6 pb-16">
+      <div class="article-prose max-w-3xl mx-auto font-body text-darkWalnut" set:html={renderedBody} />
+    </div>
+
+    <div class="max-w-3xl mx-auto px-6">
+      <TransitDivider />
+    </div>
+
+    {/* ---------- Previous / next stop along the newsletter ---------- */}
+    {(prev || next) && (
+      <nav class="px-6 pt-12" aria-label="More issues of The Brown Line">
+        <div class="max-w-3xl mx-auto">
+          <p class="font-body text-xs font-bold uppercase tracking-[0.3em] text-darkWalnut/70">
+            This line continues
+          </p>
+          <div class="mt-5 grid gap-4 md:grid-cols-2">
+            {prev && (
+              <a href={articleHref(prev)} class={railCardClass}>
+                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenne">
+                  <span aria-hidden="true">&larr;</span> Previous stop
+                </span>
+                <span class="font-body font-extrabold text-darkWalnut text-lg leading-snug tracking-tight mt-2">
+                  {prev.title}
+                </span>
+                <span class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-darkWalnut/70 mt-auto pt-4">
+                  <time datetime={new Date(prev.pubDate).toISOString()}>
+                    {formatArticleDate(prev.pubDate)}
+                  </time>
+                </span>
+              </a>
+            )}
+            {next && (
+              <a href={articleHref(next)} class={`${railCardClass} md:text-right md:items-end md:col-start-2`}>
+                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenne">
+                  Next stop <span aria-hidden="true">&rarr;</span>
+                </span>
+                <span class="font-body font-extrabold text-darkWalnut text-lg leading-snug tracking-tight mt-2">
+                  {next.title}
+                </span>
+                <span class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-darkWalnut/70 mt-auto pt-4">
+                  <time datetime={new Date(next.pubDate).toISOString()}>
+                    {formatArticleDate(next.pubDate)}
+                  </time>
+                </span>
+              </a>
+            )}
+          </div>
+        </div>
+      </nav>
+    )}
+
+    {/* ---------- Similar articles ---------- */}
+    {similar.length > 0 && (
+      <section class="px-6 pt-14" aria-labelledby="transfer-here">
+        <div class="max-w-5xl mx-auto">
+          <h2
+            id="transfer-here"
+            class="font-heading text-darkWalnut text-2xl md:text-3xl leading-tight tracking-tight"
+          >
+            Transfer here
+          </h2>
+          <p class="font-body text-darkWalnut/70 text-sm mt-2">
+            Other stops on the same route.
+          </p>
+
+          <div class={`mt-8 ${similarGridClass}`}>
+            {similar.map((entry, index) => (
+              <a href={articleHref(entry)} class="group block focus:outline-none">
+                <article
+                  class:list={[
+                    'h-full bg-seashell border-2 border-darkWalnut flex flex-col gap-3 p-6',
+                    'transition-transform duration-150 ease-out',
+                    'group-hover:-translate-y-1 group-hover:-translate-x-1',
+                    index % 2 === 0 ? 'group-hover:shadow-retro-cayenne' : 'group-hover:shadow-retro-amber',
+                    'group-focus-visible:shadow-retro',
+                  ]}
+                >
+                  <span class="inline-flex items-center gap-1.5 font-body text-darkWalnut text-xs font-bold uppercase tracking-widest">
+                    <span class="h-2 w-2 bg-mayaBlue" aria-hidden="true"></span>
+                    {entry.category}
+                  </span>
+
+                  <p class="font-body text-darkWalnut/70 text-sm">
+                    <time datetime={new Date(entry.pubDate).toISOString()}>
+                      {formatArticleDate(entry.pubDate)}
+                    </time>
+                  </p>
+
+                  <h3 class="font-body font-extrabold text-darkWalnut text-xl leading-snug tracking-tight mt-1">
+                    {entry.title}
+                  </h3>
+
+                  <p class="font-body text-darkWalnut/85 text-sm leading-relaxed">
+                    {entry.summary}
+                  </p>
+
+                  <span class="mt-auto pt-4 inline-flex items-center gap-1 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut">
+                    Read
+                    <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-1">
+                      &rarr;
+                    </span>
+                  </span>
+                </article>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    {/* ---------- Subscribe CTA ---------- */}
+    <section class="px-6 py-16 md:py-20">
+      <div class="max-w-3xl mx-auto text-center">
+        <h2 class="font-heading text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
+          Ride with us.
+        </h2>
+        <p class="font-body text-darkWalnut/85 text-base mt-4 max-w-xl mx-auto leading-relaxed">
+          One stop a week in your inbox. Arts, culture, and community from the corners of Chicago you
+          actually want to know.
+        </p>
+        <div class="mt-8 flex justify-center">
+          <SubscribeForm caption="" />
+        </div>
+        <p class="mt-8">
+          <a
+            href={`${base}newsletter`}
+            class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+          >
+            <span aria-hidden="true">&larr;</span>
+            All dispatches
+          </a>
+        </p>
+      </div>
+    </section>
+  </article>
+</Layout>
+
+{/* Article body typography. Global because the body markup arrives through
+    set:html, which Astro's scoped styles do not reach. */}
+<style is:global>
+  .article-prose {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+
+  .article-prose > * + * {
+    margin-top: 1.5rem;
+  }
+
+  .article-prose h2 {
+    font-weight: 800;
+    font-size: 1.875rem;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: #642713;
+    margin-top: 3rem;
+  }
+
+  .article-prose h3 {
+    font-weight: 700;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    color: #642713;
+    margin-top: 2.5rem;
+  }
+
+  .article-prose h2 + *,
+  .article-prose h3 + * {
+    margin-top: 1rem;
+  }
+
+  .article-prose ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .article-prose li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  /* Transit-stop marker in place of a bullet. */
+  .article-prose li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 0.5rem;
+    height: 0.5rem;
+    background: #5BC3FF;
+    border: 2px solid #642713;
+  }
+
+  .article-prose blockquote {
+    border-left: 4px solid #F35A0F;
+    padding-left: 1.5rem;
+    font-size: 1.25rem;
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  .article-prose strong {
+    font-weight: 700;
+  }
+
+  .article-prose a,
+  .article-credit a {
+    font-weight: 600;
+    color: #642713;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: #5BC3FF;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms ease;
+  }
+
+  .article-prose a:hover,
+  .article-prose a:focus-visible,
+  .article-credit a:hover,
+  .article-credit a:focus-visible {
+    text-decoration-color: #F35A0F;
+  }
+
+  /* Embeds keep the same hard border and offset shadow as the hero frame. */
+  .article-prose .embed-frame {
+    border: 2px solid #642713;
+    box-shadow: 4px 4px 0px #642713;
+    background: #FAF1EC;
+    padding: 0.5rem;
+    max-width: 40rem;
+  }
+
+  .article-prose .embed-frame iframe {
+    display: block;
+    width: 100%;
+    border: 0;
+  }
+
+  @media (min-width: 768px) {
+    .article-prose {
+      font-size: 1.125rem;
+    }
+
+    .article-prose h2 {
+      font-size: 2.25rem;
+    }
+
+    .article-prose h3 {
+      font-size: 1.5rem;
+    }
+  }
+</style>

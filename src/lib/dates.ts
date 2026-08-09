@@ -1,3 +1,10 @@
+/**
+ * How far back the events board keeps stops that have already departed. The
+ * same window sizes the "View past stops" drawer on `/events` and the set of
+ * per-event detail pages, so a card on the board never links to a 404.
+ */
+export const PAST_EVENT_WINDOW_DAYS = 60;
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
   'Jan',
@@ -55,6 +62,17 @@ export function formatTimeRange(
   if (!endLabel) return startLabel;
   if (!startLabel) return endLabel;
   return `${startLabel} to ${endLabel}`;
+}
+
+/**
+ * Shift a `YYYY-MM-DD` date by whole days (UTC math, so the calendar day never
+ * drifts across time zones). Used to size the past-stops look-back window.
+ */
+export function addDays(dateString: string, days: number): string {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
 }
 
 /**

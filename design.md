@@ -81,17 +81,17 @@ The mobile menu is themed as a transit route map.
 - A vertical Dark Walnut "track" line scales down from top to bottom after the drawer settles.
 - Each link is a "stop" with a 22×22 colored dot, 2px walnut border, and the retro hard shadow.
 - Stops slide in from the right with a 200 / 280 / 360 / 440 ms stagger, like train cars arriving.
-- Stop colors map in order: Baby Pink → Maya Blue → Celadon → Amber → Cayenne. Subscribe is always the Cayenne terminus (matches the CTA token).
+- Stop colors map in order: Maya Blue → Celadon → Amber (Events, Newsletter, About). Below the three stops a single amber Submit an Event `.nav-cta` button stacks full-width; Support, Ethics, and Board here were consolidated onto `/about` (2026-08-09), so they no longer appear in the drawer.
 - Closes on link tap, backdrop tap, Escape, or resizing past `md`.
 
 ### Desktop Header Route Map (`Nav.astro`, `lg+` only)
-The desktop primary nav mirrors the mobile transit-stop language as a horizontal route, followed by the CTA cluster: Support and Subscribe on a top row (`flex-1`, equal share), and a full-width amber Submit an Event button spanning both beneath them. The route is a content-width group centered in the space between the logo and the CTA cluster (its container is `flex-1`; the route uses `margin: 0 auto` + `justify-content: center` with a `5rem` `--route-gap` at `lg`), so the stops have comfortable spacing and use the header's real estate without stretching edge to edge. It renders at `lg+` only; tablets and phones get the hamburger drawer instead, because the route plus the CTA buttons and the logo gets crammed below ~1024px.
+The desktop primary nav mirrors the mobile transit-stop language as one horizontal route of four stops (Events, Newsletter, About, Submit an Event), with the mini calendar parked at the end of the line. The route is a content-width group centered in the space between the logo and the mini calendar (its container is `flex-1`; the route uses `margin: 0 auto` + `justify-content: center`), so the stops have comfortable spacing and use the header's real estate without stretching edge to edge. It renders at `lg+` only; tablets and phones get the hamburger drawer instead.
 - A Dark Walnut track runs behind the stop group and ends at the first and last dots.
 - Each link has a 20×20 colored dot, 2px walnut border, and the retro hard shadow.
 - Labels stay Montserrat, bold, uppercase, and compact so the header reads like signage rather than body copy.
 - **Label overflow:** station labels are absolutely positioned and centered under their dots, so they overflow the 20px dot width. `.desktop-route` carries horizontal padding (`--route-pad`) so the first/last labels stay inside the route box instead of colliding with the logo or the Support button; the track `::before` is inset by the same padding so it still starts/ends on the end dots. Gaps (`--route-gap`) are tuned so adjacent labels keep clearance (4.25rem at `lg`).
-- Stop colors: Maya Blue → Celadon → Amber → Cayenne (Events, Newsletter, About, Ethics). `--route-gap` is 5rem at `lg` (comfortable, centered spacing); `--route-pad` reserves room for the first/last labels so they clear the logo and the CTA cluster.
-- `.nav-cta` variants: `.nav-cta-amber` (Submit an Event), `.nav-cta-outline` (Support), `.nav-cta-filled` (Subscribe, Cayenne). Amber is the site's established "submit" color (events hero, homepage "Hosting?" band).
+- Stop colors: Maya Blue → Celadon → Amber → Baby Pink (Events, Newsletter, About, Submit an Event). `--route-pad` reserves room for the first/last labels so they clear the logo and the mini calendar.
+- `.nav-cta` variants: only `.nav-cta-amber` (Submit an Event, mobile drawer) remains; the outline/filled Support and Subscribe buttons were removed when those destinations merged into `/about`. Amber is the site's established "submit" color (events hero, homepage "Hosting?" band).
 - Hover/focus lifts the station slightly, scales the dot, and tints the label Cayenne.
 
 ### Sticky Header Rule
@@ -138,6 +138,13 @@ The public events page is a static Supabase-powered route board. It should feel 
 - The Category dropdown is themed on desktop (a custom listbox built in the page script) and falls back to the native OS `<select>` on mobile; both drive the same hidden native select.
 - The no-results state is a bordered Seashell panel reading "Try a different route."
 
+### Event Detail Page (`/events/<slug>`)
+Every stop also has its own page, so an event is something you can link, share, and index rather than only an anchor on the board. Built at `src/pages/events/[id].astro` with `getStaticPaths()` over the same window `/events` uses (everything upcoming plus the rolling 60-day archive), so a card on the board can never link to a page that was not built.
+- Slug is a readable title slug with the row's uuid appended (`/events/farm-concert-the-arab-blues-f78d05b1-...`): unique, and stable across rebuilds unless the title itself is edited.
+- Reading order at `max-w-3xl`: a "Back to the board" link (pointing at that card's `#event-<uuid>` anchor), a "This stop" eyebrow, the two-segment departure tag (date, then the amber time segment) borrowed from the homepage rail, the shared `EventCard` with `showTime={false}` so the time is not printed twice, a `TransitDivider`, then a Maya Blue "See all stops" button and a "Hosting something?" submit link.
+- The card renders its title as the page `h1` (`headingLevel="h1"`) and, being the page about itself, does not link the title.
+- Page title is `<event title> | Events | The Brown Line`; the meta description leads with when and where and then as much of the listing blurb as fits. When the row has an `image_url` it also becomes the page's Open Graph card.
+
 ### Homepage Upcoming Stops (`index.astro`)
 The homepage includes an `Upcoming Stops` section between the credibility strip and the two-sided Browse/Submit band. It adapts the events route-map language into a compact Transit Route Timeline:
 - The homepage queries Supabase `public.events` at build time for the next three upcoming rows, **ordered Conductor's Picks first** (then soonest date), so the section leads with a strong example rather than the bare next chronological event. No local placeholder events are rendered.
@@ -156,6 +163,7 @@ Every event uses **one** bordered card template (the former "Conductor's Pick" f
 - **Defensive text normalization:** `fixSpelling()` restores the umlaut on any "Turkiye" in the title/description at render, and the description/blurb paragraphs carry `break-words` so a long unbroken token cannot overflow the card on mobile.
 - Giveaway: keeps the dashed ticket-stub treatment with side punch-outs, the same tag row, meta, and action footer.
 - **Venue once:** when an event has a `neighborhood`, the trailing `, Neighborhood` segment is stripped from the displayed venue and shown as `Venue · Neighborhood`. The organizer is hidden when it equals the venue (fixes the "prints the venue twice" bug).
+- **Two destinations, clearly distinct.** The card title links to the event's own page on this site (`/events/<slug>`, with the standard `.link-transit` rainbow underline and Cayenne hover), while the footer's `Details / RSVP ↗` still goes off-site to the organizer. Words in, arrow out. `linkTitle={false}` turns the title link off (the detail page uses it, since the title there is the page heading), and `headingLevel` promotes the title from `h3` to `h1` on that page.
 - **No whole-card link.** The card is always an `<article>`; `event_url` drives the `Details / RSVP ↗` link in the footer instead of wrapping the whole card (so the `Share` button is valid). `Share` uses the Web Share API, falling back to copy-to-clipboard. One delegated listener handles every card (`window.__brownLineShareWired` guard). Every card carries a stable `id="event-<uuid>"` anchor; when an event has no `event_url`, Share copies the events-page deep link (`/events#event-<uuid>`) and the footer shows a mono "See organizer for details" line instead of the button, so every card still has one clear next step.
 - **Optional photo:** when `events.image_url` is set (usually carried over from a community submission), the standard card renders the image between the meta line and the blurb: bordered, `object-cover`, capped at `max-h-72`, `loading="lazy"`, `referrerpolicy="no-referrer"`, only `http(s)` URLs, and an inline `onerror` hides the element so a dead link never shows a broken-image glyph.
 - Optional `recurrenceLabel` prop renders a mono date-range line (e.g. `Jun 22 – Jul 24`) for collapsed multi-day/recurring events. The en dash here is a true date range, which the no-em-dash rule (§7) permits.
@@ -177,6 +185,18 @@ The admin portal is intentionally utilitarian but still brand-native.
 - Tags accept JSON arrays, comma-separated strings, or pipe-separated strings, validated case-insensitively against the nine-tag taxonomy (normalized to canonical casing); unknown tags are an error so free-form labels cannot reach the public board.
 - `event_url` and `image_url` validation requires `http://` or `https://`.
 - Review submissions: on unlock the portal loads pending rows from `public.event_submissions` (gated by the admin password header) and renders each as an editable card with the event fields plus the editorial flags (emoji, author note, Conductor's pick, Giveaway). A submitted photo/flyer URL renders as a constrained preview image with an "Open original" link (the image hides itself on load error), and the card's tags are the same nine-tag checkbox group. "Approve & publish" inserts the edited record into `public.events` and marks the submission `approved` (linking `approved_event_id`); "Reject" marks it `rejected`. If the event publishes but the bookkeeping update fails, Approve stays disabled (a second insert would duplicate the event) and a "Retry marking reviewed" button re-runs just the status update. Submission text is filled into the card via DOM properties, never `innerHTML`, so untrusted input cannot inject markup.
+
+### Articles Admin Portal (`/admin/articles`)
+Same shell, same credential, and the same conventions as the events portal; only the work surfaces differ.
+- `<Layout minimal noindex>`, staff-only password panel, unlock verified through the same `public.events_admin_login_check()` RPC, password held in memory and sent as the `x-admin-password` header, `onsubmit="return false"` guard on the login form.
+- All feedback is inline `aria-live` status text, and every mutating button disables itself with a busy label while its request is in flight.
+- Two surfaces: a compose/edit form and the full article list. The two admin portals cross-link to each other from their headers.
+- The article list shows every `public.articles` row including drafts (admin reads are password-gated, so drafts never reach the public build). Each row carries a Draft badge when unpublished, a Publish/Unpublish toggle, Edit (loads the row into the form), and Delete (confirm dialog). Writes use `.select('id')` so a silent zero-row result surfaces as an error instead of fake success. The list refreshes on demand rather than through realtime.
+- The form is one form for both new and edit. The slug auto-generates from the title until the author types their own, and stops following the title from then on, so retitling never silently changes a published URL. A slug collision comes back from Postgres as `23505` and is rewritten as a plain "already used" message.
+- Publish date and time is entered as Chicago wall time and converted to an absolute timestamp before the write.
+- Body editor: a self-contained `contenteditable` implemented in the page script, no editor library and no CDN. Toolbar is bold, italic, H2, H3, link (URL prompt, off-site links get `target="_blank" rel="noopener noreferrer"`), bullets, numbers, quote, transit divider, clear formatting, and an HTML view toggle for hand editing. Paste is normalized: `script`/`style` removed and `style`/`class`/`id`/dimension attributes stripped, so pasted copy inherits the site's article typography instead of the source document's.
+- The transit divider is stored in the body as `<hr class="transit-divider-slot" />` and previewed in the editor as the rainbow rule it becomes on the public page.
+- "Publish live site" is the same `trigger-deploy` button as the events portal.
 
 ## 6. Layout & Integration
 - **Spacing:** Generous padding (e.g., `py-24`). Content should be constrained to readable max-widths (e.g., `max-w-3xl` for text, `max-w-5xl` for grids, `max-w-md` for the Link-in-Bio page).
@@ -225,34 +245,42 @@ Hyphens (`-`) inside compound modifiers (`Chicago-based`, `creator-led`, `small-
 ## 9. Component & Page Inventory
 
 Components live in `src/components/`:
-- `Nav.astro`: header with logo, four route links (Events, Newsletter, About, Ethics), and a CTA cluster: Support (outline) and Subscribe (filled) share a top row, with a full-width amber Submit an Event button spanning both beneath them (desktop). On the mobile drawer the three buttons stack full-width in the same order. Submit an Event is intentionally a button, not a route stop, so the organizer pathway reads as an engaging call to action. At `lg+` = horizontal route-map nav + buttons; below `lg` (phones and tablets) = hamburger that opens the sliding route-map drawer with the same buttons (see § 5). Sticky below `lg`, static at `lg+`. (World Cup nav link intentionally omitted until `/events/world-cup` exists, to avoid a dead link.)
+- `Nav.astro`: header with logo and a four-stop route (Events, Newsletter, About, Submit an Event) plus the mini calendar at the end of the line on desktop. Support, Ethics, and Board here were consolidated onto `/about` (`#support`, `#ethics`, `#subscribe`) on 2026-08-09 to slim the nav down. On the mobile drawer the three content stops are followed by one full-width amber Submit an Event button. At `lg+` = horizontal route-map nav; below `lg` (phones and tablets) = hamburger that opens the sliding route-map drawer (see § 5). Sticky below `lg`, static at `lg+`. (World Cup nav link intentionally omitted until `/events/world-cup` exists, to avoid a dead link.)
 - `CredibilityStrip.astro`: shared "Supported by" (Medill, Project C, Meet Your Neighbor) / "Featured in" (Chicago Reader) logo strip, data-driven and used on both the homepage and the About page so the two never drift. Real orgs only (see § 8).
 - `TransitDivider.astro`: the 5-color stripe used between sections and at the top of the footer.
+- `NewsletterArticle.astro`: the on-site newsletter issue template. Takes `slug` and `bodyHtml`; reads the header, hero, credit, tags, previous/next rail, and the "Transfer here" similar-articles grid from `src/lib/articles.ts`. The body is printed with `set:html`, so the article typography lives in an `is:global` `.article-prose` block (transit-stop list markers, cayenne quote rule, mayaBlue link underlines, bordered `.embed-frame` for iframes).
 - `Marquee.astro`: structured LED ticker with pause/play, drag-to-scroll, reduced-motion support, constant pixels-per-second scroll, and dynamic data from `src/lib/ticker.ts`.
 - `SubscribeForm.astro`: the Beehiiv POST form. Reads `PUBLIC_BEEHIIV_URL` from env, falls back to `#BEEHIIV_EMBED_URL`. Accepts optional `caption` and `class` props.
 - `IssueCard.astro`: newsletter card with category, date, title, and read link. Hover translates and casts an Amber or Cayenne hard shadow.
-- `EventCard.astro`: Supabase event renderer. One unified bordered card for all events (Conductor's Pick is a badge, not a separate layout) plus a dashed giveaway ticket-stub. Venue-once, organizer dedupe, a labeled "Conductor's note" author-note pull-quote, `break-words` blurbs, `fixSpelling()` Türkiye normalization, `Details / RSVP` link + `Share` button, optional `recurrenceLabel` for collapsed series.
+- `EventCard.astro`: Supabase event renderer. One unified bordered card for all events (Conductor's Pick is a badge, not a separate layout) plus a dashed giveaway ticket-stub. Venue-once, organizer dedupe, a labeled "Conductor's note" author-note pull-quote, `break-words` blurbs, `fixSpelling()` Türkiye normalization, a title that links to the event's own page, an off-site `Details / RSVP` link + `Share` button, optional `recurrenceLabel` for collapsed series. Props: `event`, `recurrenceLabel`, `showTime`, `linkTitle`, `headingLevel`.
 - `EventDatePicker.astro`: brand-styled single-date calendar used by the events filter, rendered as a popover. Still supports an `inline` (open-in-place) prop from the retired floating-panel pattern, but `events.astro` (2026-07-11) only instantiates the one popover instance now.
 - `EventSelect.astro`: themed filter dropdown. Renders a native `<select>` on mobile and a custom listbox on desktop (`md+`), both backed by the same hidden native select. Used for the Category and Neighborhood filters. Props: `field`, `label`, `placeholder`, `options`, `inline` (the `inline` prop is likewise unused since the floating panel was removed).
 - `Footer.astro`: dark walnut footer with the brand wordmark, copy, "Find us" social row (Instagram), and "Follow the line" link column.
 - `TrainSplash.jsx`: React intro-gate overlay. As of 2026-07-11 (owner request) the train illustration, rails, sparks, speed lines, motion keyframes, and the entire audio engine are gone; the gate itself stays: seashell full-screen overlay with the wordmark block, a static "NEXT STOP: [destination]" LED sign (dynamic next-stop copy, including `/events` as `EVENTS`), an "Enter the platform" button, tap/Space/B/Escape dismissal, and the `brownLineIntroSeen` localStorage memory (returning visitors skip via the `splash-done` head script). Auto-dismisses after about 1.5s when the visitor is not interacting; manual skips fade in about 220ms; respects `prefers-reduced-motion`. **No-JS fail-safe:** a pure-CSS `splash-failsafe-hide` animation on `.train-splash-root` (present in the server-rendered HTML) fades the overlay out and drops `pointer-events` at 9s, so a visitor is never trapped if the script fails to hydrate.
 
 Pages live in `src/pages/`:
-- `index.astro`: hero, shared `CredibilityStrip`, Supabase-powered Upcoming Stops (leads with a Conductor's Pick), two-sided Browse/Submit band, optional Testimonials section (renders only when real quotes exist), RSS-powered recent dispatches grid, Support band, closing brand statement.
-- `about.astro`: project-first (what we're building) then the shared `CredibilityStrip` (for the investor-facing view), the founder section (portrait, bio, affiliations), values strip, business-model pull-quote kept lower, subscribe + support CTA.
+- `index.astro`: hero, shared `CredibilityStrip`, Supabase-powered Upcoming Stops (leads with a Conductor's Pick), two-sided Browse/Submit band, optional Testimonials section (renders only when real quotes exist), newsletter band (CTA to `/newsletter`), Support band (CTA to `/about#support`), closing brand statement.
+- `about.astro`: project-first (what we're building) then the shared `CredibilityStrip` (for the investor-facing view), the founder section (portrait, bio, affiliations), values strip, business-model pull-quote kept lower, then the consolidated sections moved off their own pages on 2026-08-09: Support (`#support`: the solidarity-fare model, $20/$50/$100 Stripe tiers, free vs $7/mo cards), Standards & Ethics (`#ethics`: the full policy, compacted into a two-column stack around the criteria grid), the perspective note band, and the subscribe CTA (`#subscribe`).
 - `events.astro`: Supabase-powered public events route board with static build data and client-side filtering by quick-filter chips (This week / This weekend / All upcoming / Free), search, a single-date calendar (jump), Category (diaspora tag), and Neighborhood. Recurring/multi-day events are collapsed into one card with a date range.
-- `support.astro`: reader-support page framed as a solidarity-fare model (everything stays free; monthly riders subsidize free access for everyone else). Three one-time "Give once" tiers ($20/$50/$100) wired to Stripe payment links, plus a "Ride monthly" section (free Street Level → Subscribe, and a $7/mo "Solidarity Fare" card). See `PRIVATE_README.md` for the confirmed Stripe link mapping. Note: the $7/mo Stripe checkout link still points at the retired $9 product and must be repointed in the Stripe dashboard.
+- `events/[id].astro`: one page per stop, built with `getStaticPaths()` over the same upcoming-plus-60-day window the board uses. Renders the shared `EventCard` as the page `h1` plus Event and BreadcrumbList structured data. See § 5 and § 10.
+- `support.astro`: noindexed meta-refresh redirect stub to `/about#support` (the support content moved onto the About page on 2026-08-09; the stub keeps old links and bookmarks working). See `PRIVATE_README.md` for the confirmed Stripe link mapping. Note: the $7/mo Stripe checkout link still points at the retired $9 product and must be repointed in the Stripe dashboard.
 - `privacy.astro`: plain-language privacy page (newsletter, submissions, analytics, payments). Fixes the former dead `#privacy` footer anchor.
 - `submit-event.astro`: public "submit an event" request form. Locked master-doc §7 copy: "Put your event on the map." headline, the two-line curated-by-a-human intro, "Who should submit" / "What we look for" blocks, a "7-10 days ahead" timing helper by the date field, and the "your stop is in the queue" confirmation. Conditional location fields (Chicago neighborhood / suburb), Cloudflare Turnstile captcha, and a honeypot. Posts to the `submit-event` edge function, which queues the request in `public.event_submissions` for review.
+- `newsletter/index.astro`: the Newsletter stop. Hero with `<SubscribeForm />` plus the RSS-powered "Recent dispatches" grid that used to live on the homepage (`grid-cols-1 md:grid-cols-2`, first card featured full-width, "View all" out to Beehiiv).
+- `newsletter/[slug].astro`: one page per published article, built with `getStaticPaths()` over `src/lib/articles.ts`. Issues migrated off Beehiiv keep their existing paths (`/newsletter/whose-world-cup`, `/newsletter/back-in-service-for-good`), which is what `MIGRATED_ISSUES` in `issues.ts` rewrites the homepage dispatch links to.
+- `admin/articles.astro`: internal articles admin portal. Password-gated list of every article (drafts included), a compose/edit form, publish toggle, delete, a self-contained rich-text body editor, and the same Publish live site deploy trigger. Minimal, noindexed, protected by Supabase RLS.
 - `admin/events.astro`: internal events admin portal for Gemini flyer scanning, single-event inserts, CSV imports, a live editable view of the full events table (edit/delete with realtime refresh and an on-demand "Publish live site" deploy trigger), and a review queue for public submissions (edit, approve into `public.events`, or reject). Minimal, noindexed, and protected by Supabase RLS.
-- `standards.astro`: editorial Standards & Ethics page. Linked from the footer. Event Submissions section links `/submit-event` (email as fallback).
+- `standards.astro`: noindexed meta-refresh redirect stub to `/about#ethics` (the Standards & Ethics content moved onto the About page on 2026-08-09).
 - `links.astro`: Link-in-Bio destination optimized for IG / TikTok in-app browser traffic. Uses `<Layout minimal>` so no site chrome (no Nav, Footer, top TransitDivider, or splash) renders. The noise overlay and ::selection still apply.
 
 Library modules live in `src/lib/`:
+- `articles.ts`: the single source for on-site newsletter issues. Fetches published rows from `public.articles` at build time (newest first), caches the promise for the whole build the way `ticker.ts` does, and exposes `getSortedArticles`, `getArticle`, `getPrevNext`, `getSimilar` (ranked by shared tags, then recency), `formatArticleDate`, and `renderArticleBody`. `renderArticleBody` swaps each `<hr class="transit-divider-slot" />` marker for the real TransitDivider markup and prefixes root-relative `href`/`src` values with `BASE_URL` (only relevant to the GitHub Pages subpath build).
+- `articles-fallback.ts`: the two migrated issues with their body HTML, in the repo. `articles.ts` falls back to it when the Supabase query errors or returns zero rows, so a build never half-breaks (no missing article pages) if the database is unreachable or not yet seeded.
 - `issues.ts`: fetches and parses Beehiiv RSS, formats dates, alternates issue card accents, and falls back to a static issue list.
 - `supabase.ts`: creates the Supabase browser/build client and exports the `TransitEvent` interface (which includes `neighborhood` and `start_time`; the free-text `display_date` column was removed).
 - `ticker.ts`: composes ticker items from up to 5 hand-picked event highlights (Conductor's Picks first, then soonest, deduped by title so a recurring series shows once) drawn from the next 21 days; no longer includes a "Latest Issue" item. Derives its date labels from `event_date` via `dates.ts`; item text is the event title only (no venue), Türkiye/TÜRKIYE-normalized.
-- `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped.
+- `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped. Also exports `formatStartTime` / `formatTimeRange`, `getChicagoDateString`, `addDays` (UTC date math), and `PAST_EVENT_WINDOW_DAYS` (60), the one place the past-stops window is defined for both the board and the detail pages.
+- `seo.ts`: build-time structured data (JSON-LD) builders plus the event URL scheme. Pure functions, so a rebuild never churns output: `buildEventSlug` / `buildEventPath` / `buildEventUrl`, `buildEventMetaDescription`, `buildEventJsonLd`, `buildSiteJsonLd` (Organization + WebSite), `buildBreadcrumbJsonLd`, `buildItemListJsonLd`, `buildArticleJsonLd`, and `stringifyJsonLd` (escapes `<` so a stray `</script>` in listing text cannot close the tag early). See § 11.
 - `locations.ts`: dropdown data for the submit form (the diaspora `DIASPORA_TAGS`, the four `LOCATION_TYPES`, the 77 Chicago `NEIGHBORHOOD_GROUPS` by side, and `SUBURBS`).
 
 The `Layout` component accepts optional `minimal?: boolean` (default `false`) and `noindex?: boolean` (default `false`) props. Set `minimal` when a page should render standalone without the global Nav, top TransitDivider, Footer, Marquee, or TrainSplash. Set `noindex` for internal or utility surfaces.
@@ -268,17 +296,17 @@ Current top-to-bottom structure:
 3. Upcoming Stops: inside-train LED `Marquee` leading with the next Conductor's Pick, then the route timeline of `EventCard`s (curated-first), terminus link "See all stops" (to `/events`, which defaults to All upcoming), closing `<TransitDivider />`.
 4. Two-sided band: "Feeling social? -> Browse events" (Maya Blue) and "Hosting? -> Submit an event" (Amber), the platform/network story.
 5. Testimonials: renders only when `testimonials` has real entries (empty by default; no fabricated quotes).
-6. Recent dispatches grid: `grid-cols-1 md:grid-cols-2`, top row featured (full width), from Beehiiv RSS.
-7. Support band (Dark Walnut): "Fund the line" with a Support CTA to `/support`.
+6. Newsletter band (bordered card): "Catch up on recent dispatches" with a Celadon CTA to `/newsletter` (the dispatches grid itself moved there on 2026-08-09).
+7. Support band (Dark Walnut): "Fund the line" with a Support CTA to `/about#support`.
 8. Closing brand statement: heavy `font-heading` headline, supporting paragraph, "What we're building" CTA to `/about`.
 
 Section heads (Upcoming Stops, Recent dispatches) are `font-semibold` at ~40px; the hero H1 and the closing statement stay heavy (see § 3).
 
 ### About (`/about`)
-Project first: open with what The Brown Line is and what it covers, then a "Meet the founder" section (portrait, bio, affiliations strip), values strip (numbered with `font-heading` numerals), the creator-economy pull-quote with the heavier business-model language kept lower, then `<SubscribeForm />` plus a Support link. The top should read public, not pitch-deck.
+Project first: open with what The Brown Line is and what it covers, then a "Meet the founder" section (portrait, bio, affiliations strip), values strip (numbered with `font-heading` numerals), the creator-economy pull-quote with the heavier business-model language kept lower. Since 2026-08-09 the page also carries the consolidated Support section (`#support`), the full Standards & Ethics policy (`#ethics`), the perspective-note band, and the closing `<SubscribeForm />` CTA (`#subscribe`). Anchored sections carry `scroll-mt-24 lg:scroll-mt-6` so deep links land clear of the sticky mobile header. The top should read public, not pitch-deck. Standards copy follows the same no-em-dash rule as the rest of the site (§ 7).
 
-### Standards (`/standards`)
-Long-form editorial. Body text uses Montserrat at `max-w-3xl`. Standards copy follows the same no-em-dash rule as the rest of the site (§ 7); the earlier founder-voice exception was removed on 2026-06-21.
+### Newsletter (`/newsletter`)
+Subscribe-first: hero with `<SubscribeForm />`, then the RSS-powered Recent dispatches grid (first card featured full-width) with a "View all" link out to Beehiiv.
 
 ### Links (`/links`)
 Mobile-first Link-in-Bio destination served at IG / TikTok in-app browsers, designed to read just as intentionally on desktop. Uses `<Layout minimal>` so no `Nav`, `Footer`, `TrainSplash`, or top divider renders. Container: `max-w-md md:max-w-lg mx-auto min-h-[calc(100vh-6px)] px-6 md:px-10 pt-8 md:pt-16 pb-12 md:pb-16 flex flex-col`. Structure top to bottom:
@@ -312,6 +340,9 @@ Client-side filter behavior:
 - Neighborhood filters by exact match; the control only appears once some events have a neighborhood.
 - Result count reflects the upcoming board only; the past-stops archive is static and unfiltered, so it carries no `data-event-*` hooks and never moves the count.
 
+### Event Detail (`/events/<slug>`)
+One stop, at reading width, with full site chrome. Back link to that card's anchor on the board, "This stop" eyebrow, departure tag (date + time), the shared `EventCard` as the page `h1`, `<TransitDivider />`, then "See all stops" and a submit-an-event link. Adding an event is an admin action; the page appears on the next build. See § 5 for the slug scheme and § 11 for the Event JSON-LD.
+
 ### Events Admin (`/admin/events`)
 Internal page using `<Layout minimal noindex>`. Structure:
 1. Logo, "Internal platform" eyebrow, H1, and lock button.
@@ -325,6 +356,19 @@ Internal page using `<Layout minimal noindex>`. Structure:
 
 The page is not a full auth system. It is a static admin tool backed by RLS. Do not put passwords or hashes in tracked files; use the ignored `PRIVATE_README.md` for recovery details.
 
+### Articles Admin (`/admin/articles`)
+Internal page using `<Layout minimal noindex>`. Structure:
+1. Logo, "Internal platform" eyebrow, H1, link across to the events admin, and lock button.
+2. Login panel with password input.
+3. Transit divider.
+4. "Composing" panel: title, slug (with the `/newsletter/<slug>` preview), category, comma-separated tags with a live chip preview, summary, SEO description, hero URL/alt/credit, Chicago publish datetime, a Published checkbox, and the body toolbar plus editor.
+5. "On the line" panel: article count with a draft tally, Refresh, Publish live site, and the article rows.
+
+Same caveat as the events admin: it is a static tool backed by RLS, not an auth system.
+
+### Newsletter Article (`/newsletter/<slug>`)
+Reading page for an on-site issue, generated from a `public.articles` row. Structure: category kicker, headline, publish date, tag chips, bordered hero with the offset transit-divider corner and optional credit line, the article body at `max-w-3xl`, a transit divider, the previous/next stop rail, the "Transfer here" similar-articles grid, and the subscribe CTA. Adding an issue is an admin action, not a repo change.
+
 ## 11. Infrastructure & Data
 
 ### Supabase
@@ -333,6 +377,7 @@ Production project ref: `xuursvzrlbqiwcevzhao`. Public API URL: `https://xuursvz
 Tables:
 - `public.events`: source of public event data. RLS enabled. Public `SELECT` allowed. `INSERT` allowed only when the RLS check confirms the admin password header and required fields. Includes an optional `image_url` column (photo/flyer link; CHECK-constrained to `http(s)`), rendered on the public card when present.
 - `public.event_submissions`: queue of public "submit an event" requests. Mirrors the `events` columns (including `image_url`, same `http(s)` CHECK) plus submitter contact (`submitter_name`, `submitter_email`), raw spec location fields (`location_type`, `chicago_neighborhood`, `suburb`, `address`), and review metadata (`status` pending/approved/rejected, `reviewed_at`, `approved_event_id`). RLS enabled with NO public insert; the public can only write through the `submit-event` edge function (service role). Admin SELECT/UPDATE/DELETE are gated by the same `private.events_admin_password_matches()` helper used for events inserts.
+- `public.articles`: source of the on-site newsletter issues (`slug`, `title`, `category`, `tags text[]`, `summary`, `description`, `body_html`, `hero_image_url` (CHECK: `http(s)` or a site-relative `/` path, since hero art is committed under `public/`), `hero_alt`, `hero_credit_html`, `published_at timestamptz`, `is_published`, `created_at`/`updated_at` with an update trigger). RLS enabled. Public `SELECT` is limited to `is_published`, so drafts never reach a build. Admin `SELECT`/`INSERT`/`UPDATE`/`DELETE` are gated by the same `private.events_admin_password_matches()` helper the events tables use, so one admin password covers both portals. The schema and its seed ship as `supabase/articles.sql` and `supabase/articles-seed.sql`, run by hand in the Supabase SQL editor (this project applies DDL directly; there is no migrations directory).
 - `private.events_admin_credentials`: one-row private table containing the admin password salt/hash. RLS enabled. Direct access denied to public client roles. The password is checked by `private.events_admin_password_matches()`, which SHA-256 hashes the `x-admin-password` request header plus the stored salt and compares to the stored hash.
 
 Tag taxonomy: `public.events.tags` uses a fixed set of nine diaspora community tags: South Asian, SWANA, East Asian, Southeast Asian, Black Diaspora, Latine, Afro-Latine, Indigenous, Cross-cultural. These power the events Category filter and are the only values the submit form and admin should use ("Cross-cultural" is labelled "Multi-diaspora / Cross-cultural" in the submit dropdown).
@@ -368,6 +413,22 @@ The site deploys through `.github/workflows/deploy.yml`.
 - Supabase URL and publishable key are supplied at build time.
 - `PUBLIC_GA_MEASUREMENT_ID` (optional) is read from a GitHub repo variable and passed through; when set, the GA4 script loads.
 
+### Structured Data (JSON-LD)
+Every schema is built at build time in `src/lib/seo.ts` and printed with `<script type="application/ld+json" set:html={stringifyJsonLd(...)}>`. `stringifyJsonLd` escapes `<`, so a stray `</script>` inside an event description or article body can never close the tag early. Empty values are left out rather than emitted blank.
+
+| Page | Schemas |
+| --- | --- |
+| Every page (`Layout.astro`) | `Organization` + `WebSite` in one `@graph`, with the logo and `sameAs` Instagram. The `@id`s are what other schemas point at. |
+| `/events` | `ItemList` of the upcoming board, in the order the page prints it, pointing at each stop's detail page. |
+| `/events/<slug>` | `Event` + `BreadcrumbList` (Home > Events > title). |
+| `/newsletter/<slug>` | `Article` + `BreadcrumbList` (Home > Newsletter > title). Author and publisher are both the Organization, since the publication writes as a masthead. |
+
+Event schema notes:
+- `startDate` / `endDate` are Chicago wall-clock stamps with a real UTC offset (`2026-09-05T17:00:00-05:00`), resolved through the platform zone data so daylight saving is handled. A row with no `start_time` becomes a date-only (all-day) `startDate`, and `endDate` is only emitted when the row actually has an `end_time` (an end at or before the start rolls to the next day, matching the calendar links).
+- `location` is a `Place` with the deduped venue name, a Chicago `PostalAddress`, and the neighborhood as `containedInPlace`.
+- `offers` are parsed from the free-text `cost_info`: one dollar amount becomes an `Offer`, two or more an `AggregateOffer`, and a listing that only says "free" is priced at 0. Anything unparseable ("Donations welcome") is omitted rather than guessed. `isAccessibleForFree` is only claimed when the line names no dollar amount at all, so "Free entry, $10 workshop" never reads as free.
+- `image` is only present when the row has an `image_url`, and `organizer` only when it adds something beyond the venue (the same dedupe and research-phrasing nets the card uses).
+
 ### Analytics (GA4)
 `Layout.astro` loads Google Analytics 4 only when `PUBLIC_GA_MEASUREMENT_ID` (a `G-XXXXXXXXXX` id) is set, so the site ships no tracker by default.
 - **Consent:** Consent Mode v2 sets `analytics_storage: 'denied'` (and ad storage denied) by default. A minimal bottom consent banner (`#bl-consent`) offers Accept / Decline, stores the choice in `localStorage` (`blAnalyticsConsent`), and on Accept calls `gtag('consent','update',{analytics_storage:'granted'})`. The banner only appears until a choice is made. Links to `/privacy`.
@@ -395,6 +456,17 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-08-09 (per-event pages + structured data):** Every stop got its own address on the web, and every page got the machine-readable version of what it says.
+  - **New route `src/pages/events/[id].astro`:** one page per event, built with `getStaticPaths()` over the same upcoming-plus-60-day window `/events` uses, so no card on the board (or in the past-stops archive) can link to a page that was not built. Slug is a readable title slug with the row uuid appended.
+  - **Event card titles now link** to that page, with the site's `.link-transit` underline. The off-site `Details / RSVP ↗` button is unchanged, so the card has one internal destination and one external one. New `linkTitle` and `headingLevel` props let the detail page render its own card title as the page `h1` without linking to itself. The homepage rail and the events board pick this up for free.
+  - **JSON-LD everywhere** (`src/lib/seo.ts`): `Organization` + `WebSite` on every page from `Layout.astro`, `Event` + `BreadcrumbList` on each detail page, `ItemList` on the events board, `Article` + `BreadcrumbList` on each newsletter issue. Event times carry a real Chicago UTC offset, offers are parsed from `cost_info` only when a price is actually named, and the serializer escapes `<` so listing text cannot break out of the script tag. See § 11.
+  - **Shared date helpers:** `addDays` and `PAST_EVENT_WINDOW_DAYS` moved into `src/lib/dates.ts`, so the board and the detail-page route read the past window from one place.
+- **2026-08-09 (nav consolidation):** Slimmed the nav from seven destinations to four (owner request: too many pages). Support, Ethics, and Board here merged into `/about` as anchored sections (`#support` with the Stripe tiers and solidarity-fare cards, `#ethics` with the full policy compacted into a two-column stack around the criteria grid, plus the perspective band; `#subscribe` already existed). `/support` and `/standards` are now noindexed meta-refresh redirect stubs to those anchors (kept out of the sitemap) so old links keep working. Newsletter got promoted from a homepage section to its own `/newsletter` page (subscribe hero + the Recent dispatches grid); the homepage section was replaced with a bordered newsletter band linking there. Nav route is Events, Newsletter, About, Submit an Event; the drawer keeps only the amber Submit CTA button (outline/filled variants removed). Footer gained a Newsletter link and points Support / Standards & Ethics at the About anchors; the article breadcrumb and "All dispatches" links moved from `/#newsletter` to `/newsletter`.
+- **2026-08-09 (articles moved into Supabase):** On-site newsletter issues stopped being code.
+  - **New `public.articles` table** with the same password-gated RLS the events tables use, plus a public read policy limited to `is_published`. Ships as `supabase/articles.sql` and `supabase/articles-seed.sql` for the owner to run in the Supabase SQL editor.
+  - **Dynamic route:** the two hand-written article pages were replaced by `src/pages/newsletter/[slug].astro` with `getStaticPaths()`. Both URLs are unchanged, so the homepage dispatch rewrite (`MIGRATED_ISSUES`) still resolves. `NewsletterArticle.astro` now takes a `bodyHtml` prop instead of a slot.
+  - **Fallback by design:** `src/lib/articles.ts` falls back to the in-repo `articles-fallback.ts` (the same two issues, body HTML included) when the query errors or the table is empty, so the build never half-breaks before the SQL is applied or if Supabase is down.
+  - **New `/admin/articles` portal:** same auth, styling, and publish button as the events portal, with a draft-aware article list, publish toggle, delete, a shared new/edit form, and a self-contained contenteditable rich-text editor (no editor library, no CDN) including an HTML view and a transit-divider insert. The two admin portals now cross-link.
 - **2026-07-11 (Round 3 review pass):** Owner's Round 3 checklist, applied to the website and mirrored in the iOS app in the same pass.
   - **Brand line swap:** "Chicago's Global South culture, in motion" became "Underground culture, elevated" everywhere it appeared (homepage hero eyebrow, mobile drawer tagline, marquee fallback item, `/links` tagline). The app's home masthead eyebrow (formerly "All stops, all stories") now matches.
   - **"Board here":** every Subscribe CTA button label became "Board here" (desktop nav, mobile drawer, the support page's free-tier card, and the app's subscribe tab). The Beehiiv form's no-JS fallback link keeps its descriptive label.

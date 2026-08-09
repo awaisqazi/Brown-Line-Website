@@ -1,0 +1,71 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SubscribeForm from '../../components/SubscribeForm.astro';
+import IssueCard from '../../components/IssueCard.astro';
+import TransitDivider from '../../components/TransitDivider.astro';
+import { getRecentIssues } from '../../lib/issues';
+
+const issues = await getRecentIssues();
+
+const description =
+  'Read The Brown Line newsletter: weekly dispatches on Chicago Global South diaspora arts, culture, and community. Subscribe free and ride along.';
+---
+<Layout title="Newsletter · The Brown Line" description={description}>
+  {/* ---------- Hero + subscribe ---------- */}
+  <section id="subscribe" class="px-6 pt-16 md:pt-24 pb-12">
+    <div class="max-w-3xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+        The newsletter
+      </p>
+      <h1 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[1.02] tracking-tight text-balance">
+        One stop a week in your inbox.
+      </h1>
+      <p class="font-body text-darkWalnut/85 text-lg md:text-xl mt-8 leading-relaxed">
+        Arts, culture, and community from the corners of Chicago you actually want to know. Free,
+        always.
+      </p>
+      <div class="mt-10 flex justify-center">
+        <SubscribeForm caption="" />
+      </div>
+    </div>
+  </section>
+
+  <div class="max-w-4xl mx-auto px-6">
+    <TransitDivider />
+  </div>
+
+  {/* ---------- Recent dispatches (moved here from the homepage) ---------- */}
+  <section class="px-6 py-16 md:py-24">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex items-end justify-between flex-wrap gap-4 mb-12">
+        <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] tracking-tight leading-none">
+          Recent dispatches
+        </h2>
+        <a
+          href="https://www.thebrownline.co"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="link-transit font-body text-darkWalnut text-sm font-bold uppercase tracking-widest"
+        >
+          View all &nearr;
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {issues.map((issue, i) => (
+          <div class:list={[i === 0 ? 'md:col-span-2' : '']}>
+            <IssueCard
+              category={issue.category}
+              date={issue.date}
+              datetime={issue.publishedAt ? new Date(issue.publishedAt).toISOString().slice(0, 10) : undefined}
+              title={issue.title}
+              href={issue.href}
+              accent={issue.accent as 'amber' | 'cayenne'}
+              featured={i === 0}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

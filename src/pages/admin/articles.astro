@@ -1,0 +1,1154 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import TransitDivider from '../../components/TransitDivider.astro';
+
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+const supabasePublishableKey = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
+const base = import.meta.env.BASE_URL;
+
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error('Missing Supabase environment variables.');
+}
+
+const inputClass =
+  'mt-2 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-sm text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue';
+const labelClass = 'block font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65';
+const buttonClass =
+  'border-2 border-darkWalnut bg-cayenne px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-seashell shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const quietButtonClass =
+  'border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const fieldMarkerClass = 'ml-2 text-[9px] tracking-widest';
+const toolbarButtonClass =
+  'border-2 border-darkWalnut bg-[#FDFBF7] px-2.5 py-1.5 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut transition-colors hover:bg-amber focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const crossLinkClass =
+  'inline-flex border-2 border-darkWalnut bg-amber px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+
+// The kickers the newsletter has used so far. The field stays free text so a
+// new section does not need a code change; these are only quick picks.
+const CATEGORY_OPTIONS = ['Culture', 'Global South'];
+
+// Body toolbar. `command` maps to the editor's handler, not directly to a
+// browser command, so the divider and HTML-view actions live in the same list.
+const BODY_TOOLS = [
+  { command: 'bold', label: 'Bold' },
+  { command: 'italic', label: 'Italic' },
+  { command: 'h2', label: 'H2' },
+  { command: 'h3', label: 'H3' },
+  { command: 'link', label: 'Link' },
+  { command: 'bullets', label: 'Bullets' },
+  { command: 'numbers', label: 'Numbers' },
+  { command: 'quote', label: 'Quote' },
+  { command: 'divider', label: 'Divider' },
+  { command: 'clear', label: 'Clear formatting' },
+];
+---
+
+<Layout
+  title="Articles Admin | The Brown Line"
+  description="Internal article management for The Brown Line."
+  minimal
+  noindex
+>
+  <section
+    data-admin-articles-app
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabasePublishableKey}
+    data-functions-base={`${supabaseUrl}/functions/v1`}
+    data-site-base={base}
+    class="min-h-screen px-6 py-8 md:px-10 md:py-12"
+  >
+    <div class="mx-auto max-w-6xl">
+      <div class="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
+        <div>
+          <img src={`${base}logos/logo.png`} alt="The Brown Line" class="h-12 w-auto" />
+          <p class="mt-8 font-body text-xs font-bold uppercase tracking-[0.3em] text-cayenne">
+            Internal platform
+          </p>
+          <h1 class="mt-3 font-heading text-[2.75rem] leading-none text-darkWalnut md:text-6xl">
+            Articles admin portal
+          </h1>
+          <p class="mt-5 max-w-2xl font-body text-base leading-relaxed text-darkWalnut/75">
+            Write a newsletter issue for the site, edit an existing one, or hold it as a draft.
+            Every change saves to the database instantly; the public pages rebuild every 4 hours,
+            or push them out right away with Publish live site.
+          </p>
+          <p class="mt-5">
+            <a href={`${base}admin/events`} class={crossLinkClass}>Go to events admin</a>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          data-admin-logout
+          hidden
+          class="self-start border-2 border-darkWalnut bg-seashell px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+        >
+          Lock portal
+        </button>
+      </div>
+
+      <div class="mt-10">
+        <TransitDivider />
+      </div>
+
+      <section
+        data-login-panel
+        class="mt-10 max-w-xl border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7"
+      >
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          Staff only
+        </p>
+        <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+          Enter the line room.
+        </h2>
+        {/* onsubmit guard: if the module script has not attached yet, a native submit
+            would GET the page with ?password=... in the URL. Block it outright. */}
+        <form data-password-form class="mt-6 space-y-4" onsubmit="return false">
+          <label class={labelClass} for="admin-password">
+            Password
+            <input
+              id="admin-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              class={inputClass}
+              required
+            />
+          </label>
+          <button type="submit" data-login-submit class={buttonClass}>Unlock admin</button>
+          <p data-login-status class="font-body text-sm font-bold text-cayenne" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section data-admin-portal hidden class="mt-10 space-y-8">
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+                Composing
+              </p>
+              <h2 data-form-heading class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+                New article
+              </h2>
+            </div>
+            <button type="button" data-form-reset hidden class={quietButtonClass}>
+              Cancel edit
+            </button>
+          </div>
+
+          {/* novalidate: native validation stops at the first empty required field.
+              The submit handler collects every missing one and names them all in a
+              single message instead. */}
+          <form data-article-form novalidate class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <label class={`${labelClass} md:col-span-2`} for="article-title">
+              Title
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="article-title" data-field="title" type="text" class={inputClass} required />
+            </label>
+
+            <label class={labelClass} for="article-slug">
+              Slug
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input
+                id="article-slug"
+                data-field="slug"
+                type="text"
+                placeholder="whose-world-cup"
+                class={inputClass}
+                required
+              />
+              <span class="mt-2 block font-body text-[10px] font-normal normal-case tracking-normal text-darkWalnut/60">
+                The page URL: /newsletter/<span data-slug-preview>your-slug</span>. Generated from the
+                title until you type your own. It cannot be changed later without breaking links.
+              </span>
+            </label>
+
+            <label class={labelClass} for="article-category">
+              Category
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input
+                id="article-category"
+                data-field="category"
+                list="article-category-options"
+                type="text"
+                placeholder="Culture"
+                class={inputClass}
+                required
+              />
+              <datalist id="article-category-options">
+                {CATEGORY_OPTIONS.map((option) => <option value={option}></option>)}
+              </datalist>
+              <span class="mt-2 block font-body text-[10px] font-normal normal-case tracking-normal text-darkWalnut/60">
+                Pick a usual kicker or type a new one.
+              </span>
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="article-tags">
+              Tags
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Comma separated</span>
+              <input
+                id="article-tags"
+                data-field="tags"
+                type="text"
+                placeholder="Watch parties, Neighborhood guides, Cross-cultural"
+                class={inputClass}
+              />
+            </label>
+
+            <div class="md:col-span-2">
+              <p class={labelClass}>Tag preview</p>
+              <div data-tag-preview class="mt-2 flex flex-wrap gap-2">
+                <span class="font-body text-xs text-darkWalnut/50">No tags yet.</span>
+              </div>
+            </div>
+
+            <label class={`${labelClass} md:col-span-2`} for="article-summary">
+              Summary
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Shown on the Transfer here cards</span>
+              <textarea id="article-summary" data-field="summary" rows="3" class={inputClass}></textarea>
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="article-description">
+              Description (SEO)
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Share card and search results</span>
+              <input id="article-description" data-field="description" type="text" class={inputClass} />
+            </label>
+
+            <label class={`${labelClass} md:col-span-2`} for="article-hero-url">
+              Hero image URL
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input
+                id="article-hero-url"
+                data-field="hero_image_url"
+                type="text"
+                placeholder="/images/newsletter/your-slug/hero.png or https://..."
+                class={inputClass}
+              />
+            </label>
+
+            <label class={labelClass} for="article-hero-alt">
+              Hero alt text
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input id="article-hero-alt" data-field="hero_alt" type="text" class={inputClass} />
+            </label>
+
+            <label class={labelClass} for="article-hero-credit">
+              Hero credit HTML
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+              <input
+                id="article-hero-credit"
+                data-field="hero_credit_html"
+                type="text"
+                placeholder={'<a href="...">Header art credit: Name</a>'}
+                class={inputClass}
+              />
+            </label>
+
+            <label class={labelClass} for="article-published-at">
+              Publish date and time
+              <span class={`${fieldMarkerClass} text-cayenne`}>Chicago time</span>
+              <input
+                id="article-published-at"
+                data-field="published_at"
+                type="datetime-local"
+                class={inputClass}
+                required
+              />
+            </label>
+
+            <div class="flex items-end">
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+                <input data-field="is_published" type="checkbox" class="h-4 w-4 accent-cayenne" checked />
+                Published
+              </label>
+            </div>
+
+            <div class="md:col-span-2">
+              <p class={labelClass}>
+                Body<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              </p>
+
+              <div class="mt-2 flex flex-wrap gap-2 border-2 border-b-0 border-darkWalnut bg-seashell p-2">
+                {BODY_TOOLS.map((tool) => (
+                  <button type="button" data-body-command={tool.command} class={toolbarButtonClass}>
+                    {tool.label}
+                  </button>
+                ))}
+                <button type="button" data-body-html-toggle class={toolbarButtonClass}>
+                  HTML view
+                </button>
+              </div>
+
+              <div
+                data-body-editor
+                contenteditable="true"
+                role="textbox"
+                aria-multiline="true"
+                aria-label="Article body"
+                class="admin-body-editor min-h-[24rem] w-full overflow-y-auto border-2 border-darkWalnut bg-[#FDFBF7] p-4 font-body text-sm leading-relaxed text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              ></div>
+
+              <textarea
+                data-body-source
+                hidden
+                rows="20"
+                spellcheck="false"
+                aria-label="Article body HTML"
+                class="w-full border-2 border-darkWalnut bg-[#FDFBF7] p-4 font-mono text-xs leading-relaxed text-darkWalnut focus:outline-none focus:ring-2 focus:ring-mayaBlue"
+              ></textarea>
+
+              <p class="mt-2 font-body text-[11px] leading-relaxed text-darkWalnut/60">
+                Divider drops the rainbow transit rule between sections. Pasted text loses its
+                source styling on purpose, so it inherits the site's article typography.
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 border-t-2 border-dashed border-darkWalnut/35 pt-4 md:col-span-2">
+              <button type="submit" data-article-submit class={buttonClass}>Save article</button>
+              <p data-article-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </div>
+
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+                On the line
+              </p>
+              <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+                All articles <span data-list-count class="font-body text-base align-middle"></span>
+              </h2>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" data-list-refresh class={quietButtonClass}>Refresh</button>
+              <button type="button" data-publish class={buttonClass}>Publish live site</button>
+            </div>
+          </div>
+
+          <p data-publish-status class="mt-4 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+
+          <div data-list class="mt-6 space-y-3"></div>
+          <p data-list-status class="mt-4 font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <template data-article-row-template>
+        <article class="border-2 border-darkWalnut bg-seashell shadow-[3px_3px_0_#642713]">
+          <div class="flex flex-wrap items-center gap-3 p-4">
+            <div class="min-w-[8.5rem] border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 text-center font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut">
+              <span data-row-date></span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="truncate font-body text-sm font-bold text-darkWalnut">
+                <span data-row-title></span>
+                <span data-row-draft hidden class="ml-2 border-2 border-darkWalnut bg-amber px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest">
+                  Draft
+                </span>
+              </p>
+              <p class="truncate font-body text-xs text-darkWalnut/65">
+                <span data-row-slug></span>
+                <span data-row-category class="ml-2 font-bold uppercase tracking-widest text-cayenne"></span>
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                data-row-toggle
+                class="border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60"
+              ></button>
+              <button
+                type="button"
+                data-row-edit
+                class="border-2 border-darkWalnut bg-amber px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+              >Edit</button>
+              <button
+                type="button"
+                data-row-delete
+                class="border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenne transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60"
+              >Delete</button>
+            </div>
+          </div>
+        </article>
+      </template>
+    </div>
+  </section>
+</Layout>
+
+<style is:global>
+  [data-admin-articles-app] [hidden] {
+    display: none !important;
+  }
+
+  /* The editor previews the article's own shape, not the finished typography:
+     enough structure to see headings, lists, and quotes while writing. */
+  .admin-body-editor > * + * {
+    margin-top: 0.85rem;
+  }
+
+  .admin-body-editor h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .admin-body-editor h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .admin-body-editor ul {
+    list-style: disc;
+    padding-left: 1.4rem;
+  }
+
+  .admin-body-editor ol {
+    list-style: decimal;
+    padding-left: 1.4rem;
+  }
+
+  .admin-body-editor blockquote {
+    border-left: 4px solid #F35A0F;
+    padding-left: 1rem;
+    font-style: italic;
+  }
+
+  .admin-body-editor a {
+    color: #642713;
+    text-decoration: underline;
+    text-decoration-color: #5BC3FF;
+    text-decoration-thickness: 2px;
+  }
+
+  /* The divider marker is stored as a bare hr; show it as the rainbow rule it
+     becomes on the public page. */
+  .admin-body-editor hr.transit-divider-slot {
+    height: 6px;
+    border: 0;
+    margin: 1.5rem 0;
+    background: linear-gradient(
+      to right,
+      #F79CD0 0%,    #F79CD0 20%,
+      #5BC3FF 20%,   #5BC3FF 40%,
+      #90D393 40%,   #90D393 60%,
+      #FFBC29 60%,   #FFBC29 80%,
+      #F35A0F 80%,   #F35A0F 100%
+    );
+  }
+</style>
+
+<script>
+  import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+  type ArticleRow = {
+    id: string;
+    slug: string;
+    title: string;
+    category: string;
+    tags: string[] | null;
+    summary: string | null;
+    description: string | null;
+    body_html: string | null;
+    hero_image_url: string | null;
+    hero_alt: string | null;
+    hero_credit_html: string | null;
+    published_at: string;
+    is_published: boolean;
+  };
+
+  type ArticleRecord = Omit<ArticleRow, 'id'>;
+
+  const app = document.querySelector('[data-admin-articles-app]') as HTMLElement | null;
+
+  if (app) {
+    const supabaseUrl = app.dataset.supabaseUrl ?? '';
+    const supabaseKey = app.dataset.supabaseKey ?? '';
+    const functionsBase = app.dataset.functionsBase ?? '';
+    let adminSupabase: SupabaseClient | null = null;
+    // Kept in memory only, same threat model as the events portal: the publish
+    // endpoint re-verifies it server-side on every call.
+    let adminPassword = '';
+    let articles: ArticleRow[] = [];
+    // The row being edited, or null while composing a new article.
+    let editingId: string | null = null;
+    // Cleared once the author types their own slug, so retitling stops
+    // rewriting a slug that is already published.
+    let slugFollowsTitle = true;
+
+    const loginPanel = app.querySelector('[data-login-panel]') as HTMLElement | null;
+    const portal = app.querySelector('[data-admin-portal]') as HTMLElement | null;
+    const passwordForm = app.querySelector('[data-password-form]') as HTMLFormElement | null;
+    const loginSubmit = app.querySelector('[data-login-submit]') as HTMLButtonElement | null;
+    const loginStatus = app.querySelector('[data-login-status]') as HTMLElement | null;
+    const logoutButton = app.querySelector('[data-admin-logout]') as HTMLButtonElement | null;
+    const articleForm = app.querySelector('[data-article-form]') as HTMLFormElement | null;
+    const articleSubmit = app.querySelector('[data-article-submit]') as HTMLButtonElement | null;
+    const articleStatus = app.querySelector('[data-article-status]') as HTMLElement | null;
+    const formHeading = app.querySelector('[data-form-heading]') as HTMLElement | null;
+    const formResetButton = app.querySelector('[data-form-reset]') as HTMLButtonElement | null;
+    const slugPreview = app.querySelector('[data-slug-preview]') as HTMLElement | null;
+    const tagPreview = app.querySelector('[data-tag-preview]') as HTMLElement | null;
+    const bodyEditor = app.querySelector('[data-body-editor]') as HTMLElement | null;
+    const bodySource = app.querySelector('[data-body-source]') as HTMLTextAreaElement | null;
+    const bodyHtmlToggle = app.querySelector('[data-body-html-toggle]') as HTMLButtonElement | null;
+    const listEl = app.querySelector('[data-list]') as HTMLElement | null;
+    const listStatus = app.querySelector('[data-list-status]') as HTMLElement | null;
+    const listCount = app.querySelector('[data-list-count]') as HTMLElement | null;
+    const listRefresh = app.querySelector('[data-list-refresh]') as HTMLButtonElement | null;
+    const publishButton = app.querySelector('[data-publish]') as HTMLButtonElement | null;
+    const publishStatus = app.querySelector('[data-publish-status]') as HTMLElement | null;
+    const rowTemplate = app.querySelector('[data-article-row-template]') as HTMLTemplateElement | null;
+
+    function field(name: string) {
+      return articleForm?.querySelector(`[data-field="${name}"]`) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+    }
+
+    function cleanText(value: unknown) {
+      return typeof value === 'string' ? value.trim() : '';
+    }
+
+    function nullableText(value: unknown) {
+      const clean = cleanText(value);
+      return clean.length > 0 ? clean : null;
+    }
+
+    function setInlineStatus(el: HTMLElement | null, message: string, isError = false) {
+      if (!el) return;
+      el.textContent = message;
+      el.classList.toggle('text-cayenne', isError);
+      el.classList.toggle('text-darkWalnut', !isError);
+    }
+
+    // Disable a button and show progress text while `work` runs.
+    async function withBusy<T>(button: HTMLButtonElement | null, busyLabel: string, work: () => Promise<T>) {
+      const restore = button?.textContent ?? '';
+      if (button) {
+        button.disabled = true;
+        button.textContent = busyLabel;
+      }
+      try {
+        return await work();
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = restore;
+        }
+      }
+    }
+
+    function createAdminClient(password: string) {
+      return createClient(supabaseUrl, supabaseKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        global: {
+          headers: {
+            'x-admin-password': password,
+          },
+        },
+      });
+    }
+
+    function setUnlocked(isUnlocked: boolean) {
+      if (loginPanel) loginPanel.hidden = isUnlocked;
+      if (portal) portal.hidden = !isUnlocked;
+      if (logoutButton) logoutButton.hidden = !isUnlocked;
+      if (isUnlocked) {
+        resetForm();
+        void loadArticles();
+      } else {
+        // Locking clears the draft in the editor too: it is unsaved work that
+        // the next person at this browser should not inherit.
+        resetForm();
+        articles = [];
+        if (listEl) listEl.innerHTML = '';
+        if (listCount) listCount.textContent = '';
+        setInlineStatus(listStatus, '');
+        setInlineStatus(publishStatus, '');
+        setInlineStatus(articleStatus, '');
+      }
+    }
+
+    /* ---------- Chicago publish time ---------- */
+
+    // Minutes America/Chicago is ahead of UTC at `date` (negative all year).
+    function chicagoOffsetMinutes(date: Date) {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Chicago',
+        hour12: false,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }).formatToParts(date);
+      const lookup = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      const asIfUtc = Date.UTC(
+        Number(lookup.year),
+        Number(lookup.month) - 1,
+        Number(lookup.day),
+        Number(lookup.hour) % 24,
+        Number(lookup.minute),
+        Number(lookup.second)
+      );
+      return (asIfUtc - date.getTime()) / 60000;
+    }
+
+    // "YYYY-MM-DDTHH:MM" as Chicago wall time, to an absolute ISO timestamp.
+    function chicagoLocalToIso(value: string) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+        throw new Error('Publish date and time must be a full date and time.');
+      }
+      const asUtc = new Date(`${value}:00Z`);
+      const offset = chicagoOffsetMinutes(asUtc);
+      return new Date(asUtc.getTime() - offset * 60000).toISOString();
+    }
+
+    function isoToChicagoLocal(iso: string) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '';
+      const offset = chicagoOffsetMinutes(date);
+      return new Date(date.getTime() + offset * 60000).toISOString().slice(0, 16);
+    }
+
+    function chicagoNowLocal() {
+      return isoToChicagoLocal(new Date().toISOString());
+    }
+
+    /* ---------- Body editor ---------- */
+
+    const DIVIDER_HTML = '<hr class="transit-divider-slot" />';
+
+    function htmlViewOpen() {
+      return Boolean(bodySource && !bodySource.hidden);
+    }
+
+    function normalizeBodyHtml(html: string) {
+      return html
+        // Browsers serialize a void hr without the closing slash; the site's
+        // renderer and the seed file both use the self-closing form.
+        .replace(/<hr\s+class="transit-divider-slot"\s*\/?>/g, DIVIDER_HTML)
+        .replace(/&nbsp;/g, ' ')
+        .replace(/<(div|p|h2|h3|ul|ol|li|blockquote|hr)(?=[\s>/])/g, '\n<$1')
+        .trim();
+    }
+
+    function getBodyHtml() {
+      if (htmlViewOpen()) return normalizeBodyHtml(bodySource?.value ?? '');
+      return normalizeBodyHtml(bodyEditor?.innerHTML ?? '');
+    }
+
+    function setBodyHtml(html: string) {
+      if (bodyEditor) bodyEditor.innerHTML = html;
+      if (bodySource) bodySource.value = html;
+    }
+
+    function setHtmlView(open: boolean) {
+      if (!bodyEditor || !bodySource || !bodyHtmlToggle) return;
+      if (open) {
+        bodySource.value = normalizeBodyHtml(bodyEditor.innerHTML);
+      } else {
+        bodyEditor.innerHTML = bodySource.value;
+      }
+      bodySource.hidden = !open;
+      bodyEditor.hidden = open;
+      bodyHtmlToggle.textContent = open ? 'Rich text view' : 'HTML view';
+      (open ? bodySource : bodyEditor).focus();
+    }
+
+    // Attributes that carry the source document's look. Everything the site
+    // styles itself (article typography) comes from the class-free tags.
+    function stripPastedFormatting(root: HTMLElement) {
+      root.querySelectorAll('script,style,meta,link').forEach((node) => node.remove());
+      root.querySelectorAll('*').forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        node.removeAttribute('style');
+        node.removeAttribute('id');
+        node.removeAttribute('width');
+        node.removeAttribute('height');
+        node.removeAttribute('bgcolor');
+        // Only the divider marker keeps a class; anything else would reference
+        // stylesheets the article page does not load.
+        if (node.tagName === 'HR') {
+          node.className = 'transit-divider-slot';
+        } else {
+          node.removeAttribute('class');
+        }
+      });
+    }
+
+    function insertHtmlAtCursor(html: string) {
+      bodyEditor?.focus();
+      document.execCommand('insertHTML', false, html);
+    }
+
+    function applyBodyCommand(command: string) {
+      if (!bodyEditor || htmlViewOpen()) return;
+      bodyEditor.focus();
+
+      switch (command) {
+        case 'bold':
+        case 'italic':
+          document.execCommand(command);
+          break;
+        case 'h2':
+          document.execCommand('formatBlock', false, 'h2');
+          break;
+        case 'h3':
+          document.execCommand('formatBlock', false, 'h3');
+          break;
+        case 'quote':
+          document.execCommand('formatBlock', false, 'blockquote');
+          break;
+        case 'bullets':
+          document.execCommand('insertUnorderedList');
+          break;
+        case 'numbers':
+          document.execCommand('insertOrderedList');
+          break;
+        case 'link': {
+          const url = cleanText(window.prompt('Link URL (include https://)', 'https://'));
+          if (!url) return;
+          if (!/^(https?:\/\/|mailto:|\/)/i.test(url)) {
+            setInlineStatus(articleStatus, 'Links must start with https://, mailto:, or /.', true);
+            return;
+          }
+          document.execCommand('createLink', false, url);
+          // Off-site links open in a new tab, matching the migrated bodies.
+          bodyEditor.querySelectorAll('a[href]').forEach((anchor) => {
+            if (!(anchor instanceof HTMLAnchorElement)) return;
+            if (/^https?:\/\//i.test(anchor.getAttribute('href') ?? '')) {
+              anchor.target = '_blank';
+              anchor.rel = 'noopener noreferrer';
+            }
+          });
+          break;
+        }
+        case 'divider':
+          insertHtmlAtCursor(`${DIVIDER_HTML}<p><br></p>`);
+          break;
+        case 'clear':
+          document.execCommand('removeFormat');
+          document.execCommand('formatBlock', false, 'p');
+          break;
+        default:
+          break;
+      }
+    }
+
+    app.querySelectorAll('[data-body-command]').forEach((button) => {
+      button.addEventListener('click', () => {
+        applyBodyCommand((button as HTMLElement).dataset.bodyCommand ?? '');
+      });
+    });
+
+    bodyHtmlToggle?.addEventListener('click', () => {
+      setHtmlView(!htmlViewOpen());
+    });
+
+    bodyEditor?.addEventListener('paste', (event) => {
+      const clipboard = (event as ClipboardEvent).clipboardData;
+      if (!clipboard) return;
+      event.preventDefault();
+      const html = clipboard.getData('text/html');
+      if (!html) {
+        document.execCommand('insertText', false, clipboard.getData('text/plain'));
+        return;
+      }
+      const holder = document.createElement('div');
+      holder.innerHTML = html;
+      stripPastedFormatting(holder);
+      insertHtmlAtCursor(holder.innerHTML);
+    });
+
+    /* ---------- Form ---------- */
+
+    function slugify(value: string) {
+      return value
+        .toLowerCase()
+        .normalize('NFKD')
+        // Drop emoji, accents, and punctuation; the slug is the public URL.
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80);
+    }
+
+    function parseTags(value: string) {
+      return [...new Set(value.split(',').map((tag) => tag.trim()).filter(Boolean))];
+    }
+
+    function renderTagPreview() {
+      if (!tagPreview) return;
+      const tags = parseTags(field('tags')?.value ?? '');
+      tagPreview.innerHTML = '';
+      if (tags.length === 0) {
+        const empty = document.createElement('span');
+        empty.className = 'font-body text-xs text-darkWalnut/50';
+        empty.textContent = 'No tags yet.';
+        tagPreview.appendChild(empty);
+        return;
+      }
+      tags.forEach((tag) => {
+        const chip = document.createElement('span');
+        chip.className =
+          'inline-flex items-center border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#62361B]';
+        chip.textContent = tag;
+        tagPreview.appendChild(chip);
+      });
+    }
+
+    function renderSlugPreview() {
+      if (slugPreview) slugPreview.textContent = field('slug')?.value.trim() || 'your-slug';
+    }
+
+    function resetForm() {
+      editingId = null;
+      slugFollowsTitle = true;
+      articleForm?.reset();
+      const publishedAt = field('published_at') as HTMLInputElement | null;
+      if (publishedAt) publishedAt.value = chicagoNowLocal();
+      const isPublished = field('is_published') as HTMLInputElement | null;
+      if (isPublished) isPublished.checked = true;
+      if (htmlViewOpen()) setHtmlView(false);
+      setBodyHtml('');
+      renderTagPreview();
+      renderSlugPreview();
+      if (formHeading) formHeading.textContent = 'New article';
+      if (articleSubmit) articleSubmit.textContent = 'Save article';
+      if (formResetButton) formResetButton.hidden = true;
+      setInlineStatus(articleStatus, '');
+    }
+
+    function fillForm(row: ArticleRow) {
+      editingId = row.id;
+      slugFollowsTitle = false;
+      const set = (name: string, value: string) => {
+        const input = field(name);
+        if (input) input.value = value;
+      };
+      set('title', row.title);
+      set('slug', row.slug);
+      set('category', row.category);
+      set('tags', (row.tags ?? []).join(', '));
+      set('summary', row.summary ?? '');
+      set('description', row.description ?? '');
+      set('hero_image_url', row.hero_image_url ?? '');
+      set('hero_alt', row.hero_alt ?? '');
+      set('hero_credit_html', row.hero_credit_html ?? '');
+      set('published_at', isoToChicagoLocal(row.published_at));
+      const isPublished = field('is_published') as HTMLInputElement | null;
+      if (isPublished) isPublished.checked = row.is_published;
+      if (htmlViewOpen()) setHtmlView(false);
+      setBodyHtml(row.body_html ?? '');
+      renderTagPreview();
+      renderSlugPreview();
+      if (formHeading) formHeading.textContent = `Editing ${row.slug}`;
+      if (articleSubmit) articleSubmit.textContent = 'Save changes';
+      if (formResetButton) formResetButton.hidden = false;
+      setInlineStatus(articleStatus, '');
+      articleForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function recordFromForm(): ArticleRecord {
+      const title = cleanText(field('title')?.value);
+      const slug = cleanText(field('slug')?.value);
+      const category = cleanText(field('category')?.value);
+      const bodyHtml = getBodyHtml();
+      const publishedAt = cleanText(field('published_at')?.value);
+
+      const missing: string[] = [];
+      if (!title) missing.push('Title');
+      if (!slug) missing.push('Slug');
+      if (!category) missing.push('Category');
+      if (!bodyHtml) missing.push('Body');
+      if (!publishedAt) missing.push('Publish date and time');
+      if (missing.length > 0) {
+        throw new Error(`Still needed before this article can board: ${missing.join(', ')}.`);
+      }
+      if (slug !== slugify(slug)) {
+        throw new Error('Slug can only use lowercase letters, numbers, and single hyphens.');
+      }
+
+      const hero = nullableText(field('hero_image_url')?.value);
+      if (hero && !/^(https?:\/\/|\/)/i.test(hero)) {
+        throw new Error('Hero image URL must start with http://, https://, or /.');
+      }
+
+      return {
+        slug,
+        title,
+        category,
+        tags: parseTags(field('tags')?.value ?? ''),
+        summary: cleanText(field('summary')?.value),
+        description: cleanText(field('description')?.value),
+        body_html: bodyHtml,
+        hero_image_url: hero,
+        hero_alt: nullableText(field('hero_alt')?.value),
+        hero_credit_html: nullableText(field('hero_credit_html')?.value),
+        published_at: chicagoLocalToIso(publishedAt),
+        is_published: Boolean((field('is_published') as HTMLInputElement | null)?.checked),
+      };
+    }
+
+    // Postgres reports the slug unique index by name; say what to do about it.
+    function describeSaveError(error: { code?: string; message: string }, slug: string) {
+      if (error.code === '23505' || /duplicate key|articles_slug_key/i.test(error.message)) {
+        return `The slug "${slug}" is already used by another article. Pick a different one.`;
+      }
+      return error.message;
+    }
+
+    field('title')?.addEventListener('input', () => {
+      if (!slugFollowsTitle) return;
+      const slugInput = field('slug');
+      if (slugInput) slugInput.value = slugify(field('title')?.value ?? '');
+      renderSlugPreview();
+    });
+
+    field('slug')?.addEventListener('input', () => {
+      slugFollowsTitle = false;
+      renderSlugPreview();
+    });
+
+    field('tags')?.addEventListener('input', renderTagPreview);
+
+    formResetButton?.addEventListener('click', () => {
+      resetForm();
+    });
+
+    articleForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void withBusy(articleSubmit, 'Saving...', async () => {
+        try {
+          if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+          setInlineStatus(articleStatus, '');
+          const record = recordFromForm();
+
+          // .select() so a silent zero-row write (stale password, deleted row)
+          // surfaces as an error instead of a fake success.
+          const query = editingId
+            ? adminSupabase.from('articles').update(record).eq('id', editingId).select('id')
+            : adminSupabase.from('articles').insert(record).select('id');
+          const { data, error } = await query;
+          if (error) throw new Error(describeSaveError(error, record.slug));
+          if (!data || data.length === 0) {
+            throw new Error('The database rejected the save. Lock the portal, unlock it again, and retry.');
+          }
+
+          const wasEditing = Boolean(editingId);
+          resetForm();
+          await loadArticles();
+          setInlineStatus(
+            publishStatus,
+            `${wasEditing ? 'Updated' : 'Saved'} "${record.title}". It is in the database now; press Publish live site to show it publicly, or wait for the scheduled rebuild.`
+          );
+          publishStatus?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(articleStatus, message, true);
+        }
+      });
+    });
+
+    /* ---------- Article list ---------- */
+
+    async function loadArticles() {
+      if (!adminSupabase || !listEl) return;
+      setInlineStatus(listStatus, 'Loading articles...');
+      try {
+        const { data, error } = await adminSupabase
+          .from('articles')
+          .select('*')
+          .order('published_at', { ascending: false });
+        if (error) throw new Error(error.message);
+        articles = (data ?? []) as ArticleRow[];
+        renderList();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error.';
+        setInlineStatus(listStatus, `Could not load articles: ${message}`, true);
+      }
+    }
+
+    function formatRowDate(iso: string) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return iso;
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        timeZone: 'America/Chicago',
+      });
+    }
+
+    function renderList() {
+      if (!listEl || !rowTemplate) return;
+      listEl.innerHTML = '';
+      articles.forEach((row) => {
+        const card = buildRow(row);
+        if (card) listEl.appendChild(card);
+      });
+      const drafts = articles.filter((row) => !row.is_published).length;
+      if (listCount) {
+        listCount.textContent = drafts > 0 ? `(${articles.length}, ${drafts} draft)` : `(${articles.length})`;
+      }
+      setInlineStatus(listStatus, articles.length === 0 ? 'No articles yet.' : '');
+    }
+
+    function buildRow(row: ArticleRow) {
+      const fragment = rowTemplate?.content.cloneNode(true) as DocumentFragment | undefined;
+      const card = fragment?.firstElementChild as HTMLElement | null;
+      if (!card) return null;
+
+      const setText = (selector: string, value: string) => {
+        const el = card.querySelector(selector);
+        if (el) el.textContent = value;
+      };
+      setText('[data-row-date]', formatRowDate(row.published_at));
+      setText('[data-row-title]', row.title);
+      setText('[data-row-slug]', `/newsletter/${row.slug}`);
+      setText('[data-row-category]', row.category);
+
+      const draftBadge = card.querySelector('[data-row-draft]') as HTMLElement | null;
+      if (draftBadge) draftBadge.hidden = row.is_published;
+
+      const toggleButton = card.querySelector('[data-row-toggle]') as HTMLButtonElement | null;
+      if (toggleButton) toggleButton.textContent = row.is_published ? 'Unpublish' : 'Publish';
+      const editButton = card.querySelector('[data-row-edit]') as HTMLButtonElement | null;
+      const deleteButton = card.querySelector('[data-row-delete]') as HTMLButtonElement | null;
+
+      editButton?.addEventListener('click', () => {
+        fillForm(row);
+      });
+
+      toggleButton?.addEventListener('click', () => {
+        void withBusy(toggleButton, 'Saving...', async () => {
+          try {
+            if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+            const { data, error } = await adminSupabase
+              .from('articles')
+              .update({ is_published: !row.is_published })
+              .eq('id', row.id)
+              .select('id');
+            if (error) throw new Error(error.message);
+            if (!data || data.length === 0) {
+              throw new Error('The database rejected the change. Lock the portal, unlock it again, and retry.');
+            }
+            setInlineStatus(
+              publishStatus,
+              `"${row.title}" is now ${row.is_published ? 'a draft' : 'published'}. Press Publish live site to update the public pages, or wait for the scheduled rebuild.`
+            );
+            await loadArticles();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error.';
+            setInlineStatus(publishStatus, message, true);
+          }
+        });
+      });
+
+      deleteButton?.addEventListener('click', () => {
+        if (
+          !window.confirm(
+            `Delete "${row.title}" from the database? This cannot be undone, and the page disappears at the next publish.`
+          )
+        )
+          return;
+        void withBusy(deleteButton, 'Deleting...', async () => {
+          try {
+            if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+            const { data, error } = await adminSupabase
+              .from('articles')
+              .delete()
+              .eq('id', row.id)
+              .select('id');
+            if (error) throw new Error(error.message);
+            if (!data || data.length === 0) {
+              throw new Error('The database rejected the delete. Lock the portal, unlock it again, and retry.');
+            }
+            if (editingId === row.id) resetForm();
+            setInlineStatus(
+              publishStatus,
+              `Deleted "${row.title}". Press Publish live site to update the public pages, or wait for the scheduled rebuild.`
+            );
+            await loadArticles();
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown error.';
+            setInlineStatus(publishStatus, message, true);
+          }
+        });
+      });
+
+      return card;
+    }
+
+    listRefresh?.addEventListener('click', () => {
+      void loadArticles();
+    });
+
+    publishButton?.addEventListener('click', () => {
+      void withBusy(publishButton, 'Publishing...', async () => {
+        try {
+          setInlineStatus(publishStatus, '');
+          const res = await fetch(`${functionsBase}/trigger-deploy`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', 'x-admin-password': adminPassword },
+            body: '{}',
+          });
+          const payload = await res.json().catch(() => null);
+          if (!res.ok) throw new Error(payload?.error ?? `Publish failed (status ${res.status}).`);
+          setInlineStatus(publishStatus, payload?.message ?? 'Site rebuild started.');
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(publishStatus, message, true);
+        }
+      });
+    });
+
+    /* ---------- Auth ---------- */
+
+    passwordForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void withBusy(loginSubmit, 'Checking...', async () => {
+        const formData = new FormData(passwordForm);
+        const password = cleanText(formData.get('password'));
+        setInlineStatus(loginStatus, '');
+
+        try {
+          const client = createAdminClient(password);
+          // Same credential and check as the events portal: verify before
+          // unlocking so a typo is caught here, not at the first save.
+          const { data, error } = await client.rpc('events_admin_login_check');
+          if (error) throw new Error(error.message);
+          if (data !== true) {
+            setInlineStatus(loginStatus, 'Wrong password. Try again.', true);
+            return;
+          }
+          adminSupabase = client;
+          adminPassword = password;
+          passwordForm.reset();
+          setUnlocked(true);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error.';
+          setInlineStatus(loginStatus, `Could not unlock the portal: ${message}`, true);
+        }
+      });
+    });
+
+    logoutButton?.addEventListener('click', () => {
+      adminSupabase = null;
+      adminPassword = '';
+      setUnlocked(false);
+    });
+
+    // <p> instead of <div> for new blocks, so the stored body matches the
+    // paragraph markup the article stylesheet targets.
+    document.execCommand('defaultParagraphSeparator', false, 'p');
+    resetForm();
+  }
+</script>

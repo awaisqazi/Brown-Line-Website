@@ -1,23 +1,22 @@
 ---
+import MiniCalendar from './MiniCalendar.astro';
+
 const base = import.meta.env.BASE_URL;
-// Route stops = destinations. Support + Subscribe sit side by side; Submit an
-// Event is a wide amber CTA on its own row beneath them (see the CTA cluster).
+// Route stops = destinations. Support, Ethics, and Board here now live on the
+// About page (/about#support, /about#ethics, /about#subscribe), so the line
+// runs just four stops: three content stops plus the Submit CTA.
 const navLinks = [
-  { href: `${base}events`,      label: 'Events',     stopColor: '#5BC3FF' },
-  { href: `${base}#newsletter`, label: 'Newsletter', stopColor: '#90D393' },
-  { href: `${base}about`,       label: 'About',      stopColor: '#FFBC29' },
-  { href: `${base}standards`,   label: 'Ethics',     stopColor: '#F35A0F' },
-];
-const navButtons = [
-  { href: `${base}support`,    label: 'Support',   variant: 'outline', gaEvent: 'support_click' },
-  { href: `${base}#subscribe`, label: 'Board here', variant: 'filled',  gaEvent: 'subscribe_click' },
+  { href: `${base}events`,     label: 'Events',     stopColor: '#5BC3FF' },
+  { href: `${base}newsletter`, label: 'Newsletter', stopColor: '#90D393' },
+  { href: `${base}about`,      label: 'About',      stopColor: '#FFBC29' },
 ];
 const submitCta = { href: `${base}submit-event`, label: 'Submit an Event', gaEvent: 'submit_click' };
-const variantClass = {
-  amber:   'nav-cta-amber',
-  outline: 'nav-cta-outline',
-  filled:  'nav-cta-filled',
-};
+// Desktop: one line, four stops. Colors cycle the brand palette so no two
+// neighboring stops share a dot color.
+const desktopRoute = [
+  ...navLinks,
+  { ...submitCta, stopColor: '#F79CD0' },
+];
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 ---
 <header class="bg-seashell sticky top-0 z-30 lg:static lg:z-auto">
@@ -33,13 +32,13 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       />
     </a>
 
-    {/* Desktop nav: route of destinations + distinct Support/Subscribe buttons.
-        Shown at lg+; tablets and phones use the hamburger drawer below so the
-        7-item route never gets crammed. */}
+    {/* Desktop nav: all seven destinations on a single route, with the mini
+        calendar parked at the end of the line. Shown at lg+; tablets and phones
+        use the hamburger drawer below so the route never gets crammed. */}
     <div class="hidden lg:flex flex-1 items-center gap-8 min-w-0">
       <nav aria-label="Primary" class="desktop-route-nav min-w-0">
         <ul class="desktop-route">
-          {navLinks.map(({ href, label, stopColor, gaEvent }) => (
+          {desktopRoute.map(({ href, label, stopColor, gaEvent }) => (
             <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
               <a
                 href={href}
@@ -55,18 +54,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
         </ul>
       </nav>
 
-      <div class="flex shrink-0 flex-col gap-2.5">
-        <div class="flex items-stretch gap-2.5">
-          {navButtons.map(({ href, label, variant, gaEvent }) => (
-            <a href={href} class:list={['nav-cta flex-1', variantClass[variant]]} data-ga-event={gaEvent} data-ga-label="nav">
-              {label}
-            </a>
-          ))}
-        </div>
-        <a href={submitCta.href} class="nav-cta nav-cta-amber w-full" data-ga-event={submitCta.gaEvent} data-ga-label="nav">
-          {submitCta.label}
-        </a>
-      </div>
+      <MiniCalendar class="hidden lg:block shrink-0" />
     </div>
 
     {/* Mobile menu toggle */}
@@ -120,17 +108,6 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       </ul>
 
       <div class="mt-6 flex flex-col gap-3">
-        {navButtons.map(({ href, label, variant, gaEvent }) => (
-          <a
-            href={href}
-            data-mobile-link
-            data-ga-event={gaEvent}
-            data-ga-label="nav"
-            class:list={['nav-cta nav-cta-mobile', variantClass[variant]]}
-          >
-            {label}
-          </a>
-        ))}
         <a
           href={submitCta.href}
           data-mobile-link
@@ -219,7 +196,8 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     transform: translateY(-8px) rotate(-45deg);
   }
 
-  /* Support / Subscribe buttons: visually distinct from the route links */
+  /* Drawer CTA button (Submit an Event): visually distinct from the route
+     stops above it */
   .nav-cta {
     display: inline-flex;
     align-items: center;
@@ -234,16 +212,6 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     line-height: 1;
     white-space: nowrap;
     transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
-  }
-
-  .nav-cta-outline {
-    background: #FAF1EC;
-    color: #642713;
-  }
-
-  .nav-cta-filled {
-    background: #F35A0F;
-    color: #FAF1EC;
   }
 
   /* Submit an Event: engaging amber CTA (matches the site's other Submit buttons). */
@@ -278,14 +246,18 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   .desktop-route {
     --route-gap: 2.75rem;
     --stop-size: 20px;
+    /* Labels sit in a fixed-width centered column under each dot and wrap to a
+       second line when needed, so "Submit an Event" does not need a gap wide
+       enough to clear it on one line. */
+    --label-width: 4.75rem;
     /* Horizontal padding reserves room for the first/last station labels, which
        are centered under their dots and overflow the dot width. Without it the
        first/last label spills past the route box. */
-    --route-pad: 2.25rem;
+    --route-pad: calc((var(--label-width) - var(--stop-size)) / 2);
     position: relative;
     display: flex;
-    /* A content-width group centered in the space between the logo and the CTA
-       cluster: comfortable spacing between stops without stretching the route
+    /* A content-width group centered in the space between the logo and the mini
+       calendar: comfortable spacing between stops without stretching the route
        across the whole header. */
     width: fit-content;
     max-width: 100%;
@@ -293,7 +265,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     align-items: flex-start;
     justify-content: center;
     column-gap: var(--route-gap);
-    padding: 0 var(--route-pad) 1.75rem;
+    padding: 0 var(--route-pad) 2.75rem;
     isolation: isolate;
   }
 
@@ -312,7 +284,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   .desktop-route-item {
     position: relative;
     width: var(--stop-size);
-    height: calc(var(--stop-size) + 1.75rem);
+    height: calc(var(--stop-size) + 2.75rem);
     z-index: 1;
   }
 
@@ -322,12 +294,11 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     width: var(--stop-size);
     height: 100%;
     font-family: 'Montserrat', system-ui, sans-serif;
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     font-weight: 800;
-    line-height: 1;
+    line-height: 1.2;
     text-transform: uppercase;
     color: #642713;
-    white-space: nowrap;
     transition: color 200ms ease, transform 220ms ease;
   }
 
@@ -348,6 +319,9 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     top: calc(var(--stop-size) + 0.55rem);
     left: 50%;
     transform: translateX(-50%);
+    width: var(--label-width);
+    text-align: center;
+    text-wrap: balance;
   }
 
   .desktop-route-link:hover,
@@ -363,9 +337,23 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     box-shadow: 3px 3px 0 #642713;
   }
 
+  /* At lg the four stops share the strip between the logo and the mini
+     calendar; the gap and labels open up at xl where there is room to spare. */
   @media (min-width: 1024px) {
     .desktop-route {
-      --route-gap: 5rem;
+      --route-gap: 4.75rem;
+      --label-width: 5.25rem;
+    }
+
+    .desktop-route-link {
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .desktop-route {
+      --route-gap: 6rem;
+      --label-width: 6.5rem;
     }
 
     .desktop-route-link {

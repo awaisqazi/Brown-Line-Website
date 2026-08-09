@@ -1,0 +1,20 @@
+---
+import NewsletterArticle from '../../components/NewsletterArticle.astro';
+import { getSortedArticles } from '../../lib/articles';
+
+// One page per row in public.articles (or per in-repo seed article when the
+// query fails). Slugs are the stored ones, so migrated issues keep the URLs
+// MIGRATED_ISSUES in src/lib/issues.ts points at.
+export async function getStaticPaths() {
+  const articles = await getSortedArticles();
+
+  return articles.map((article) => ({
+    params: { slug: article.slug },
+    props: { bodyHtml: article.bodyHtml },
+  }));
+}
+
+const { slug } = Astro.params;
+const { bodyHtml } = Astro.props;
+---
+<NewsletterArticle slug={slug!} bodyHtml={bodyHtml} />
