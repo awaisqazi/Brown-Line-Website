@@ -1,0 +1,18 @@
+{
+  "version": "5",
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.45.0": "36ae57c3f2dc3f94fd122a846b40a87114d29bb2f47e910cb46bee5575febf2e"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@astrojs/tailwind@^5.1.4",
+        "npm:@supabase/supabase-js@^2.106.2",
+        "npm:@types/papaparse@^5.5.2",
+        "npm:astro@^4.16.18",
+        "npm:papaparse@^5.5.3",
+        "npm:tailwindcss@^3.4.17"
+      ]
+    }
+  }
+}

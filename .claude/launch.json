@@ -1,0 +1,33 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "astro-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4399"],
+      "port": 4399,
+      "autoPort": false
+    },
+    {
+      "name": "astro-dev-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4400"],
+      "port": 4400,
+      "autoPort": false
+    },
+    {
+      "name": "astro-dev-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4401"],
+      "port": 4401,
+      "autoPort": false
+    },
+    {
+      "name": "astro-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--", "--port", "4398"],
+      "port": 4398,
+      "autoPort": false
+    }
+  ]
+}

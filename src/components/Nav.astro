@@ -11,9 +11,9 @@ const navLinks = [
   { href: `${base}about`,      label: 'About',      stopColor: '#FFBC29' },
 ];
 const submitCta = { href: `${base}submit-event`, label: 'Submit an Event', gaEvent: 'submit_click' };
-// Desktop: one line, four stops. Colors cycle the brand palette so no two
-// neighboring stops share a dot color.
-const desktopRoute = [
+// One route for desktop and the mobile drawer: four stops, colors cycling the
+// brand palette so no two neighboring stops share a dot color.
+const route = [
   ...navLinks,
   { ...submitCta, stopColor: '#F79CD0' },
 ];
@@ -38,7 +38,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     <div class="hidden lg:flex flex-1 items-center gap-8 min-w-0">
       <nav aria-label="Primary" class="desktop-route-nav min-w-0">
         <ul class="desktop-route">
-          {desktopRoute.map(({ href, label, stopColor, gaEvent }) => (
+          {route.map(({ href, label, stopColor, gaEvent }) => (
             <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
               <a
                 href={href}
@@ -96,7 +96,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
     <nav aria-label="Mobile primary" class="px-6 pt-4 pb-2 flex-1">
       <ul id="mobile-nav-list" class="nav-stops flex flex-col">
-        {navLinks.map(({ href, label, stopColor, gaEvent }) => (
+        {route.map(({ href, label, stopColor, gaEvent }) => (
           <li class="mobile-nav-item" style={`--stop-color: ${stopColor};`}>
             <a href={href} class="mobile-nav-link" data-mobile-link data-ga-event={gaEvent} data-ga-label={gaEvent ? 'nav' : undefined}>
               <span class="mobile-nav-stop" aria-hidden="true"></span>
@@ -107,16 +107,11 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
         ))}
       </ul>
 
-      <div class="mt-6 flex flex-col gap-3">
-        <a
-          href={submitCta.href}
-          data-mobile-link
-          data-ga-event={submitCta.gaEvent}
-          data-ga-label="nav"
-          class="nav-cta nav-cta-mobile nav-cta-amber"
-        >
-          {submitCta.label}
-        </a>
+      {/* Same mini calendar as the desktop header, parked after the stops. Its
+          popover panel is re-anchored left and clamped to the drawer width
+          (see .drawer-calendar rules below). */}
+      <div class="drawer-calendar mt-8">
+        <MiniCalendar />
       </div>
     </nav>
 
@@ -196,46 +191,14 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     transform: translateY(-8px) rotate(-45deg);
   }
 
-  /* Drawer CTA button (Submit an Event): visually distinct from the route
-     stops above it */
-  .nav-cta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #642713;
-    padding: 0.5rem 1rem;
-    font-family: 'Montserrat', system-ui, sans-serif;
-    font-size: 0.72rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    line-height: 1;
-    white-space: nowrap;
-    transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
-  }
-
-  /* Submit an Event: engaging amber CTA (matches the site's other Submit buttons). */
-  .nav-cta-amber {
-    background: #FFBC29;
-    color: #642713;
-  }
-
-  .nav-cta:hover,
-  .nav-cta:focus-visible {
-    transform: translate(-2px, -2px);
-    box-shadow: 3px 3px 0 #642713;
-    outline: none;
-  }
-
-  .nav-cta-mobile {
-    padding: 0.85rem 1rem;
-    font-size: 0.85rem;
-  }
-
-  @media (min-width: 1024px) {
-    .nav-cta {
-      font-size: 0.78rem;
-    }
+  /* Drawer calendar: re-anchor the popover panel to the left edge and clamp it
+     to the drawer's inner width so it never spills past the drawer edge on
+     small phones (the desktop instance keeps its fixed 21rem right-anchored
+     panel). */
+  .drawer-calendar :global(.mini-cal-panel) {
+    right: auto;
+    left: 0;
+    width: 100%;
   }
 
   /* Desktop route map mirrors the mobile stop language on a compact horizontal track */
