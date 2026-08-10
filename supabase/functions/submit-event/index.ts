@@ -9,15 +9,13 @@
 //   1. Create a Cloudflare Turnstile widget and copy the site + secret keys.
 //   2. Set TURNSTILE_SECRET as an Edge Function secret in Supabase.
 //   3. Set PUBLIC_TURNSTILE_SITE_KEY (build var) to the matching site key.
-// Until TURNSTILE_SECRET is set, the function falls back to Cloudflare's public
-// TEST secret (which accepts the matching TEST site key), so the flow works end
-// to end before real keys are wired in. Replace it before promoting the form.
+// The site key and the secret must come from the same widget. If they drift
+// apart, or TURNSTILE_SECRET goes missing, every submission is rejected and the
+// reason lands in the function logs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-// Cloudflare's documented "always passes" TEST secret.
-const TEST_SECRET = "1x0000000000000000000000000000000AA";
 
 const DIASPORA_TAGS = [
   "South Asian",
@@ -55,11 +53,13 @@ function nullable(value: unknown): string | null {
 }
 
 async function verifyTurnstile(token: string, ip: string | null): Promise<boolean> {
-  const secret = Deno.env.get("TURNSTILE_SECRET") ?? TEST_SECRET;
-  if (secret === TEST_SECRET) {
-    console.warn(
-      "TURNSTILE_SECRET is not set; using Cloudflare's TEST secret, so the captcha always passes. Set the real secret before launch.",
-    );
+  const secret = Deno.env.get("TURNSTILE_SECRET");
+  if (!secret) {
+    // Fail closed. A missing secret used to fall back to Cloudflare's TEST
+    // secret, which accepts every token, so a misconfigured deploy would have
+    // quietly waved bots through instead of breaking loudly.
+    console.error("TURNSTILE_SECRET is not set; rejecting the submission.");
+    return false;
   }
   const form = new FormData();
   form.append("secret", secret);
@@ -68,8 +68,16 @@ async function verifyTurnstile(token: string, ip: string | null): Promise<boolea
   try {
     const res = await fetch(TURNSTILE_VERIFY_URL, { method: "POST", body: form });
     const data = await res.json();
-    return data?.success === true;
-  } catch (_) {
+    if (data?.success !== true) {
+      // Cloudflare names the reason here, and the two worth telling apart are a
+      // stale token from the visitor and a secret that belongs to a different
+      // widget than the site key the page renders.
+      console.warn("Turnstile rejected the token:", JSON.stringify(data?.["error-codes"] ?? []));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Turnstile siteverify request failed:", err);
     return false;
   }
 }

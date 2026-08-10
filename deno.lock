@@ -6,6 +6,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@astrojs/sitemap@^3.5.1",
         "npm:@astrojs/tailwind@^5.1.4",
         "npm:@supabase/supabase-js@^2.106.2",
         "npm:@types/papaparse@^5.5.2",
