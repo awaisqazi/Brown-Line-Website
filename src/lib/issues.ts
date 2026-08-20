@@ -115,6 +115,7 @@ function normalizeIssueHref(href: string) {
 // Beehiiv. Map each migrated issue's /p/ slug to its local path so both the
 // RSS-parsed list and any future entries link to the on-site version.
 const MIGRATED_ISSUES: Record<string, string> = {
+  'what-i-d-cross-chicago-for-this-week-black-august-tarab-fufu': 'newsletter/black-august-tarab-fufu',
   'geopolitical-f-tbol-the-brown-line-guide-to-the-world-cup-in-chicago': 'newsletter/whose-world-cup',
   'back-in-service-for-good': 'newsletter/back-in-service-for-good',
 };
