@@ -222,49 +222,28 @@ const route = [
     width: 100%;
   }
 
-  /* Desktop route map: dot and label ride side by side on one line, and a
-     single track runs behind the whole route. Each link carries the header
-     background, so the track shows only in the gaps between stops, reading
-     as segments connecting station to station. */
+  /* Desktop route: colored station dots beside their labels, no connecting
+     track. The dots alone carry the transit identity; drawn segments between
+     stops read as stray dashes at header scale. */
   .desktop-route-nav {
     flex: 1 1 auto;
     min-width: 0;
   }
 
   .desktop-route {
-    position: relative;
     display: flex;
     width: fit-content;
     max-width: 100%;
     margin: 0 auto;
     align-items: center;
-    column-gap: 0.95rem;
-    isolation: isolate;
-  }
-
-  .desktop-route::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    right: 8px;
-    top: 50%;
-    height: 2px;
-    transform: translateY(-50%);
-    background: #642713;
-    z-index: 0;
-  }
-
-  .desktop-route-item {
-    position: relative;
-    z-index: 1;
+    column-gap: 1.4rem;
   }
 
   .desktop-route-link {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    padding: 0.3rem 0.35rem;
-    background: #FAF1EC;
+    padding: 0.3rem 0.1rem;
     font-family: 'Montserrat', system-ui, sans-serif;
     font-size: 0.63rem;
     font-weight: 800;
@@ -305,7 +284,7 @@ const route = [
      room than this even on very wide screens. */
   @media (min-width: 1280px) {
     .desktop-route {
-      column-gap: 1.4rem;
+      column-gap: 2rem;
     }
 
     .desktop-route-link {
