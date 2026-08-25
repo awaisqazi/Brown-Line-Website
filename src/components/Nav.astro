@@ -222,79 +222,123 @@ const route = [
     width: 100%;
   }
 
-  /* Desktop route: colored station dots beside their labels, no connecting
-     track. The dots alone carry the transit identity; drawn segments between
-     stops read as stray dashes at header scale. */
+  /* Desktop route map: one continuous track through every station dot, with
+     the label centered under its dot, mirroring the mobile drawer's route. */
   .desktop-route-nav {
     flex: 1 1 auto;
-    min-width: 0;
   }
 
   .desktop-route {
+    --route-gap: 2.5rem;
+    --stop-size: 20px;
+    /* Labels sit in a fixed-width centered column under each dot and wrap to
+       extra lines when needed. Keep --label-width below --route-gap plus
+       --stop-size at every size, or neighboring centered labels overlap. */
+    --label-width: 5rem;
+    /* Horizontal padding reserves room for the first/last station labels,
+       which are centered under their dots and overflow the dot width. */
+    --route-pad: calc((var(--label-width) - var(--stop-size)) / 2);
+    position: relative;
     display: flex;
     width: fit-content;
     max-width: 100%;
     margin: 0 auto;
-    align-items: center;
-    column-gap: 1.4rem;
+    align-items: flex-start;
+    justify-content: center;
+    column-gap: var(--route-gap);
+    padding: 0 var(--route-pad) 3rem;
+    isolation: isolate;
+  }
+
+  .desktop-route::before {
+    content: '';
+    position: absolute;
+    /* Start/end on the first and last dot centers (inset by the route padding). */
+    left: calc(var(--route-pad) + var(--stop-size) / 2);
+    right: calc(var(--route-pad) + var(--stop-size) / 2);
+    top: calc(var(--stop-size) / 2);
+    height: 2px;
+    background: #642713;
+    z-index: 0;
+  }
+
+  .desktop-route-item {
+    position: relative;
+    width: var(--stop-size);
+    height: calc(var(--stop-size) + 3rem);
+    z-index: 1;
   }
 
   .desktop-route-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.3rem 0.1rem;
+    position: relative;
+    display: block;
+    width: var(--stop-size);
+    height: 100%;
     font-family: 'Montserrat', system-ui, sans-serif;
-    font-size: 0.63rem;
+    font-size: 0.64rem;
     font-weight: 800;
-    line-height: 1;
-    letter-spacing: 0.06em;
+    line-height: 1.2;
     text-transform: uppercase;
-    white-space: nowrap;
     color: #642713;
     transition: color 200ms ease, transform 220ms ease;
   }
 
   .desktop-route-stop {
     display: block;
-    width: 14px;
-    height: 14px;
-    flex-shrink: 0;
+    width: var(--stop-size);
+    height: var(--stop-size);
     border-radius: 9999px;
     border: 2px solid #642713;
     background: var(--stop-color);
-    box-shadow: 1.5px 1.5px 0 #642713;
+    box-shadow: 2px 2px 0 #642713;
     transition: transform 220ms ease, box-shadow 220ms ease;
+  }
+
+  .desktop-route-label {
+    display: block;
+    position: absolute;
+    top: calc(var(--stop-size) + 0.55rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: var(--label-width);
+    text-align: center;
+    text-wrap: balance;
   }
 
   .desktop-route-link:hover,
   .desktop-route-link:focus-visible {
     color: #F35A0F;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     outline: none;
   }
 
   .desktop-route-link:hover .desktop-route-stop,
   .desktop-route-link:focus-visible .desktop-route-stop {
-    transform: scale(1.2);
-    box-shadow: 2px 2px 0 #642713;
+    transform: scale(1.15);
+    box-shadow: 3px 3px 0 #642713;
   }
 
-  /* The header container caps at max-w-6xl, so the route never gets more
-     room than this even on very wide screens. */
-  @media (min-width: 1280px) {
+  /* The header container caps at max-w-6xl, so these are the only two sizes
+     that matter. Label width stays under gap plus dot to avoid collisions. */
+  @media (min-width: 1024px) {
     .desktop-route {
-      column-gap: 2rem;
+      --route-gap: 3.75rem;
+      --label-width: 4.75rem;
     }
 
     .desktop-route-link {
-      font-size: 0.67rem;
-      gap: 0.5rem;
+      font-size: 0.66rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .desktop-route {
+      --route-gap: 5rem;
+      --label-width: 6rem;
     }
 
-    .desktop-route-stop {
-      width: 15px;
-      height: 15px;
+    .desktop-route-link {
+      font-size: 0.72rem;
     }
   }
 

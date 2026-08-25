@@ -678,6 +678,14 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
       height: 100%;
     }
 
+    /* The frame clips at its edges, so the lift-and-shadow hover would slide
+       the card's left and top borders out of the window. Inside the board the
+       flyer zoom and title color carry the hover instead. */
+    .board-on [data-stops-list] > li > :global(article:hover) {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
     /* Inside the clipped frame, the calendar menu opens upward instead. */
     .board-on [data-stops-list] :global(details[data-calendar-menu] > div) {
       top: auto;
