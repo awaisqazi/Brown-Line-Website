@@ -13,13 +13,22 @@ const functionUrl = `${supabaseUrl}/functions/v1/submit-event`;
 // PUBLIC_TURNSTILE_SITE_KEY (and the matching secret in the edge function) for prod.
 const turnstileSiteKey = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
 
-const inputClass =
-  'mt-2 w-full border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm';
+// Shared field styling. Inputs get appearance resets so iOS does not smuggle
+// in rounded corners and inner shadows; selects keep their native arrow, and
+// date/time fields get a minimum height so an empty value never collapses.
+const fieldBase =
+  'mt-2 w-full min-h-[2.75rem] rounded-none border-2 border-darkWalnut bg-seashell px-3 py-2.5 font-body text-base text-darkWalnut placeholder:text-darkWalnut/45 focus:outline-none focus:ring-2 focus:ring-mayaBlue md:text-sm';
+const inputClass = `${fieldBase} appearance-none`;
+const selectClass = fieldBase;
 const labelClass = 'block font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65';
+// Section headers break the single-column mobile form into short stretches.
+const sectionClass =
+  'md:col-span-2 mt-4 first:mt-0 border-b border-darkWalnut/15 pb-2 font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne';
+const hintClass =
+  'mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60';
 const buttonClass =
   'border-2 border-darkWalnut bg-cayenne px-5 py-3 font-body text-xs font-bold uppercase tracking-widest text-seashell shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0';
 const reqClass = 'ml-2 text-[9px] tracking-widest text-cayenne';
-const optClass = 'ml-2 text-[9px] tracking-widest text-darkWalnut/45';
 
 const pageDescription =
   'Submit a Chicago arts, culture, or community event for The Brown Line to review and feature.';
@@ -92,54 +101,60 @@ const pageDescription =
         if you are not sure.
       </p>
 
-      <form data-submit-form class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2" novalidate>
+      <form data-submit-form class="mt-7 grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-x-5 md:gap-y-5" novalidate>
+        <p class={sectionClass}>Who's flagging it</p>
+
         <label class={labelClass} for="submitter-name">
           Your name<span class={reqClass}>Required</span>
-          <input id="submitter-name" name="submitter_name" type="text" autocomplete="name" maxlength="200" class={inputClass} required />
+          <input id="submitter-name" name="submitter_name" type="text" autocomplete="name" maxlength="200" placeholder="First and last" class={inputClass} required />
         </label>
 
         <label class={labelClass} for="submitter-email">
-          Your email<span class={optClass}>Optional</span>
+          Your email
           <input id="submitter-email" name="submitter_email" type="email" autocomplete="email" placeholder="So we can follow up" class={inputClass} />
         </label>
 
+        <p class={sectionClass}>The stop</p>
+
         <label class={`${labelClass} md:col-span-2`} for="event-title">
           Event title<span class={reqClass}>Required</span>
-          <input id="event-title" name="title" type="text" maxlength="300" class={inputClass} required />
+          <input id="event-title" name="title" type="text" maxlength="300" placeholder="What's it called?" class={inputClass} required />
         </label>
 
-        <label class={labelClass} for="event-date">
+        <label class={`${labelClass} md:col-span-2`} for="event-date">
           Event date<span class={reqClass}>Required</span>
           <input id="event-date" name="event_date" type="date" class={inputClass} required />
-          <span class="mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60">
+          <span class={hintClass}>
             For best consideration, submit at least 7&ndash;10 days ahead. Events submitted by Thursday
             may make that Sunday's newsletter.
           </span>
         </label>
 
         <label class={labelClass} for="event-time">
-          Event time<span class={optClass}>Optional</span>
+          Start time
           <input id="event-time" name="event_time" type="time" class={inputClass} />
         </label>
 
         <label class={labelClass} for="event-time-end">
-          End time<span class={optClass}>Optional</span>
+          End time
           <input id="event-time-end" name="event_time_end" type="time" class={inputClass} />
         </label>
 
+        <p class={sectionClass}>Where it is</p>
+
         <label class={labelClass} for="event-venue">
           Venue name<span class={reqClass}>Required</span>
-          <input id="event-venue" name="venue" type="text" maxlength="300" class={inputClass} required />
+          <input id="event-venue" name="venue" type="text" maxlength="300" placeholder="Where it happens" class={inputClass} required />
         </label>
 
         <label class={labelClass} for="event-address">
-          Address<span class={optClass}>Optional</span>
+          Address
           <input id="event-address" name="address" type="text" placeholder="Street address" class={inputClass} />
         </label>
 
         <label class={labelClass} for="event-tag">
           Community tag<span class={reqClass}>Required</span>
-          <select id="event-tag" name="diaspora_tag" class={inputClass} required>
+          <select id="event-tag" name="diaspora_tag" class={selectClass} required>
             <option value="" selected disabled>Choose one</option>
             {DIASPORA_TAGS.map((tag) => (
               <option value={tag.value}>{tag.label}</option>
@@ -149,7 +164,7 @@ const pageDescription =
 
         <label class={labelClass} for="location-type">
           Location type<span class={reqClass}>Required</span>
-          <select id="location-type" name="location_type" data-location-type class={inputClass} required>
+          <select id="location-type" name="location_type" data-location-type class={selectClass} required>
             <option value="" selected disabled>Choose one</option>
             {LOCATION_TYPES.map((type) => (
               <option value={type}>{type}</option>
@@ -159,7 +174,7 @@ const pageDescription =
 
         <label class={labelClass} for="chicago-neighborhood" data-when-location="Chicago" hidden>
           Chicago neighborhood<span class={reqClass}>Required</span>
-          <select id="chicago-neighborhood" name="chicago_neighborhood" class={inputClass} disabled>
+          <select id="chicago-neighborhood" name="chicago_neighborhood" class={selectClass} disabled>
             <option value="" selected disabled>Choose a community area</option>
             {NEIGHBORHOOD_GROUPS.map((group) => (
               <optgroup label={group.side}>
@@ -172,10 +187,10 @@ const pageDescription =
         </label>
 
         <div class="md:col-span-2" data-when-location="Suburb" hidden>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
             <label class={labelClass} for="suburb">
               Suburb<span class={reqClass}>Required</span>
-              <select id="suburb" name="suburb" data-suburb-select class={inputClass} disabled>
+              <select id="suburb" name="suburb" data-suburb-select class={selectClass} disabled>
                 <option value="" selected disabled>Choose a suburb</option>
                 {SUBURBS.map((suburb) => (
                   <option value={suburb}>{suburb}</option>
@@ -190,25 +205,27 @@ const pageDescription =
           </div>
         </div>
 
+        <p class={sectionClass}>The details</p>
+
         <label class={labelClass} for="event-organizer">
-          Organizer<span class={optClass}>Optional</span>
+          Organizer
           <input id="event-organizer" name="organizer" type="text" placeholder="Host or group" class={inputClass} />
         </label>
 
         <label class={labelClass} for="event-cost">
-          Cost<span class={optClass}>Optional</span>
+          Cost
           <input id="event-cost" name="cost" type="text" placeholder="Free, $10, sliding scale" class={inputClass} />
         </label>
 
         <label class={`${labelClass} md:col-span-2`} for="event-url">
-          Event URL / RSVP link<span class={optClass}>Optional</span>
+          Event URL / RSVP link
           <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
         </label>
 
         <label class={`${labelClass} md:col-span-2`} for="event-image-url">
-          Photo or flyer URL<span class={optClass}>Optional</span>
+          Photo or flyer URL
           <input id="event-image-url" name="image_url" type="url" maxlength="2000" placeholder="https://... (link to a flyer or photo)" class={inputClass} />
-          <span class="mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60">
+          <span class={hintClass}>
             A link to your event flyer or a photo helps your event stand out during review. Paste an
             image link from your site, Google Drive, or anywhere public.
           </span>
@@ -216,7 +233,7 @@ const pageDescription =
 
         <label class={`${labelClass} md:col-span-2`} for="event-description">
           Event description<span class={reqClass}>Required, 150 words max</span>
-          <textarea id="event-description" name="description" rows="5" maxlength="6000" data-word-limit="150" class={inputClass} required></textarea>
+          <textarea id="event-description" name="description" rows="5" maxlength="6000" data-word-limit="150" placeholder="What's happening, who it's for, and why it matters" class={inputClass} required></textarea>
           <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
         </label>
 
@@ -234,8 +251,8 @@ const pageDescription =
           <div class="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" data-size="flexible"></div>
         </div>
 
-        <div class="md:col-span-2 flex flex-wrap items-center gap-4">
-          <button type="submit" data-submit-button class={buttonClass}>Submit for review</button>
+        <div class="md:col-span-2 mt-1 flex flex-wrap items-center gap-4">
+          <button type="submit" data-submit-button class={`${buttonClass} inline-flex w-full items-center justify-center sm:w-auto`}>Submit for review</button>
           <p data-form-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
         </div>
       </form>
