@@ -192,7 +192,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             Add one event
           </h2>
           <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
-            Fill the fields marked Required. Optional fields can stay blank if we do not have that detail yet.
+            Fill the fields marked Required, including the organizer, start time, neighborhood,
+            event URL, a flyer or photo link, and a description of 150 words or fewer. For a
+            multi-day run, set Last day and we add one event per day.
           </p>
 
           {/* novalidate: native validation stops at the first empty required field.
@@ -211,6 +213,16 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <input id="event-date" name="event_date" type="date" class={inputClass} required />
             </label>
 
+            <label class={labelClass} for="event-end-date">
+              Last day
+              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional, for multi-day runs</span>
+              <input id="event-end-date" name="event_end_date" type="date" class={inputClass} />
+              <span class="mt-1.5 block font-body text-[11px] font-normal normal-case leading-relaxed tracking-normal text-darkWalnut/60">
+                For a run of consecutive days, set the final date and we add one event per day from
+                the event date through this one. Leave blank for a single day.
+              </span>
+            </label>
+
             <label class={labelClass} for="event-venue">
               Venue
               <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
@@ -219,8 +231,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={labelClass} for="event-start-time">
               Start time
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-start-time" name="start_time" type="time" class={inputClass} />
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-start-time" name="start_time" type="time" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-end-time">
@@ -231,14 +243,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={labelClass} for="event-neighborhood">
               Neighborhood
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-neighborhood" name="neighborhood" type="text" placeholder="Pilsen, Hyde Park" class={inputClass} />
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-neighborhood" name="neighborhood" type="text" placeholder="Pilsen, Hyde Park" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-organizer">
               Organizer
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-organizer" name="organizer" type="text" class={inputClass} />
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-organizer" name="organizer" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-cost-info">
@@ -249,14 +261,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={`${labelClass} md:col-span-2`} for="event-url">
               Event URL
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} />
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`} for="event-image-url">
               Photo or flyer URL
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input id="event-image-url" name="image_url" type="url" placeholder="https://... (link to a flyer or photo)" class={inputClass} />
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input id="event-image-url" name="image_url" type="url" placeholder="https://... (link to a flyer or photo)" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-emoji">
@@ -282,8 +294,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={`${labelClass} md:col-span-2`} for="event-description">
               Description
-              <span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <textarea id="event-description" name="description" rows="5" class={inputClass}></textarea>
+              <span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              <textarea id="event-description" name="description" rows="5" data-word-limit="150" class={inputClass} required></textarea>
+              <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
 
             <label class={`${labelClass} md:col-span-2`} for="event-author-note">
@@ -342,7 +355,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Required columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                event_date, title, venue
+                event_date, title, venue, start_time, neighborhood, organizer, event_url, image_url, description (150 words max)
               </p>
             </div>
 
@@ -351,7 +364,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                 Optional columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                start_time, end_time, neighborhood, description, organizer, cost_info, event_url, image_url, author_note, emoji, tags, is_curated, is_giveaway
+                end_time, cost_info, author_note, emoji, tags, is_curated, is_giveaway
               </p>
             </div>
           </div>
@@ -360,7 +373,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             Tags can be comma-separated inside one cell and must come from the fixed community tag
             list: {DIASPORA_TAGS.join(', ')}. For pick or giveaway columns, use true, false, yes,
             no, 1, or 0. Start time and end time both use 24-hour HH:MM. An end time may be
-            earlier than its start time when the event runs past midnight.
+            earlier than its start time when the event runs past midnight. For a multi-day run,
+            add one row per day with the same title and venue; the public board collapses them
+            into a single card with a date range.
           </p>
 
           <form data-csv-form class="mt-7 space-y-5">
@@ -520,8 +535,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Start time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="start_time" type="time" class={inputClass} />
+              Start time<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="start_time" type="time" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
@@ -535,13 +550,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Neighborhood<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="neighborhood" type="text" class={inputClass} />
+              Neighborhood<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="neighborhood" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Organizer<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="organizer" type="text" class={inputClass} />
+              Organizer<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="organizer" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
@@ -550,13 +565,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Event URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="event_url" type="url" class={inputClass} />
+              Event URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="event_url" type="url" class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Photo or flyer URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input data-field="image_url" type="url" class={inputClass} />
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input data-field="image_url" type="url" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
@@ -579,8 +594,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </fieldset>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Description<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <textarea data-field="description" rows="4" class={inputClass}></textarea>
+              Description<span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              <textarea data-field="description" rows="4" data-word-limit="150" class={inputClass} required></textarea>
+              <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
@@ -660,8 +676,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Start time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input name="start_time" type="time" class={inputClass} />
+              Start time<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="start_time" type="time" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
@@ -670,13 +686,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Neighborhood<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input name="neighborhood" type="text" class={inputClass} />
+              Neighborhood<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="neighborhood" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Organizer<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input name="organizer" type="text" class={inputClass} />
+              Organizer<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="organizer" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
@@ -690,13 +706,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Event URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input name="event_url" type="url" class={inputClass} />
+              Event URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="event_url" type="url" class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Photo or flyer URL<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <input name="image_url" type="url" class={inputClass} />
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <input name="image_url" type="url" class={inputClass} required />
             </label>
 
             <fieldset class="md:col-span-2">
@@ -714,8 +730,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </fieldset>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Description<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
-              <textarea name="description" rows="4" class={inputClass}></textarea>
+              Description<span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              <textarea name="description" rows="4" data-word-limit="150" class={inputClass} required></textarea>
+              <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
@@ -921,6 +938,39 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return clean;
     }
 
+    function addDaysToDateString(dateString: string, days: number) {
+      const [y, m, d] = dateString.split('-').map(Number);
+      const next = new Date(Date.UTC(y, m - 1, d + days));
+      const pad = (v: number) => String(v).padStart(2, '0');
+      return `${next.getUTCFullYear()}-${pad(next.getUTCMonth() + 1)}-${pad(next.getUTCDate())}`;
+    }
+
+    // Multi-day runs from the single-add form: one row per day from event_date
+    // through the last day, which is how the public board already models a
+    // series (same title + venue rows collapse into one card with a range).
+    const MAX_RANGE_DAYS = 90;
+
+    function expandDateRange(record: AdminEventRecord, endDate: string): AdminEventRecord[] {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        throw new Error('Last day must use YYYY-MM-DD format.');
+      }
+      if (endDate < record.event_date) {
+        throw new Error('Last day must be on or after the event date.');
+      }
+      const records: AdminEventRecord[] = [];
+      let date = record.event_date;
+      while (date <= endDate) {
+        records.push({ ...record, event_date: date });
+        if (records.length > MAX_RANGE_DAYS) {
+          throw new Error(
+            `That range is longer than ${MAX_RANGE_DAYS} days. Double-check the last day.`
+          );
+        }
+        date = addDaysToDateString(date, 1);
+      }
+      return records;
+    }
+
     function normalizeUrl(value: unknown, fieldName = 'event_url') {
       const clean = nullableText(value);
       if (!clean) return null;
@@ -941,6 +991,64 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       }
       return clean.slice(0, 5);
     }
+
+    function requiredTimeOfDay(value: unknown, fieldName: string) {
+      const clean = normalizeTimeOfDay(value, fieldName);
+      if (!clean) throw new Error(`${fieldName} is required.`);
+      return clean;
+    }
+
+    function requiredUrl(value: unknown, fieldName: string) {
+      const clean = normalizeUrl(value, fieldName);
+      if (!clean) throw new Error(`${fieldName} is required.`);
+      return clean;
+    }
+
+    // Every event ships with a description, and the uniform preview cards on
+    // the public board depend on descriptions staying short. 150 words, stated
+    // on every description field and enforced on every write path.
+    const DESCRIPTION_WORD_LIMIT = 150;
+
+    function countWords(value: string) {
+      return value.trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    function requiredDescription(value: unknown) {
+      const clean = requiredText(value, 'description');
+      const words = countWords(clean);
+      if (words > DESCRIPTION_WORD_LIMIT) {
+        throw new Error(
+          `description is ${words} words; the limit is ${DESCRIPTION_WORD_LIMIT}. Trim it down.`
+        );
+      }
+      return clean;
+    }
+
+    /* ---------- Description word counters ---------- */
+    function updateWordCounter(textarea: HTMLTextAreaElement) {
+      const counter = textarea.closest('label')?.querySelector('[data-word-count]');
+      if (!counter) return;
+      const limit = Number(textarea.dataset.wordLimit) || DESCRIPTION_WORD_LIMIT;
+      const words = countWords(textarea.value);
+      counter.textContent = `${words} / ${limit} words`;
+      counter.classList.toggle('text-cayenne', words > limit);
+      counter.classList.toggle('text-darkWalnut/60', words <= limit);
+    }
+
+    function updateWordCounters(scope: ParentNode) {
+      scope
+        .querySelectorAll('textarea[data-word-limit]')
+        .forEach((el) => updateWordCounter(el as HTMLTextAreaElement));
+    }
+
+    // One delegated listener covers the static single form plus every cloned
+    // review card and row editor.
+    app.addEventListener('input', (event) => {
+      const target = event.target;
+      if (target instanceof HTMLTextAreaElement && target.dataset.wordLimit) {
+        updateWordCounter(target);
+      }
+    });
 
     // Case-insensitive match against the fixed taxonomy, normalized to the
     // canonical casing. Unknown tags are an error so free-form labels can
@@ -991,7 +1099,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     // The single-add form confirms with a themed banner rather than a text line.
     // It is built inside the existing status element so the same live region
     // announces it, and so the next setInlineStatus call wipes it.
-    function setSingleSuccessBanner(title: string) {
+    function setSingleSuccessBanner(title: string, dayCount = 1) {
       if (!singleStatus) return;
       singleStatus.textContent = '';
       singleStatus.classList.remove('text-cayenne');
@@ -1006,7 +1114,10 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
       const body = document.createElement('p');
       body.className = 'mt-2 font-body text-sm font-normal leading-relaxed text-darkWalnut';
-      body.textContent = `"${title}" is on the schedule. Press Publish live site to show it publicly now, or wait for the scheduled rebuild.`;
+      body.textContent =
+        dayCount > 1
+          ? `"${title}" is on the schedule for ${dayCount} days. Press Publish live site to show it publicly now, or wait for the scheduled rebuild.`
+          : `"${title}" is on the schedule. Press Publish live site to show it publicly now, or wait for the scheduled rebuild.`;
 
       banner.append(heading, body);
       singleStatus.appendChild(banner);
@@ -1046,14 +1157,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         title: requiredText(getFormValue(formData, 'title'), 'title'),
         event_date: requiredDate(getFormValue(formData, 'event_date')),
         venue: requiredText(getFormValue(formData, 'venue'), 'venue'),
-        start_time: normalizeTimeOfDay(getFormValue(formData, 'start_time'), 'start_time'),
+        start_time: requiredTimeOfDay(getFormValue(formData, 'start_time'), 'start_time'),
         end_time: normalizeTimeOfDay(getFormValue(formData, 'end_time'), 'end_time'),
-        neighborhood: nullableText(getFormValue(formData, 'neighborhood')),
-        organizer: nullableText(getFormValue(formData, 'organizer')),
+        neighborhood: requiredText(getFormValue(formData, 'neighborhood'), 'neighborhood'),
+        organizer: requiredText(getFormValue(formData, 'organizer'), 'organizer'),
         cost_info: nullableText(getFormValue(formData, 'cost_info')),
-        event_url: normalizeUrl(getFormValue(formData, 'event_url')),
-        image_url: normalizeUrl(getFormValue(formData, 'image_url'), 'image_url'),
-        description: nullableText(getFormValue(formData, 'description')),
+        event_url: requiredUrl(getFormValue(formData, 'event_url'), 'event_url'),
+        image_url: requiredUrl(getFormValue(formData, 'image_url'), 'image_url'),
+        description: requiredDescription(getFormValue(formData, 'description')),
         author_note: nullableText(getFormValue(formData, 'author_note')),
         emoji: nullableText(getFormValue(formData, 'emoji')),
         tags: validateTags(checkedTags.length > 0 ? checkedTags : null),
@@ -1069,6 +1180,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       { name: 'title', label: 'Title' },
       { name: 'event_date', label: 'Event date' },
       { name: 'venue', label: 'Venue' },
+      { name: 'start_time', label: 'Start time' },
+      { name: 'neighborhood', label: 'Neighborhood' },
+      { name: 'organizer', label: 'Organizer' },
+      { name: 'event_url', label: 'Event URL' },
+      { name: 'image_url', label: 'Photo or flyer URL' },
+      { name: 'description', label: 'Description' },
     ];
 
     function missingRequiredLabels(form: HTMLFormElement) {
@@ -1084,14 +1201,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           event_date: requiredDate(row.event_date),
           title: requiredText(row.title, 'title'),
           venue: requiredText(row.venue, 'venue'),
-          start_time: normalizeTimeOfDay(row.start_time, 'start_time'),
+          start_time: requiredTimeOfDay(row.start_time, 'start_time'),
           end_time: normalizeTimeOfDay(row.end_time, 'end_time'),
-          neighborhood: nullableText(row.neighborhood),
-          description: nullableText(row.description),
-          organizer: nullableText(row.organizer),
+          neighborhood: requiredText(row.neighborhood, 'neighborhood'),
+          description: requiredDescription(row.description),
+          organizer: requiredText(row.organizer, 'organizer'),
           cost_info: nullableText(row.cost_info),
-          event_url: normalizeUrl(row.event_url),
-          image_url: normalizeUrl(row.image_url, 'image_url'),
+          event_url: requiredUrl(row.event_url, 'event_url'),
+          image_url: requiredUrl(row.image_url, 'image_url'),
           author_note: nullableText(row.author_note),
           emoji: nullableText(row.emoji),
           tags: validateTags(parseTags(row.tags)),
@@ -1182,14 +1299,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         title: requiredText(cardFieldValue(card, 'title'), 'title'),
         event_date: requiredDate(cardFieldValue(card, 'event_date')),
         venue: requiredText(cardFieldValue(card, 'venue'), 'venue'),
-        start_time: normalizeTimeOfDay(cardFieldValue(card, 'start_time'), 'start_time'),
+        start_time: requiredTimeOfDay(cardFieldValue(card, 'start_time'), 'start_time'),
         end_time: normalizeTimeOfDay(cardFieldValue(card, 'end_time'), 'end_time'),
-        neighborhood: nullableText(cardFieldValue(card, 'neighborhood')),
-        organizer: nullableText(cardFieldValue(card, 'organizer')),
+        neighborhood: requiredText(cardFieldValue(card, 'neighborhood'), 'neighborhood'),
+        organizer: requiredText(cardFieldValue(card, 'organizer'), 'organizer'),
         cost_info: nullableText(cardFieldValue(card, 'cost_info')),
-        event_url: normalizeUrl(cardFieldValue(card, 'event_url')),
-        image_url: normalizeUrl(cardFieldValue(card, 'image_url'), 'image_url'),
-        description: nullableText(cardFieldValue(card, 'description')),
+        event_url: requiredUrl(cardFieldValue(card, 'event_url'), 'event_url'),
+        image_url: requiredUrl(cardFieldValue(card, 'image_url'), 'image_url'),
+        description: requiredDescription(cardFieldValue(card, 'description')),
         author_note: nullableText(cardFieldValue(card, 'author_note')),
         emoji: nullableText(cardFieldValue(card, 'emoji')),
         tags: validateTags(cardTags(card)),
@@ -1371,6 +1488,8 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       card.querySelector('[data-reject]')?.addEventListener('click', () => {
         void rejectSubmission(card, String(submission.id), cardStatus);
       });
+
+      updateWordCounters(card);
 
       return card;
     }
@@ -1611,6 +1730,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           return;
         }
         fillRowEditor(editor, row);
+        updateWordCounters(editor);
         if (rowStatus) rowStatus.textContent = '';
         editor.hidden = false;
       });
@@ -1896,6 +2016,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           if (body?.quota) setScanQuota(body.quota);
           if (!res.ok) throw new Error(body?.error ?? `Scan failed (status ${res.status}).`);
           prefillSingleForm(body?.event ?? {});
+          updateWordCounters(singleEventForm ?? app);
           const note = cleanText(body?.event?.scan_notes);
           setInlineStatus(
             scanStatus,
@@ -1960,9 +2081,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             return;
           }
           const record = recordFromForm(singleEventForm);
-          await insertEvents([record]);
+          const endDate = cleanText(new FormData(singleEventForm).get('event_end_date'));
+          const records = endDate ? expandDateRange(record, endDate) : [record];
+          await insertEvents(records);
           singleEventForm.reset();
-          setSingleSuccessBanner(record.title);
+          updateWordCounters(singleEventForm);
+          setSingleSuccessBanner(record.title, records.length);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error.';
           setInlineStatus(singleStatus, `Could not add event: ${message}`, true);

@@ -18,6 +18,9 @@ export default {
         // ("the Brown Line") via `font-wordmark`. See design.md § 3.
         heading:  ['Montserrat', 'system-ui', 'sans-serif'],
         body:     ['Montserrat', 'system-ui', 'sans-serif'],
+        // Event preview cards use Arial so dense listing text stays compact
+        // and every card renders at the same size.
+        card:     ['Arial', 'Helvetica', 'system-ui', 'sans-serif'],
         wordmark: ['"JT Modernism"', 'Georgia', 'serif'],
       },
       boxShadow: {

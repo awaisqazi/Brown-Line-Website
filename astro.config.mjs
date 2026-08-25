@@ -15,12 +15,13 @@ export default defineConfig({
     tailwind({ applyBaseStyles: false }),
     sitemap({
       // Admin pages are already noindex'd via meta; this filter is belt
-      // and braces so they never show up in the sitemap either. /standards and
-      // /support are redirect stubs to /about anchors, so they stay out too.
+      // and braces so they never show up in the sitemap either. /standards is
+      // a redirect stub to an /about anchor, so it stays out too. /support is
+      // a real page again (Keep the Line Running) and belongs in the sitemap.
       filter: (page) =>
         !page.includes('/admin/') &&
         !page.includes('/link-unavailable') &&
-        !/\/(standards|support)\/?$/.test(page),
+        !/\/standards\/?$/.test(page),
     }),
   ],
 });

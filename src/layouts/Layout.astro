@@ -4,6 +4,7 @@ import Nav from '../components/Nav.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import Footer from '../components/Footer.astro';
 import Marquee from '../components/Marquee.astro';
+import SupportPopup from '../components/SupportPopup.astro';
 import { getTickerItems } from '../lib/ticker';
 import { buildSiteJsonLd, stringifyJsonLd } from '../lib/seo';
 
@@ -141,6 +142,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     </main>
 
     {!minimal && <Footer />}
+    {!minimal && <SupportPopup />}
 
     {gaMeasurementId && (
       <Fragment>

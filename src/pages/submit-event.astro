@@ -215,8 +215,9 @@ const pageDescription =
         </label>
 
         <label class={`${labelClass} md:col-span-2`} for="event-description">
-          Event description<span class={reqClass}>Required</span>
-          <textarea id="event-description" name="description" rows="5" maxlength="6000" class={inputClass} required></textarea>
+          Event description<span class={reqClass}>Required, 150 words max</span>
+          <textarea id="event-description" name="description" rows="5" maxlength="6000" data-word-limit="150" class={inputClass} required></textarea>
+          <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
         </label>
 
         {/* Honeypot: hidden from people, tempting to bots. Leave it empty. The name
@@ -339,6 +340,27 @@ const pageDescription =
       dateInput.min = now.toISOString().slice(0, 10);
     }
 
+    // Description word limit: live counter plus a submit-time check. The same
+    // 150-word cap is enforced server-side in the submit-event edge function.
+    const DESCRIPTION_WORD_LIMIT = 150;
+    const descriptionInput = app.querySelector('#event-description') as HTMLTextAreaElement | null;
+    const wordCountEl = app.querySelector('[data-word-count]') as HTMLElement | null;
+
+    function countWords(value: string) {
+      return value.trim().split(/\s+/).filter(Boolean).length;
+    }
+
+    function updateWordCounter() {
+      if (!descriptionInput || !wordCountEl) return;
+      const words = countWords(descriptionInput.value);
+      wordCountEl.textContent = `${words} / ${DESCRIPTION_WORD_LIMIT} words`;
+      wordCountEl.classList.toggle('text-cayenne', words > DESCRIPTION_WORD_LIMIT);
+      wordCountEl.classList.toggle('text-darkWalnut/60', words <= DESCRIPTION_WORD_LIMIT);
+    }
+
+    descriptionInput?.addEventListener('input', updateWordCounter);
+    updateWordCounter();
+
     function getTurnstileToken() {
       const input = form?.querySelector(
         '[name="cf-turnstile-response"]'
@@ -349,6 +371,16 @@ const pageDescription =
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
+
+      const descriptionWords = countWords(descriptionInput?.value ?? '');
+      if (descriptionWords > DESCRIPTION_WORD_LIMIT) {
+        setStatus(
+          `Your description is ${descriptionWords} words; the limit is ${DESCRIPTION_WORD_LIMIT}. Trim it down and resubmit.`,
+          true
+        );
+        descriptionInput?.focus();
+        return;
+      }
 
       const token = getTurnstileToken();
       if (!token) {

@@ -7,47 +7,6 @@ import TransitDivider from '../components/TransitDivider.astro';
 const base = import.meta.env.BASE_URL;
 const EMAIL = 'hi@thebrownlinechi.com';
 
-// Stripe payment links (amounts confirmed 2026-06-25 from the live checkout pages).
-const STRIPE_LINKS = {
-  fare:    'https://buy.stripe.com/6oUcN65DS5iJcFa5vlasg00', // $20 one-time
-  stop:    'https://buy.stripe.com/4gM5kEeaodPfdJe5vlasg02', // $50 one-time
-  track:   'https://buy.stripe.com/6oUaEYeao26xdJe7Dtasg03', // $100 one-time
-  monthly: 'https://buy.stripe.com/7sY00k1nC4eF8oUg9Zasg04', // $7 / month (UPDATE STRIPE LINK: still the old $9 product)
-};
-
-const oneTimeTiers = [
-  {
-    amount: '$20',
-    name: 'Buy a fare',
-    blurb: 'Chip in for the ride and help keep the guide free.',
-    href: STRIPE_LINKS.fare,
-    accent: 'mayaBlue',
-    popular: false,
-  },
-  {
-    amount: '$50',
-    name: 'Cover a stop',
-    blurb: 'Help fund a neighborhood guide.',
-    href: STRIPE_LINKS.stop,
-    accent: 'celadon',
-    popular: false,
-  },
-  {
-    amount: '$100',
-    name: 'Lay the track',
-    blurb: 'Power a full month of coverage.',
-    href: STRIPE_LINKS.track,
-    accent: 'amber',
-    popular: true,
-  },
-];
-
-const accentBar: Record<string, string> = {
-  mayaBlue: 'bg-mayaBlue',
-  celadon: 'bg-celadon',
-  amber: 'bg-amber',
-};
-
 // Standards & Ethics: selection criteria cards.
 const criteria = [
   {
@@ -353,95 +312,13 @@ const description =
     </div>
   </section>
 
-  {/* ---------- Support the line (moved here from /support) ---------- */}
-  <section id="support" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-16 md:py-24 bg-seashell">
-    <div class="max-w-5xl mx-auto">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
-        Fund the line
-      </p>
-      <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
-        Keep the line running.
-      </h2>
-      <p class="font-body text-darkWalnut/85 text-lg leading-relaxed mt-5 max-w-2xl">
-        The Brown Line newsletter, social media, and curated events calendar are free for everyone,
-        always. If you're able, $7/month helps keep it that way, for you and for the next rider who
-        can't pay anything at all.
-      </p>
-
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mt-10">
-        {oneTimeTiers.map((tier) => (
-          <a
-            href={tier.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-ga-event="support_checkout"
-            data-ga-label={tier.name}
-            class:list={[
-              'group relative flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-6 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue',
-              tier.popular ? 'shadow-retro' : '',
-            ]}
-          >
-            <span class:list={['absolute inset-x-0 top-0 h-1.5', accentBar[tier.accent]]} aria-hidden="true"></span>
-            {tier.popular && (
-              <span class="absolute -top-3 right-4 font-body text-[10px] font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-0.5">
-                Most popular
-              </span>
-            )}
-            <span class="font-heading text-darkWalnut text-4xl md:text-5xl leading-none mt-2">{tier.amount}</span>
-            <span class="font-body font-extrabold uppercase tracking-widest text-darkWalnut text-sm mt-3">{tier.name}</span>
-            <span class="font-body text-darkWalnut/80 text-sm leading-relaxed mt-2 flex-1">{tier.blurb}</span>
-            <span class="mt-5 inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-cayenne">
-              Give {tier.amount} <span aria-hidden="true" class="transition-transform duration-150 group-hover:translate-x-1">&rarr;</span>
-            </span>
-          </a>
-        ))}
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-10">
-        <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-7 flex flex-col">
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-darkWalnut/60 font-bold">Street Level</p>
-          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">Free</p>
-          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
-            The weekly newsletter, always free. Subscribe and ride along.
-          </p>
-          <a
-            href="#subscribe"
-            data-ga-event="subscribe_click"
-            data-ga-label="about_support"
-            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-seashell px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-          >
-            Board here <span aria-hidden="true">&rarr;</span>
-          </a>
-        </div>
-
-        <div class="relative border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 shadow-retro flex flex-col">
-          <span class="absolute inset-x-0 top-0 h-1.5 bg-cayenne" aria-hidden="true"></span>
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mt-1">Solidarity Fare</p>
-          <p class="font-heading text-darkWalnut text-4xl leading-none mt-2">$7<span class="text-base align-middle font-body font-bold">/mo</span></p>
-          <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3 flex-1">
-            This is a solidarity-fare model, not a paywall. Everything stays free regardless of payment;
-            monthly riders subsidize free access for everyone else. Cancel any time.
-          </p>
-          <a
-            href={STRIPE_LINKS.monthly}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-ga-event="support_checkout"
-            data-ga-label="Monthly $7"
-            class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-cayenne px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-          >
-            Pay the solidarity fare <span aria-hidden="true">&rarr;</span>
-          </a>
-        </div>
-      </div>
-
-      <p class="font-body text-darkWalnut/70 text-sm mt-6 leading-relaxed">
-        Your support funds reporting and curation, community events, and keeping the guide free for
-        everyone. Payments are processed securely by Stripe. Want to give a different amount?
-        <a href={`mailto:${EMAIL}`} class="link-transit font-bold">Email us</a> and we'll sort it out.
-      </p>
-    </div>
-  </section>
+  {/* Support moved to its own page (/support). Old newsletters and bookmarks
+      still deep-link to /about#support, so forward that anchor along. */}
+  <script is:inline define:vars={{ supportUrl: `${base}support` }}>
+    if (window.location.hash === '#support') {
+      window.location.replace(supportUrl);
+    }
+  </script>
 
   {/* ---------- Standards & Ethics (moved here from /standards) ---------- */}
   <section id="ethics" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-16 md:py-24">
@@ -555,7 +432,7 @@ const description =
       <p class="font-body text-darkWalnut/70 text-sm mt-8 uppercase tracking-widest">
         Want to do more?
         <a
-          href="#support"
+          href={`${base}support`}
           class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne"
         >
           Support The Brown Line

@@ -2,22 +2,21 @@
 import MiniCalendar from './MiniCalendar.astro';
 
 const base = import.meta.env.BASE_URL;
-// Route stops = destinations. Support, Ethics, and Board here now live on the
-// About page (/about#support, /about#ethics, /about#subscribe), so the line
-// runs just four stops: three content stops plus the Submit CTA.
-const navLinks = [
-  { href: `${base}events`,     label: 'Events',     stopColor: '#5BC3FF' },
-  { href: `${base}newsletter`, label: 'Newsletter', stopColor: '#90D393' },
-  { href: `${base}about`,      label: 'About',      stopColor: '#FFBC29' },
-];
-const submitCta = { href: `${base}submit-event`, label: 'Submit an Event', gaEvent: 'submit_click' };
-// One route for desktop and the mobile drawer: four stops, colors cycling the
-// brand palette so no two neighboring stops share a dot color.
-const route = [
-  ...navLinks,
-  { ...submitCta, stopColor: '#F79CD0' },
-];
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
+const tiktokUrl = 'https://www.tiktok.com/@thebrownlinechi';
+// Route stops = destinations, in the order the team set: About, Events,
+// Submit an Event, Social Media, Newsletter, Keep the Line Running (support).
+// Social Media rides out to Instagram; every other stop stays on the line.
+// One route for desktop and the mobile drawer, colors cycling the brand
+// palette so no two neighboring stops share a dot color.
+const route = [
+  { href: `${base}about`,        label: 'About',                 stopColor: '#FFBC29' },
+  { href: `${base}events`,       label: 'Events',                stopColor: '#5BC3FF' },
+  { href: `${base}submit-event`, label: 'Submit an Event',       stopColor: '#F79CD0', gaEvent: 'submit_click' },
+  { href: instagramUrl,          label: 'Social Media',          stopColor: '#90D393', gaEvent: 'social_click', external: true },
+  { href: `${base}newsletter`,   label: 'Newsletter',            stopColor: '#F35A0F' },
+  { href: `${base}support`,      label: 'Keep the Line Running', stopColor: '#FFBC29', gaEvent: 'support_click' },
+];
 ---
 <header class="bg-seashell sticky top-0 z-30 lg:static lg:z-auto">
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
@@ -32,19 +31,21 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
       />
     </a>
 
-    {/* Desktop nav: all seven destinations on a single route, with the mini
+    {/* Desktop nav: all six destinations on a single route, with the mini
         calendar parked at the end of the line. Shown at lg+; tablets and phones
         use the hamburger drawer below so the route never gets crammed. */}
     <div class="hidden lg:flex flex-1 items-center gap-8 min-w-0">
       <nav aria-label="Primary" class="desktop-route-nav min-w-0">
         <ul class="desktop-route">
-          {route.map(({ href, label, stopColor, gaEvent }) => (
+          {route.map(({ href, label, stopColor, gaEvent, external }) => (
             <li class="desktop-route-item" style={`--stop-color: ${stopColor};`}>
               <a
                 href={href}
                 class="desktop-route-link"
                 data-ga-event={gaEvent}
                 data-ga-label={gaEvent ? 'nav' : undefined}
+                target={external ? '_blank' : undefined}
+                rel={external ? 'noopener noreferrer' : undefined}
               >
                 <span class="desktop-route-stop" aria-hidden="true"></span>
                 <span class="desktop-route-label">{label}</span>
@@ -96,12 +97,20 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 
     <nav aria-label="Mobile primary" class="px-6 pt-4 pb-2 flex-1">
       <ul id="mobile-nav-list" class="nav-stops flex flex-col">
-        {route.map(({ href, label, stopColor, gaEvent }) => (
+        {route.map(({ href, label, stopColor, gaEvent, external }) => (
           <li class="mobile-nav-item" style={`--stop-color: ${stopColor};`}>
-            <a href={href} class="mobile-nav-link" data-mobile-link data-ga-event={gaEvent} data-ga-label={gaEvent ? 'nav' : undefined}>
+            <a
+              href={href}
+              class="mobile-nav-link"
+              data-mobile-link
+              data-ga-event={gaEvent}
+              data-ga-label={gaEvent ? 'nav' : undefined}
+              target={external ? '_blank' : undefined}
+              rel={external ? 'noopener noreferrer' : undefined}
+            >
               <span class="mobile-nav-stop" aria-hidden="true"></span>
               <span class="mobile-nav-label">{label}</span>
-              <span class="mobile-nav-arrow" aria-hidden="true">&rarr;</span>
+              <span class="mobile-nav-arrow" aria-hidden="true">{external ? '↗' : '→'}</span>
             </a>
           </li>
         ))}
@@ -129,6 +138,18 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
           <rect x="3" y="3" width="18" height="18" rx="5" />
           <circle cx="12" cy="12" r="4" />
           <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      </a>
+      <a
+        href={tiktokUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="The Brown Line on TikTok"
+        class="social-icon inline-flex items-center justify-center w-10 h-10 text-darkWalnut"
+        data-mobile-link
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
         </svg>
       </a>
     </div>
@@ -201,126 +222,100 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
     width: 100%;
   }
 
-  /* Desktop route map mirrors the mobile stop language on a compact horizontal track */
+  /* Desktop route map: dot and label ride side by side on one line, and a
+     single track runs behind the whole route. Each link carries the header
+     background, so the track shows only in the gaps between stops, reading
+     as segments connecting station to station. */
   .desktop-route-nav {
     flex: 1 1 auto;
+    min-width: 0;
   }
 
   .desktop-route {
-    --route-gap: 2.75rem;
-    --stop-size: 20px;
-    /* Labels sit in a fixed-width centered column under each dot and wrap to a
-       second line when needed, so "Submit an Event" does not need a gap wide
-       enough to clear it on one line. */
-    --label-width: 4.75rem;
-    /* Horizontal padding reserves room for the first/last station labels, which
-       are centered under their dots and overflow the dot width. Without it the
-       first/last label spills past the route box. */
-    --route-pad: calc((var(--label-width) - var(--stop-size)) / 2);
     position: relative;
     display: flex;
-    /* A content-width group centered in the space between the logo and the mini
-       calendar: comfortable spacing between stops without stretching the route
-       across the whole header. */
     width: fit-content;
     max-width: 100%;
     margin: 0 auto;
-    align-items: flex-start;
-    justify-content: center;
-    column-gap: var(--route-gap);
-    padding: 0 var(--route-pad) 2.75rem;
+    align-items: center;
+    column-gap: 0.95rem;
     isolation: isolate;
   }
 
   .desktop-route::before {
     content: '';
     position: absolute;
-    /* Start/end on the first and last dot centers (inset by the route padding). */
-    left: calc(var(--route-pad) + var(--stop-size) / 2);
-    right: calc(var(--route-pad) + var(--stop-size) / 2);
-    top: calc(var(--stop-size) / 2);
+    left: 8px;
+    right: 8px;
+    top: 50%;
     height: 2px;
+    transform: translateY(-50%);
     background: #642713;
     z-index: 0;
   }
 
   .desktop-route-item {
     position: relative;
-    width: var(--stop-size);
-    height: calc(var(--stop-size) + 2.75rem);
     z-index: 1;
   }
 
   .desktop-route-link {
-    position: relative;
-    display: block;
-    width: var(--stop-size);
-    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.35rem;
+    background: #FAF1EC;
     font-family: 'Montserrat', system-ui, sans-serif;
-    font-size: 0.64rem;
+    font-size: 0.63rem;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
+    white-space: nowrap;
     color: #642713;
     transition: color 200ms ease, transform 220ms ease;
   }
 
   .desktop-route-stop {
     display: block;
-    width: var(--stop-size);
-    height: var(--stop-size);
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
     border-radius: 9999px;
     border: 2px solid #642713;
     background: var(--stop-color);
-    box-shadow: 2px 2px 0 #642713;
+    box-shadow: 1.5px 1.5px 0 #642713;
     transition: transform 220ms ease, box-shadow 220ms ease;
-  }
-
-  .desktop-route-label {
-    display: block;
-    position: absolute;
-    top: calc(var(--stop-size) + 0.55rem);
-    left: 50%;
-    transform: translateX(-50%);
-    width: var(--label-width);
-    text-align: center;
-    text-wrap: balance;
   }
 
   .desktop-route-link:hover,
   .desktop-route-link:focus-visible {
     color: #F35A0F;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     outline: none;
   }
 
   .desktop-route-link:hover .desktop-route-stop,
   .desktop-route-link:focus-visible .desktop-route-stop {
-    transform: scale(1.15);
-    box-shadow: 3px 3px 0 #642713;
+    transform: scale(1.2);
+    box-shadow: 2px 2px 0 #642713;
   }
 
-  /* At lg the four stops share the strip between the logo and the mini
-     calendar; the gap and labels open up at xl where there is room to spare. */
-  @media (min-width: 1024px) {
-    .desktop-route {
-      --route-gap: 4.75rem;
-      --label-width: 5.25rem;
-    }
-
-    .desktop-route-link {
-      font-size: 0.7rem;
-    }
-  }
-
+  /* The header container caps at max-w-6xl, so the route never gets more
+     room than this even on very wide screens. */
   @media (min-width: 1280px) {
     .desktop-route {
-      --route-gap: 6rem;
-      --label-width: 6.5rem;
+      column-gap: 1.4rem;
     }
 
     .desktop-route-link {
-      font-size: 0.78rem;
+      font-size: 0.67rem;
+      gap: 0.5rem;
+    }
+
+    .desktop-route-stop {
+      width: 15px;
+      height: 15px;
     }
   }
 
@@ -360,6 +355,7 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(3) { transition-delay: 360ms; }
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(4) { transition-delay: 440ms; }
   #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(5) { transition-delay: 520ms; }
+  #mobile-nav[aria-hidden="false"] .mobile-nav-item:nth-child(6) { transition-delay: 600ms; }
 
   /* Social icons row at the drawer footer, fades in after the stops */
   #mobile-nav .social-icon {

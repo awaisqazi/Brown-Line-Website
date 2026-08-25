@@ -12,8 +12,8 @@ interface Props {
    */
   recurrenceLabel?: string;
   /**
-   * Include the start time in the venue meta line. The homepage rail turns
-   * this off because it shows the time next to each stop's date chip instead.
+   * Include the start time in the card meta. The event detail page turns this
+   * off because it shows the time in the departure chip above the card.
    */
   showTime?: boolean;
   /**
@@ -26,6 +26,13 @@ interface Props {
    * heading; the event detail page renders its card title as the page `h1`.
    */
   headingLevel?: 'h1' | 'h2' | 'h3';
+  /**
+   * 'preview' (default) is the uniform board/homepage card: date tile and
+   * flyer thumbnail on the left, clamped two-line description, Arial text.
+   * 'full' is the event detail layout with the full-size flyer, the complete
+   * description, and the conductor's note.
+   */
+  variant?: 'preview' | 'full';
 }
 
 const {
@@ -34,6 +41,7 @@ const {
   showTime = true,
   linkTitle = true,
   headingLevel = 'h3',
+  variant = 'preview',
 } = Astro.props;
 
 // Defensive spelling normalization for text that comes straight from the DB.
@@ -59,6 +67,34 @@ const safeEventUrl = /^https?:\/\//i.test(eventUrl) ? eventUrl : '';
 // leaving a broken-image glyph on the card.
 const imageUrl = event.image_url?.trim() ?? '';
 const safeImageUrl = /^https?:\/\//i.test(imageUrl) ? imageUrl : '';
+
+// Date overlay parts (month + day) for the preview card, parsed straight from
+// the YYYY-MM-DD string so the calendar day never shifts across time zones.
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dateParts = (event.event_date ?? '').split('-').map(Number);
+const hasDate = dateParts.length === 3 && dateParts.every((n) => Number.isFinite(n) && n > 0);
+const tileMonth = hasDate ? MONTHS_SHORT[dateParts[1] - 1] : '';
+const tileDay = hasDate ? String(dateParts[2]) : '';
+
+// When there's no flyer, the media panel becomes a solid brand-color block
+// keyed off the event's first tag, with the emoji as a big sticker stamp.
+const TAG_PANEL_COLORS: Record<string, string> = {
+  'South Asian': '#FFBC29',
+  SWANA: '#90D393',
+  'East Asian': '#5BC3FF',
+  'Southeast Asian': '#F79CD0',
+  'Black Diaspora': '#F35A0F',
+  Latine: '#FFBC29',
+  'Afro-Latine': '#F79CD0',
+  Indigenous: '#90D393',
+  'Cross-cultural': '#5BC3FF',
+};
+const panelColor = TAG_PANEL_COLORS[tags[0] ?? ''] ?? '#90D393';
+
+// The scrolling ribbon along the media panel's bottom edge. Both halves of the
+// track carry the same repeated sequence so the -50% translate loops cleanly.
+const ribbonSource = tags.length > 0 ? tags : ['The Brown Line'];
+const ribbonItems = Array.from({ length: 6 }, () => ribbonSource).flat();
 
 // Venue, once. The neighborhood is often baked into the venue text as a trailing
 // ", Neighborhood" segment (that's where the `neighborhood` column was derived
@@ -105,7 +141,7 @@ const anchorId = `event-${event.id}`;
 const shareUrl = safeEventUrl || new URL(`${import.meta.env.BASE_URL}events#${anchorId}`, Astro.site).href;
 
 // Every stop also has its own page (`/events/<slug>`), which is what the title
-// links to. The footer's "Details / RSVP ↗" link still points off-site to the
+// links to. The footer's "RSVP / Tickets ↗" link still points off-site to the
 // organizer, so the two destinations stay clearly distinct: words in, arrow out.
 const detailHref = linkTitle ? buildEventPath(event, import.meta.env.BASE_URL) : '';
 const Title = headingLevel;
@@ -174,32 +210,47 @@ function splitGiveawayDescription(description: string | null) {
   };
 }
 
+// Collapse the description to one plain line for the preview card's clamped
+// two-line block: paragraph breaks flatten to spaces so the clamp is what
+// limits length, not the first newline.
+const previewDescription = description ? description.replace(/\s+/g, ' ').trim() : '';
+
 const startTime = showTime ? formatTimeRange(event.start_time, event.end_time) : '';
 
 // One meta line under the title: venue, neighborhood, and date range joined
-// together. The start time renders as its own amber chip beside this line so
-// it stands out instead of blending into the venue text.
+// together. The start time renders as its own chip beside this line so it
+// stands out instead of blending into the venue text.
 const metaLine = [venueLine, recurrenceLabel].filter(Boolean).join(' · ');
 
-// Amber time chip, matching the homepage departure tag's time segment.
-const timeChipClass =
-  'border-2 border-[#62361B] bg-amber px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-[11px]';
+// Time chip, matching the homepage departure tag's time segment. On a curated
+// (amber) card the amber chip would vanish, so it flips to seashell there.
+const timeChipClass = `border-2 border-[#62361B] px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-[11px] ${
+  isCurated ? 'bg-seashell' : 'bg-amber'
+}`;
 
 const giveawayDescription = splitGiveawayDescription(description);
 const giveawayRules =
   giveawayDescription.rules || authorNote || 'Follow the newsletter instructions to enter.';
 
-// Shared button styling for the card action row.
-const detailsBtnClass =
-  'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-amber px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+// Shared button styling for the card action row. The RSVP button flips from
+// amber to seashell on curated cards so it never disappears into the amber bg.
+const detailsBtnClass = `inline-flex items-center gap-1 whitespace-nowrap border-2 border-darkWalnut px-2.5 py-1.5 font-card text-[11px] font-bold uppercase tracking-[0.08em] text-darkWalnut shadow-[2px_2px_0_#642713] transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue ${
+  isCurated ? 'bg-seashell' : 'bg-amber'
+}`;
 const shareBtnClass =
   'inline-flex items-center gap-1.5 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-1.5 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+
+// Secondary actions (Share, Calendar) on the preview card: real buttons with
+// a light single-pixel outline, half the visual weight of the RSVP chunk so
+// that stays the only loud control in the row.
+const quietActionClass =
+  'inline-flex items-center gap-1 whitespace-nowrap border border-darkWalnut/45 px-2 py-1.5 font-card text-[10px] font-bold uppercase tracking-[0.12em] text-darkWalnut/75 transition-colors hover:border-darkWalnut hover:text-darkWalnut focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
 
 // "Add to cal" menu. Both links are generated at build time from the event row,
 // so the dropdown needs no JavaScript to work: Google gets a prefilled template
 // URL, Apple and friends get a downloadable .ics data URI. Recurring series that
 // collapse to one card use the representative event's own date, which is what
-// its date chip already shows.
+// its date tile already shows.
 const googleCalendarUrl = buildGoogleCalendarUrl(event);
 const icsDataUri = buildIcsDataUri(event);
 const icsFileName = buildIcsFileName(event);
@@ -210,6 +261,9 @@ const hasCalendarLinks = Boolean(googleCalendarUrl && icsDataUri);
 const calendarSummaryClass = `${shareBtnClass} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`;
 const calendarItemClass =
   'block px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut hover:bg-amber focus-visible:outline-none focus-visible:bg-amber';
+
+// Card surface: Conductor's Picks ride in amber so they pop off the board.
+const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
 ---
 
 {isGiveaway ? (
@@ -283,8 +337,8 @@ const calendarItemClass =
       )}
       <div class="flex flex-wrap items-center gap-2">
         {safeEventUrl ? (
-          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
-            Details / RSVP <span aria-hidden="true">↗</span>
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`RSVP and tickets for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
+            RSVP / Tickets <span aria-hidden="true">↗</span>
           </a>
         ) : (
           <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/70 font-bold">
@@ -312,8 +366,8 @@ const calendarItemClass =
       </div>
     </div>
   </article>
-) : (
-  <article id={anchorId} class="event-card bg-[#FDFBF7] border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro">
+) : variant === 'full' ? (
+  <article id={anchorId} class:list={['event-card border-[3px] border-darkWalnut p-5 md:p-7 transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro', cardSurfaceClass]}>
     <div class="flex flex-wrap items-center gap-2">
       {isCurated && (
         <span class="font-body text-[10px] md:text-xs font-bold uppercase tracking-widest text-seashell bg-cayenne border-2 border-darkWalnut px-2 py-1">
@@ -353,14 +407,25 @@ const calendarItemClass =
     </div>
 
     {safeImageUrl && (
-      <img
-        src={safeImageUrl}
-        alt={`Flyer for ${title}`}
-        loading="lazy"
-        referrerpolicy="no-referrer"
-        class="mt-4 max-h-72 w-full border-2 border-darkWalnut object-cover"
-        onerror="this.style.display='none'"
-      />
+      <div class="relative mt-4 h-80 w-full overflow-hidden border-2 border-darkWalnut">
+        <img
+          src={safeImageUrl}
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          class="absolute inset-0 h-full w-full scale-110 object-cover blur-lg brightness-90 saturate-[1.15]"
+          onerror="this.style.display='none'"
+        />
+        <img
+          src={safeImageUrl}
+          alt={`Flyer for ${title}`}
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          class="relative z-[1] h-full w-full object-contain"
+          onerror="this.parentElement.style.display='none'"
+        />
+      </div>
     )}
 
     {description && (
@@ -393,8 +458,8 @@ const calendarItemClass =
       )}
       <div class="ml-auto flex flex-wrap items-center gap-2">
         {safeEventUrl ? (
-          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`Details and RSVP for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
-            Details / RSVP <span aria-hidden="true">↗</span>
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`RSVP and tickets for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
+            RSVP / Tickets <span aria-hidden="true">↗</span>
           </a>
         ) : (
           <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/65 font-bold">
@@ -419,6 +484,145 @@ const calendarItemClass =
         <button type="button" class={shareBtnClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
           Share
         </button>
+      </div>
+    </div>
+  </article>
+) : (
+  <article id={anchorId} class:list={['event-card group relative flex flex-col border-[3px] border-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro sm:flex-row', cardSurfaceClass]}>
+    {/* Media panel: the flyer is the hero, bleeding to the card edges. With no
+        flyer it becomes a brand-color panel with the emoji as a sticker stamp. */}
+    <div
+      class="event-media relative shrink-0 overflow-hidden border-b-[3px] border-darkWalnut sm:w-52 sm:self-stretch sm:border-b-0 sm:border-r-[3px] md:w-60"
+      style={`background-color: ${panelColor};`}
+    >
+      {safeImageUrl ? (
+        <>
+          {/* Most flyers arrive in Instagram ratios (1:1 or 4:5), so the
+              photo shows whole over a blurred copy of itself instead of
+              being cropped to the panel. */}
+          <img
+            src={safeImageUrl}
+            alt=""
+            aria-hidden="true"
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            class="event-media-backdrop"
+            onerror="this.style.display='none'"
+          />
+          <img
+            src={safeImageUrl}
+            alt={`Flyer for ${title}`}
+            loading="lazy"
+            referrerpolicy="no-referrer"
+            class="event-media-img relative z-[1] h-52 w-full object-contain sm:absolute sm:inset-0 sm:h-full"
+            onerror="this.style.display='none'"
+          />
+        </>
+      ) : (
+        <div class="event-media-fallback flex h-52 w-full items-center justify-center sm:absolute sm:inset-0 sm:h-full" aria-hidden="true">
+          {event.emoji && <span class="event-media-stamp">{event.emoji}</span>}
+        </div>
+      )}
+
+      {hasDate && (
+        <div class="absolute left-0 top-0 z-[2] border-b-2 border-r-2 border-darkWalnut bg-seashell px-2.5 py-1.5 text-center">
+          <span class="block font-card text-[9px] font-bold uppercase leading-none tracking-[0.22em] text-cayenne">{tileMonth}</span>
+          <span class="mt-0.5 block font-heading text-xl font-extrabold leading-none text-darkWalnut">{tileDay}</span>
+        </div>
+      )}
+
+      {isCurated && (
+        <div class="absolute right-0 top-0 z-[2] border-b-2 border-l-2 border-darkWalnut bg-cayenne px-2 py-1.5 font-card text-[8px] font-bold uppercase tracking-[0.18em] text-seashell">
+          ★ Conductor's Pick
+        </div>
+      )}
+
+      {/* Rolling destination sign: the event's community tags on a loop */}
+      <div class="event-ribbon absolute inset-x-0 bottom-0 z-[2] overflow-hidden border-t-2 border-darkWalnut bg-darkWalnut py-1.5" aria-hidden="true">
+        <div class="event-ribbon-track">
+          {[0, 1].map(() => (
+            <span class="event-ribbon-half">
+              {ribbonItems.map((item) => (
+                <span class="event-ribbon-item">
+                  {item}
+                  <span class="event-ribbon-star">✶</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Content column */}
+    <div class="flex min-w-0 flex-1 flex-col p-4 md:p-5">
+      <Title class="font-card text-lg font-bold leading-snug text-darkWalnut md:text-xl">
+        <span class="line-clamp-2">
+          {detailHref ? (
+            <a href={detailHref} class={titleLinkClass} data-ga-event="event_detail_click" data-ga-label={title}>
+              {title}
+            </a>
+          ) : (
+            title
+          )}
+        </span>
+      </Title>
+
+      {organizerDisplay && (
+        <p class="mt-1 truncate font-card text-[10px] font-bold uppercase tracking-[0.18em] text-darkWalnut/60">
+          By {organizerDisplay}
+        </p>
+      )}
+
+      <p class="mt-1.5 truncate font-card text-[11px] font-bold uppercase tracking-[0.14em] text-darkWalnut/80 md:text-xs">
+        {metaLine}
+      </p>
+
+      <div class="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+        {startTime && <span class={timeChipClass}>{startTime}</span>}
+        {priceLabelInCluster && (
+          <span class="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/70">
+            {priceLabelInCluster}
+          </span>
+        )}
+      </div>
+
+      {previewDescription && (
+        <p class="mt-2.5 line-clamp-2 font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm">
+          {previewDescription}
+        </p>
+      )}
+
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 pt-1 sm:mt-auto">
+        <div class="flex items-center gap-1.5">
+          <button type="button" class={quietActionClass} data-share-button data-share-title={title} data-share-url={shareUrl} data-ga-event="share_click" data-ga-label={title}>
+            Share
+          </button>
+          {hasCalendarLinks && (
+            <details class="relative inline-flex" data-calendar-menu>
+              <summary class={`${quietActionClass} cursor-pointer list-none select-none [&::-webkit-details-marker]:hidden`} aria-label={`Add ${title} to a calendar`}>
+                Calendar <span aria-hidden="true">▾</span>
+              </summary>
+              <div class="absolute left-0 top-[calc(100%+0.375rem)] z-30 w-52 border-2 border-darkWalnut bg-[#FDFBF7] shadow-retro">
+                <a href={googleCalendarUrl} target="_blank" rel="noopener noreferrer" class={calendarItemClass} data-ga-event="calendar_click" data-ga-label={title}>
+                  Google Calendar
+                </a>
+                <a href={icsDataUri} download={icsFileName} class={`${calendarItemClass} border-t-2 border-darkWalnut`} data-ga-event="calendar_click" data-ga-label={title}>
+                  Apple Calendar (.ics)
+                </a>
+              </div>
+            </details>
+          )}
+        </div>
+        {safeEventUrl ? (
+          <a href={safeEventUrl} target="_blank" rel="noopener noreferrer" class={detailsBtnClass} aria-label={`RSVP and tickets for ${title}`} data-ga-event="rsvp_click" data-ga-label={title}>
+            RSVP / Tickets <span aria-hidden="true">↗</span>
+          </a>
+        ) : (
+          <span class="min-w-0 truncate text-right font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/60">
+            See organizer for details
+          </span>
+        )}
       </div>
     </div>
   </article>
@@ -450,6 +654,95 @@ const calendarItemClass =
   .share-feedback {
     position: relative;
   }
+
+  /* Flyer zooms gently while the card lifts, like leaning in for a look. */
+  .event-media-img {
+    transition: transform 400ms ease;
+  }
+
+  .event-card:hover .event-media-img {
+    transform: scale(1.04);
+  }
+
+  /* Blurred fill behind the contained flyer: scaled past the edges so the
+     blur never shows a bright vignette at the panel border. */
+  .event-media-backdrop {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+    transform: scale(1.2);
+    filter: blur(14px) saturate(1.15) brightness(0.9);
+  }
+
+  /* No-flyer panel: halftone dots over the tag color, emoji as a sticker. */
+  .event-media-fallback {
+    background-image: radial-gradient(rgba(100, 39, 19, 0.16) 1.5px, transparent 1.5px);
+    background-size: 12px 12px;
+  }
+
+  .event-media-stamp {
+    font-size: 3.5rem;
+    line-height: 1;
+    transform: rotate(-8deg);
+    filter: drop-shadow(3px 3px 0 rgba(100, 39, 19, 0.3));
+  }
+
+  /* Rolling destination sign: two identical halves translate -50% for a
+     seamless loop, LED-amber on walnut like the site marquee. The 26s here
+     is only a no-JS fallback: the loop distance is half the track width,
+     which varies with tag length, so a fixed duration would make wide
+     tracks race. The script below pins every ribbon to the same px/s by
+     setting animation-duration per track. */
+  .event-ribbon-track {
+    display: flex;
+    width: max-content;
+    animation: event-ribbon-scroll 26s linear infinite;
+  }
+
+  .event-ribbon-half {
+    display: inline-flex;
+  }
+
+  .event-ribbon-item {
+    display: inline-flex;
+    align-items: center;
+    padding-right: 0.6rem;
+    font-family: Arial, Helvetica, system-ui, sans-serif;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+    color: #FFBC29;
+  }
+
+  .event-ribbon-star {
+    padding-left: 0.6rem;
+    font-size: 8px;
+    color: rgba(250, 241, 236, 0.65);
+  }
+
+  @keyframes event-ribbon-scroll {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .event-media-img {
+      transition: none;
+    }
+
+    .event-card:hover .event-media-img {
+      transform: none;
+    }
+
+    .event-ribbon-track {
+      animation: none;
+    }
+  }
 </style>
 
 <script>
@@ -474,6 +767,30 @@ const calendarItemClass =
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeMenus();
     });
+  }
+
+  // Every ribbon scrolls at the same pace. The loop distance is half the
+  // track's width, which depends on how many tags the event carries, so each
+  // track gets a duration proportional to its own width instead of sharing
+  // one fixed time. Runs once per page; track widths come from system-font
+  // text, so they do not change after layout.
+  if (!(window as any).__brownLineRibbonWired) {
+    (window as any).__brownLineRibbonWired = true;
+
+    const RIBBON_SPEED_PX_PER_S = 24;
+
+    const setRibbonSpeeds = () => {
+      document.querySelectorAll('.event-ribbon-track').forEach((track) => {
+        const el = track as HTMLElement;
+        const loopDistance = el.scrollWidth / 2;
+        if (loopDistance > 0) {
+          el.style.animationDuration = `${(loopDistance / RIBBON_SPEED_PX_PER_S).toFixed(2)}s`;
+        }
+      });
+    };
+
+    setRibbonSpeeds();
+    window.addEventListener('load', setRibbonSpeeds, { once: true });
   }
 
   // One delegated handler for every card's Share button. Astro includes this

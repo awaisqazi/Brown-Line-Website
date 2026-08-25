@@ -125,6 +125,17 @@ Deno.serve(async (req: Request) => {
   if (!description) missing.push("a description");
   if (missing.length) return json({ error: `Please provide: ${missing.join(", ")}.` }, 400);
 
+  // Descriptions are capped at 150 words (stated on the form and counted live
+  // there); this mirror check stops anything that skips the form's validation.
+  const DESCRIPTION_WORD_LIMIT = 150;
+  const descriptionWords = description.split(/\s+/).filter(Boolean).length;
+  if (descriptionWords > DESCRIPTION_WORD_LIMIT) {
+    return json({
+      error:
+        `Your description is ${descriptionWords} words; the limit is ${DESCRIPTION_WORD_LIMIT}. Trim it down and resubmit.`,
+    }, 400);
+  }
+
   // The regex above only checks the shape; reject impossible calendar dates
   // (2026-99-99) and dates that have already passed in Chicago.
   const [yy, mm, dd] = event_date.split("-").map(Number);

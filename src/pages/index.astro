@@ -2,12 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import EventCard from '../components/EventCard.astro';
-import Marquee from '../components/Marquee.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { supabase } from '../lib/supabase';
-import { formatTimeRange, formatStopDate, getChicagoDateString } from '../lib/dates';
-import type { TickerItem } from '../lib/ticker';
+import { formatStopDate, getChicagoDateString } from '../lib/dates';
+import { buildEventPath } from '../lib/seo';
+import { getSortedArticles } from '../lib/articles';
 import type { TransitEvent } from '../lib/supabase';
+
+const base = import.meta.env.BASE_URL;
+const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
+const tiktokUrl = 'https://www.tiktok.com/@thebrownlinechi';
 
 const HOMEPAGE_EVENTS_LIMIT = 5;
 
@@ -49,38 +53,250 @@ if (upcomingEventsError) {
 }
 
 const upcomingEvents = upcomingEventsData ?? [];
-// The scrolling NEXT STOP banner leads with the soonest upcoming event, matching
-// the date-ordered rail below.
-const firstUpcomingEvent = upcomingEvents[0];
-const upcomingStopsTicker: TickerItem[] = [
-  {
-    label: 'NEXT STOP',
-    text: firstUpcomingEvent
-      ? `${firstUpcomingEvent.title} · DOORS OPEN ON THE RIGHT`
-      : 'NO SCHEDULED STOPS · CHECK THE EVENTS BOARD',
-  },
-];
+
+// No-flyer slides fall back to a brand-color panel keyed off the first tag,
+// with the emoji as a sticker stamp (mirrors EventCard's media panel).
+const TAG_PANEL_COLORS: Record<string, string> = {
+  'South Asian': '#FFBC29',
+  SWANA: '#90D393',
+  'East Asian': '#5BC3FF',
+  'Southeast Asian': '#F79CD0',
+  'Black Diaspora': '#F35A0F',
+  Latine: '#FFBC29',
+  'Afro-Latine': '#F79CD0',
+  Indigenous: '#90D393',
+  'Cross-cultural': '#5BC3FF',
+};
+
+// Slides for the events-calendar product box: real flyers with the stop's
+// date and title riding underneath.
+const eventSlides = upcomingEvents.map((event) => {
+  const imageUrl = event.image_url?.trim() ?? '';
+  return {
+    href: buildEventPath(event, base),
+    image: /^https?:\/\//i.test(imageUrl) ? imageUrl : '',
+    panelColor: TAG_PANEL_COLORS[event.tags?.[0] ?? ''] ?? '#90D393',
+    emoji: event.emoji ?? '',
+    date: formatStopDate(event.event_date),
+    title: event.title,
+  };
+});
+
+// Slides for the newsletter product box: hero art plus the issue's title and
+// a one-line hook, so the carousel sells the writing, not just the art.
+const articles = await getSortedArticles();
+const newsletterSlides = articles.slice(0, 3).map((article) => ({
+  href: `${base}newsletter/${article.slug}`,
+  image: /^https?:\/\//i.test(article.heroImage) ? article.heroImage : `${base}${article.heroImage}`,
+  alt: article.heroAlt,
+  title: article.title,
+  description: article.description,
+}));
 ---
 <Layout>
   {/* ---------- Hero ---------- */}
-  <section id="subscribe" class="px-6 pt-12 pb-6 md:pt-16 md:pb-6 lg:pt-20">
+  <section id="subscribe" class="px-6 pt-10 pb-4 md:pt-12 md:pb-5">
     <div class="max-w-4xl mx-auto text-center">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-4">
         Underground culture, elevated
       </p>
 
-      <h1 class="font-heading text-darkWalnut text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-tight text-balance">
+      <h1 class="font-heading text-darkWalnut text-3xl md:text-4xl lg:text-[2.75rem] leading-[1.08] tracking-tight text-balance">
         Chicago&rsquo;s go-to guide for&nbsp;<em class="not-italic text-cayenne">Global South diaspora</em> arts, culture, and community.
       </h1>
 
-      <div class="mt-8 md:mt-10 flex justify-center">
+      <div class="mt-6 md:mt-7 flex justify-center">
         <SubscribeForm caption="" />
       </div>
     </div>
   </section>
 
+  {/* ---------- Product showcase: events calendar, social media, newsletter ---------- */}
+  <section class="px-6 pt-6 pb-8 md:pt-8 md:pb-10">
+    <div class="max-w-5xl mx-auto grid grid-cols-1 gap-5 md:grid-cols-3 md:gap-6">
+      {/* Events calendar: rotating flyers with the stop's date and title beneath */}
+      <div class="flex flex-col overflow-hidden border-[3px] border-darkWalnut bg-[#FDFBF7] shadow-retro">
+        <div class="product-slideshow relative h-60 border-b-[3px] border-darkWalnut" data-slideshow>
+          {eventSlides.length > 0 ? (
+            eventSlides.map((slide, index) => (
+              <a
+                href={slide.href}
+                data-ga-event="event_detail_click"
+                data-ga-label="homepage_products"
+                class:list={['product-slide absolute inset-0 flex flex-col focus-visible:outline-none', index === 0 ? 'is-active' : '']}
+                data-slide
+                tabindex={index === 0 ? undefined : -1}
+              >
+                {slide.image ? (
+                  <span
+                    class="product-panel relative block min-h-0 w-full flex-1 overflow-hidden"
+                    style={`background-color: ${slide.panelColor};`}
+                  >
+                    {/* If the flyer fails to load (hotlink blocks and the
+                        like), both copies hide and the brand panel with the
+                        emoji stamp shows instead of a broken-image glyph. */}
+                    {slide.emoji && (
+                      <span class="product-panel-stamp absolute inset-0 flex items-center justify-center" aria-hidden="true">{slide.emoji}</span>
+                    )}
+                    <img
+                      src={slide.image}
+                      alt=""
+                      aria-hidden="true"
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      class="absolute inset-0 h-full w-full scale-110 object-cover blur-lg brightness-90 saturate-[1.15]"
+                      onerror="this.style.display='none'"
+                    />
+                    <img
+                      src={slide.image}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerpolicy="no-referrer"
+                      class="relative z-[1] h-full w-full object-contain"
+                      onerror="this.style.display='none'"
+                    />
+                  </span>
+                ) : (
+                  <div
+                    class="product-panel flex min-h-0 w-full flex-1 items-center justify-center"
+                    style={`background-color: ${slide.panelColor};`}
+                    aria-hidden="true"
+                  >
+                    {slide.emoji && <span class="product-panel-stamp">{slide.emoji}</span>}
+                  </div>
+                )}
+                <span class="flex shrink-0 items-baseline gap-2 border-t-2 border-darkWalnut bg-darkWalnut px-3 py-2">
+                  <span class="shrink-0 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-amber">{slide.date}</span>
+                  <span class="truncate font-card text-xs font-bold text-seashell">{slide.title}</span>
+                </span>
+              </a>
+            ))
+          ) : (
+            <div class="product-slide is-active absolute inset-0 flex items-center justify-center bg-seashell px-4 text-center" data-slide>
+              <span class="font-body text-sm font-bold text-darkWalnut">New stops are on the way.</span>
+            </div>
+          )}
+        </div>
+
+        <div class="flex flex-1 flex-col p-5">
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The events calendar</p>
+          <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
+            Find your next stop.
+          </h2>
+          <a
+            href={`${base}events`}
+            data-ga-event="browse_click"
+            data-ga-label="homepage_products"
+            class="mt-4 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-mayaBlue px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+          >
+            Browse events <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Social media: a designed panel, not a box in a box */}
+      <div class="flex flex-col overflow-hidden border-[3px] border-darkWalnut bg-[#FDFBF7] shadow-retro">
+        <div class="product-panel relative flex h-60 flex-col items-center justify-center gap-4 border-b-[3px] border-darkWalnut bg-babyPink px-4">
+          <div class="flex items-center gap-4">
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="The Brown Line on Instagram"
+              data-ga-event="social_click"
+              data-ga-label="homepage_products_instagram"
+              class="inline-flex h-14 w-14 items-center justify-center border-2 border-darkWalnut bg-seashell text-darkWalnut shadow-[3px_3px_0_#642713] transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+            >
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+              </svg>
+            </a>
+            <a
+              href={tiktokUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="The Brown Line on TikTok"
+              data-ga-event="social_click"
+              data-ga-label="homepage_products_tiktok"
+              class="inline-flex h-14 w-14 items-center justify-center border-2 border-darkWalnut bg-seashell text-darkWalnut shadow-[3px_3px_0_#642713] transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+            >
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+                <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+              </svg>
+            </a>
+          </div>
+          <p class="border-2 border-darkWalnut bg-seashell px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-darkWalnut">@thebrownlinechi</p>
+        </div>
+
+        <div class="flex flex-1 flex-col p-5">
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Social media</p>
+          <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
+            Follow the line.
+          </h2>
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="social_click"
+            data-ga-label="homepage_products"
+            class="mt-4 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-babyPink px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            Follow along <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Newsletter: rotating issues, art on top with the headline and hook under it */}
+      <div class="flex flex-col overflow-hidden border-[3px] border-darkWalnut bg-[#FDFBF7] shadow-retro">
+        <div class="product-slideshow relative h-60 border-b-[3px] border-darkWalnut" data-slideshow>
+          {newsletterSlides.map((slide, index) => (
+            <a
+              href={slide.href}
+              data-ga-event="newsletter_click"
+              data-ga-label="homepage_products_issue"
+              class:list={['product-slide absolute inset-0 flex flex-col bg-[#FDFBF7] focus-visible:outline-none', index === 0 ? 'is-active' : '']}
+              data-slide
+              tabindex={index === 0 ? undefined : -1}
+            >
+              <img
+                src={slide.image}
+                alt={slide.alt}
+                loading="lazy"
+                decoding="async"
+                class="h-32 w-full shrink-0 border-b-2 border-darkWalnut object-cover"
+              />
+              <span class="flex min-h-0 flex-1 flex-col px-4 py-3">
+                <span class="line-clamp-2 font-body text-[13px] font-bold leading-snug text-darkWalnut">{slide.title}</span>
+                <span class="mt-1 line-clamp-2 font-body text-[11px] leading-relaxed text-darkWalnut/75">{slide.description}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <div class="flex flex-1 flex-col p-5">
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The newsletter</p>
+          <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
+            Catch the weekly dispatch.
+          </h2>
+          <a
+            href={`${base}newsletter`}
+            data-ga-event="newsletter_click"
+            data-ga-label="homepage_products"
+            class="mt-4 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-celadon px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+          >
+            Read the newsletter <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   {/* ---------- Scroll cue: sits right above the Upcoming Stops section ---------- */}
-  <div class="px-6 pt-4 pb-10 md:pt-6 md:pb-12 text-center">
+  <div class="px-6 pt-1 pb-6 md:pb-7 text-center">
     <a
       href="#upcoming-stops"
       class="scroll-cue-link group inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
@@ -92,15 +308,11 @@ const upcomingStopsTicker: TickerItem[] = [
   </div>
 
   {/* ---------- Upcoming Stops ---------- */}
-  <section id="upcoming-stops" class="scroll-mt-24 pt-6 pb-16 md:scroll-mt-0 md:pt-6 md:pb-24">
+  <section id="upcoming-stops" class="scroll-mt-24 pt-2 pb-10 md:scroll-mt-0 md:pb-14">
     <div class="max-w-5xl mx-auto">
-      <div class="upcoming-stops-led mb-10 md:mb-12">
-        <Marquee items={upcomingStopsTicker} visualRepeat={4} />
-      </div>
-
       <div class="px-4 sm:px-6">
-        <div class="mb-10 md:mb-14 md:pl-16">
-          <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
+        <div class="mb-7 md:mb-9 md:pl-16">
+          <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-2">
             Board here
           </p>
           <h2 class="font-heading tracking-tight font-semibold text-darkWalnut text-4xl md:text-[2.5rem] leading-none">
@@ -109,48 +321,64 @@ const upcomingStopsTicker: TickerItem[] = [
         </div>
 
         {upcomingEvents.length > 0 ? (
-          <div class="relative">
-            <ol class="upcoming-route relative space-y-9 md:space-y-12">
+          <div class="relative" data-stops-board>
+            {/* Station pagination: appears only when the departure board takes
+                over (JS adds .board-on). Each dot is a stop on the line. */}
+            <div
+              class="stops-board-nav"
+              data-stops-nav
+              role="group"
+              aria-label="Upcoming stops board controls"
+              hidden
+            >
               {upcomingEvents.map((event, index) => (
-                <li class="relative pl-12 md:pl-20">
-                  <span
-                    class:list={[
-                      'absolute left-4 top-6 z-10 h-7 w-7 -translate-x-1/2 rounded-full border-2 border-darkWalnut shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8',
-                      stopColors[index % stopColors.length],
-                    ]}
-                    aria-hidden="true"
-                  ></span>
-
-                  {/* Departure tag: date and time as one two-segment chip, like a ticket stub */}
-                  <div class="mb-3 inline-flex items-stretch font-mono text-[10px] font-bold uppercase tracking-[0.22em] text-[#62361B] shadow-[2px_2px_0_#642713] md:text-xs">
-                    <span class="border-2 border-[#62361B] bg-seashell px-2.5 py-1">
-                      {formatStopDate(event.event_date)}
-                    </span>
-                    {formatTimeRange(event.start_time, event.end_time) && (
-                      <span class="flex items-center border-2 border-l-0 border-[#62361B] bg-amber px-2.5 py-1">
-                        {formatTimeRange(event.start_time, event.end_time)}
-                      </span>
-                    )}
-                  </div>
-
-                  <EventCard event={event} showTime={false} />
-                </li>
+                <button
+                  type="button"
+                  data-stops-dot={index}
+                  class:list={['stops-dot', stopColors[index % stopColors.length]]}
+                  aria-label={`Stop ${index + 1} of ${upcomingEvents.length}: ${event.title}`}
+                ></button>
               ))}
-            </ol>
+            </div>
+
+            <div
+              class="stops-board-frame"
+              data-stops-frame
+              role="region"
+              aria-roledescription="carousel"
+              aria-label="Upcoming stops departure board"
+              tabindex="-1"
+            >
+              <ol class="upcoming-route relative space-y-6 md:space-y-8" data-stops-list>
+                {upcomingEvents.map((event, index) => (
+                  <li class="relative pl-12 md:pl-20" data-stops-item>
+                    <span
+                      class:list={[
+                        'stops-rail-dot absolute left-4 top-6 z-10 h-7 w-7 -translate-x-1/2 rounded-full border-2 border-darkWalnut shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8',
+                        stopColors[index % stopColors.length],
+                      ]}
+                      aria-hidden="true"
+                    ></span>
+
+                    <EventCard event={event} />
+                  </li>
+                ))}
+              </ol>
+            </div>
 
             {/* Terminus: the line keeps running to the full events board.
                The dot center sits a fixed 0.85rem below this block's top and
-               2.5rem (mt-10) below the list, so the .upcoming-route rail can
+               2rem (mt-8) below the list, so the .upcoming-route rail can
                extend a fixed distance down to meet it regardless of wrapping. */}
-            <div class="relative mt-10 pl-12 md:pl-20">
+            <div class="stops-terminus relative mt-8 pl-12 md:pl-20">
               <span
-                class="absolute left-4 top-[0.85rem] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-darkWalnut bg-amber shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8"
+                class="stops-rail-dot absolute left-4 top-[0.85rem] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-darkWalnut bg-amber shadow-[2px_2px_0_#642713] md:left-8 md:h-8 md:w-8"
                 aria-hidden="true"
               >
                 <span class="block h-2.5 w-2.5 rounded-full bg-darkWalnut md:h-3 md:w-3"></span>
               </span>
               <a
-                href={`${import.meta.env.BASE_URL}events`}
+                href={`${base}events`}
                 class="see-more group inline-flex items-center gap-3 font-heading font-semibold leading-none tracking-tight text-darkWalnut text-2xl transition-colors hover:text-cayenne focus-visible:text-cayenne md:text-3xl"
               >
                 <span>See all stops</span>
@@ -167,7 +395,7 @@ const upcomingStopsTicker: TickerItem[] = [
               No scheduled stops right now.
             </p>
             <a
-              href={`${import.meta.env.BASE_URL}events`}
+              href={`${base}events`}
               class="link-transit mt-5 inline-flex font-body text-sm font-bold uppercase tracking-widest text-darkWalnut"
             >
               Check the events board &nearr;
@@ -177,55 +405,14 @@ const upcomingStopsTicker: TickerItem[] = [
       </div>
     </div>
 
-    <div class="max-w-5xl mx-auto px-6 mt-16 md:mt-20">
+    <div class="max-w-5xl mx-auto px-6 mt-10 md:mt-12">
       <TransitDivider />
-    </div>
-  </section>
-
-  {/* ---------- Two-sided band: the platform/network story ---------- */}
-  <section class="px-6 pb-16 md:pb-24">
-    <div class="max-w-5xl mx-auto grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
-      <div class="flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-8 shadow-retro">
-        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Feeling social?</p>
-        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
-          Find your next stop.
-        </h3>
-        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
-          Browse the live board for what&rsquo;s happening across Chicago&rsquo;s Global South diasporas this week.
-        </p>
-        <a
-          href={`${import.meta.env.BASE_URL}events`}
-          data-ga-event="browse_click"
-          data-ga-label="homepage_band"
-          class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-mayaBlue px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
-        >
-          Browse events <span aria-hidden="true">&rarr;</span>
-        </a>
-      </div>
-
-      <div class="flex flex-col border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-8 shadow-retro">
-        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Hosting?</p>
-        <h3 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
-          Put it on the map.
-        </h3>
-        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
-          Submit your event and a human will review it for the board and the newsletter.
-        </p>
-        <a
-          href={`${import.meta.env.BASE_URL}submit-event`}
-          data-ga-event="submit_click"
-          data-ga-label="homepage_band"
-          class="mt-6 inline-flex items-center gap-2 self-start border-2 border-darkWalnut bg-amber px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-        >
-          Submit an event <span aria-hidden="true">&rarr;</span>
-        </a>
-      </div>
     </div>
   </section>
 
   {/* ---------- Testimonials (renders only when real quotes exist) ---------- */}
   {testimonials.length > 0 && (
-    <section class="px-6 py-16 md:py-24 bg-seashell">
+    <section class="px-6 py-12 md:py-16 bg-seashell">
       <div class="max-w-5xl mx-auto">
         <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3 text-center">
           From the platform
@@ -249,63 +436,18 @@ const upcomingStopsTicker: TickerItem[] = [
     </section>
   )}
 
-  {/* ---------- Newsletter band ---------- */}
-  <section class="px-6 pb-16 md:pb-24">
-    <div class="max-w-5xl mx-auto border-[3px] border-darkWalnut bg-[#FDFBF7] p-7 md:p-10 shadow-retro flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
-      <div class="max-w-xl">
-        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The newsletter</p>
-        <h2 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight mt-3">
-          Catch up on recent dispatches.
-        </h2>
-        <p class="font-body text-darkWalnut/80 text-base leading-relaxed mt-3">
-          Weekly guides, spotlights, and reporting from Chicago&rsquo;s Global South diasporas.
-        </p>
-      </div>
-      <a
-        href={`${import.meta.env.BASE_URL}newsletter`}
-        class="shrink-0 inline-flex items-center gap-2 border-2 border-darkWalnut bg-celadon px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
-      >
-        Read the newsletter <span aria-hidden="true">&rarr;</span>
-      </a>
-    </div>
-  </section>
-
-  {/* ---------- Support band ---------- */}
-  <section class="px-6 py-16 md:py-20 bg-darkWalnut text-seashell">
-    <div class="max-w-5xl mx-auto flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
-      <div class="max-w-xl">
-        <p class="font-body uppercase text-[10px] tracking-[0.3em] text-amber font-bold">Fund the line</p>
-        <h2 class="font-heading text-seashell text-3xl md:text-4xl leading-tight tracking-tight mt-3">
-          Keep independent culture coverage on the rails.
-        </h2>
-        <p class="font-body text-seashell/80 text-base md:text-lg leading-relaxed mt-3">
-          The Brown Line is reader-supported. Chip in once or ride monthly to keep the guide free, independent, and growing.
-        </p>
-      </div>
-      <a
-        href={`${import.meta.env.BASE_URL}about#support`}
-        data-ga-event="support_click"
-        data-ga-label="homepage_band"
-        class="shrink-0 inline-flex items-center gap-2 border-2 border-amber bg-amber px-6 py-3 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0_#FAF1EC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seashell"
-      >
-        Support The Brown Line
-        <span aria-hidden="true">&rarr;</span>
-      </a>
-    </div>
-  </section>
-
   {/* ---------- About teaser (closing brand statement) ---------- */}
-  <section class="px-6 py-20 md:py-28 bg-seashell">
+  <section class="px-6 py-12 md:py-16 bg-seashell">
     <div class="max-w-3xl mx-auto text-center">
       <h2 class="font-heading text-darkWalnut text-4xl md:text-5xl leading-[0.95] tracking-tight">
         Elevating Chicago&rsquo;s underground Global South culture
       </h2>
-      <p class="font-body text-darkWalnut/90 text-lg mt-6 leading-relaxed">
-        Your independent, local guide to the arts and culture of Chicago&rsquo;s Global South diasporas. From Rogers Park to Bridgeview, The Brown Line cuts through redlining to connect the neighborhoods — and the people — that make this city feel like the world.
+      <p class="font-body text-darkWalnut/90 text-lg mt-5 leading-relaxed">
+        Your independent, local guide to the arts and culture of Chicago&rsquo;s Global South diasporas. From Rogers Park to Bridgeview, The Brown Line cuts through redlining to connect the neighborhoods, and the people, that make this city feel like the world.
       </p>
       <a
-        href={`${import.meta.env.BASE_URL}about`}
-        class="inline-flex items-center gap-2 mt-8 font-body font-bold text-sm uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-6 py-3 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro"
+        href={`${base}about`}
+        class="inline-flex items-center gap-2 mt-7 font-body font-bold text-sm uppercase tracking-widest text-darkWalnut border-2 border-darkWalnut px-6 py-3 transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:shadow-retro"
       >
         What we&rsquo;re building
         <span aria-hidden="true">&rarr;</span>
@@ -331,17 +473,49 @@ const upcomingStopsTicker: TickerItem[] = [
       .scroll-cue { animation: none; }
     }
 
+    /* Product slideshows: stacked slides cross-fade on a timer (script below).
+       Only the active slide takes clicks; the invisible ones stacked above it
+       must never intercept. With reduced motion the timer still swaps slides
+       but without the fade. */
+    .product-slide {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 600ms ease;
+    }
+
+    .product-slide.is-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Brand-color media panels: halftone dots, emoji as a sticker stamp. */
+    .product-panel {
+      background-image: radial-gradient(rgba(100, 39, 19, 0.16) 1.5px, transparent 1.5px);
+      background-size: 12px 12px;
+    }
+
+    .product-panel-stamp {
+      font-size: 3.5rem;
+      line-height: 1;
+      transform: rotate(-8deg);
+      filter: drop-shadow(3px 3px 0 rgba(100, 39, 19, 0.3));
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .product-slide { transition: none; }
+    }
+
     /* Upcoming Stops rail: a single brown line behind the colorful stop dots.
-       Anchored to the list (stable height) and extended a fixed 3.35rem below
-       it so the line ends exactly on the terminus dot, which sits mt-10 (2.5rem)
-       below the list plus 0.85rem into the terminus block. This stays aligned no
-       matter how the terminus link/caption wrap. */
+       Anchored to the list (stable height) and extended a fixed 2.85rem below
+       it so the line ends exactly on the terminus dot, which sits mt-8 (2rem)
+       below the list plus 0.85rem into the terminus block. This stays aligned
+       no matter how the terminus link/caption wrap. */
     .upcoming-route::before {
       content: '';
       position: absolute;
       left: 12px;
       top: 0.75rem;
-      bottom: -3.35rem;
+      bottom: -2.85rem;
       width: 8px;
       border-radius: 9999px;
       background: #62361B;
@@ -351,6 +525,163 @@ const upcomingStopsTicker: TickerItem[] = [
       .upcoming-route::before {
         left: 28px;
       }
+    }
+
+    /* ---------- Departure board (Board here) ----------
+       JS promotes the stacked rail into a one-stop-at-a-time board: it holds,
+       then pushes up to the next stop like a station ticker. Everything below
+       applies only once .board-on lands, so no-JS, mobile, and reduced-motion
+       visitors keep the plain stacked list. */
+    /* Phones show one stop at a time with the station dots as a horizontal
+       strip under the board; from md up the window widens to three stops and
+       the dots become the vertical track beside it. */
+    [data-stops-board].board-on {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 1.25rem;
+    }
+
+    .board-on .stops-board-frame {
+      order: 1;
+    }
+
+    .board-on .stops-board-nav {
+      order: 2;
+      position: relative;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      /* Shrink to the dots so the connecting track runs stop to stop,
+         not the full span of the board. */
+      align-self: center;
+      justify-self: center;
+      gap: 1.1rem;
+      isolation: isolate;
+    }
+
+    .board-on .stops-board-nav::before {
+      content: '';
+      position: absolute;
+      /* From the center of the first dot to the center of the last. */
+      left: 9px;
+      right: 9px;
+      top: 50%;
+      height: 3px;
+      border-radius: 9999px;
+      transform: translateY(-50%);
+      background: #62361B;
+      z-index: 0;
+    }
+
+    .board-on .stops-terminus {
+      order: 3;
+    }
+
+    @media (min-width: 768px) {
+      [data-stops-board].board-on {
+        grid-template-columns: 3.25rem minmax(0, 1fr);
+        column-gap: 0.75rem;
+        row-gap: 0;
+      }
+
+      .board-on .stops-board-nav {
+        order: 0;
+        flex-direction: column;
+      }
+
+      .board-on .stops-board-nav::before {
+        left: 50%;
+        right: auto;
+        top: 9px;
+        bottom: 9px;
+        width: 3px;
+        height: auto;
+        transform: translateX(-50%);
+      }
+    }
+
+    .stops-dot {
+      position: relative;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      border-radius: 9999px;
+      border: 2px solid #642713;
+      box-shadow: 2px 2px 0 #642713;
+      cursor: pointer;
+      transition: transform 220ms ease, box-shadow 220ms ease;
+    }
+
+    .stops-dot:hover,
+    .stops-dot:focus-visible {
+      transform: scale(1.2);
+      outline: none;
+    }
+
+    /* Stops outside the visible window sit back; the window trio steps up. */
+    .board-on .stops-dot {
+      opacity: 0.5;
+    }
+
+    .board-on .stops-dot:hover,
+    .board-on .stops-dot:focus-visible {
+      opacity: 1;
+    }
+
+    .board-on .stops-dot.is-visible {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+
+    .board-on .stops-dot.is-active {
+      opacity: 1;
+      transform: scale(1.35);
+      box-shadow: 3px 3px 0 #642713;
+    }
+
+    .board-on .stops-board-frame {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .board-on [data-stops-list] {
+      transition: transform 700ms cubic-bezier(0.65, 0, 0.35, 1);
+      will-change: transform;
+    }
+
+    .board-on [data-stops-list] > li {
+      padding-left: 0 !important;
+    }
+
+    .board-on [data-stops-list] .stops-rail-dot,
+    .board-on .stops-terminus .stops-rail-dot {
+      display: none;
+    }
+
+    .board-on .upcoming-route::before {
+      display: none;
+    }
+
+    .board-on .stops-terminus {
+      padding-left: 0 !important;
+    }
+
+    @media (min-width: 768px) {
+      .board-on .stops-terminus {
+        grid-column: 2;
+      }
+    }
+
+    /* Equal-height stops: let the card fill the measured slot. */
+    .board-on [data-stops-list] > li > :global(article) {
+      height: 100%;
+    }
+
+    /* Inside the clipped frame, the calendar menu opens upward instead. */
+    .board-on [data-stops-list] :global(details[data-calendar-menu] > div) {
+      top: auto;
+      bottom: calc(100% + 0.375rem);
     }
 
     /* "See more" terminus: arrow eases forward on hover, like a train pulling away. */
@@ -367,35 +698,280 @@ const upcomingStopsTicker: TickerItem[] = [
     @media (prefers-reduced-motion: reduce) {
       .see-more-arrow { transition: none; }
     }
-
-    :global(.upcoming-stops-led .marquee) {
-      background: #642713;
-      border-color: #FFBC29;
-      color: #FFBC29;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-    }
-
-    :global(.upcoming-stops-led .marquee::before) {
-      background: linear-gradient(to right, #642713 0%, rgba(100, 39, 19, 0) 100%);
-    }
-
-    :global(.upcoming-stops-led .marquee::after) {
-      background: linear-gradient(to left, #642713 0%, rgba(100, 39, 19, 0) 100%);
-    }
-
-    :global(.upcoming-stops-led .marquee-label) {
-      color: #FAF1EC;
-    }
-
-    :global(.upcoming-stops-led .marquee-separator),
-    :global(.upcoming-stops-led .marquee-toggle) {
-      color: #FFBC29;
-    }
-
-    :global(.upcoming-stops-led .marquee-grip) {
-      background-image: radial-gradient(circle, #FAF1EC 1.4px, transparent 1.6px);
-    }
   </style>
+
+  <script>
+    // Product-box slideshows: rotate the .is-active slide on a shared timer.
+    // Single-slide shows stay put; the timer never runs for them.
+    document.querySelectorAll('[data-slideshow]').forEach((show) => {
+      const slides = Array.from(show.querySelectorAll('[data-slide]'));
+      if (slides.length < 2) return;
+
+      let index = 0;
+      window.setInterval(() => {
+        slides[index].classList.remove('is-active');
+        index = (index + 1) % slides.length;
+        slides[index].classList.add('is-active');
+      }, 3500);
+    });
+  </script>
+
+  <script>
+    // Departure board: the Upcoming Stops rail becomes a windowed board that
+    // holds for a few seconds, then pushes up one stop like a station ticker.
+    // Phones window one stop at a time; from md up the window shows three.
+    // Wheel and keyboard step whole stops while the pointer is over the
+    // board; at the last position one more step bounces back to the top of
+    // the list. Scrolling beside the board (or above it, going up at the
+    // first stop) moves the page normally, so the visitor is never trapped.
+    // Touch steps release at both ends instead of wrapping, since a finger
+    // has no "beside the widget" escape. No-JS and reduced-motion keep the
+    // plain stacked list.
+    const board = document.querySelector('[data-stops-board]') as HTMLElement | null;
+    const frame = board?.querySelector('[data-stops-frame]') as HTMLElement | null;
+    const list = board?.querySelector('[data-stops-list]') as HTMLElement | null;
+    const nav = board?.querySelector('[data-stops-nav]') as HTMLElement | null;
+    const items = list ? (Array.from(list.querySelectorAll('[data-stops-item]')) as HTMLElement[]) : [];
+    const dots = nav ? (Array.from(nav.querySelectorAll('[data-stops-dot]')) as HTMLButtonElement[]) : [];
+
+    if (board && frame && list && nav && items.length > 1) {
+      const HOLD_MS = 4500;
+      const MANUAL_PAUSE_MS = 9000;
+      const STEP_LOCK_MS = 720;
+      const WHEEL_STEP_DELTA = 60;
+
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const wideMedia = window.matchMedia('(min-width: 768px)');
+
+      // Window positions: position p shows stops p through p + visible - 1.
+      let visibleCount = 1;
+      let maxIndex = 0;
+      let positionCount = 1;
+
+      function syncWindow() {
+        visibleCount = wideMedia.matches ? Math.min(3, items.length) : 1;
+        maxIndex = Math.max(0, items.length - visibleCount);
+        positionCount = maxIndex + 1;
+      }
+
+      let enabled = false;
+      let index = 0;
+      let stepHeight = 0;
+      let lastStepAt = 0;
+      let pauseUntil = 0;
+      let hovering = false;
+      let inView = false;
+      let wheelAccumulator = 0;
+      let wheelIdleTimer = 0;
+      let touchStartY: number | null = null;
+
+      function render(animate: boolean) {
+        if (!animate) list.style.transition = 'none';
+        list.style.transform = `translateY(-${index * stepHeight}px)`;
+        if (!animate) {
+          void list.offsetHeight;
+          list.style.transition = '';
+        }
+        items.forEach((item, i) => {
+          const visibleNow = i >= index && i < index + visibleCount;
+          const hiddenNow = enabled && !visibleNow;
+          (item as any).inert = hiddenNow;
+          item.setAttribute('aria-hidden', hiddenNow ? 'true' : 'false');
+        });
+        dots.forEach((dot, i) => {
+          const visibleNow = i >= index && i < index + visibleCount;
+          dot.classList.toggle('is-active', i === index);
+          dot.classList.toggle('is-visible', visibleNow && i !== index);
+          dot.setAttribute('aria-current', i === index ? 'true' : 'false');
+        });
+      }
+
+      function measure() {
+        if (!enabled) return;
+        items.forEach((item) => {
+          item.style.minHeight = '';
+        });
+        const max = Math.max(...items.map((item) => item.offsetHeight));
+        items.forEach((item) => {
+          item.style.minHeight = `${max}px`;
+        });
+        const gap =
+          items.length > 1 ? items[1].offsetTop - (items[0].offsetTop + items[0].offsetHeight) : 0;
+        stepHeight = max + gap;
+        frame.style.height = `${max * visibleCount + gap * (visibleCount - 1)}px`;
+        render(false);
+      }
+
+      function goTo(next: number, manual = false) {
+        index = Math.max(0, Math.min(next, maxIndex));
+        lastStepAt = Date.now();
+        if (manual) pauseUntil = Date.now() + MANUAL_PAUSE_MS;
+        render(true);
+      }
+
+      // Step helpers shared by wheel and keyboard. Down at the last position
+      // bounces back to the top of the list; up at the first releases.
+      function stepDown(manual: boolean) {
+        goTo(index < maxIndex ? index + 1 : 0, manual);
+      }
+
+      // Engaged when most of the board (or most of the viewport, whichever is
+      // smaller) is on screen; until then, scrolling just brings it into view.
+      function frameEngaged() {
+        const rect = frame.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const visible = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        return visible >= Math.min(rect.height, viewportHeight) * 0.6;
+      }
+
+      function onWheel(event: WheelEvent) {
+        if (!enabled || !frameEngaged()) return;
+        const goingDown = event.deltaY > 0;
+        // Going up at the first position releases so the page can scroll on;
+        // going down always captures inside the widget, because the last
+        // position loops back to the top instead of exiting.
+        if (!goingDown && index === 0) return;
+
+        event.preventDefault();
+
+        wheelAccumulator += event.deltaY;
+        window.clearTimeout(wheelIdleTimer);
+        wheelIdleTimer = window.setTimeout(() => {
+          wheelAccumulator = 0;
+        }, 220);
+
+        if (Date.now() - lastStepAt < STEP_LOCK_MS) return;
+        if (Math.abs(wheelAccumulator) < WHEEL_STEP_DELTA) return;
+
+        wheelAccumulator = 0;
+        if (goingDown) stepDown(true);
+        else goTo(index - 1, true);
+      }
+
+      function onTouchStart(event: TouchEvent) {
+        touchStartY = event.touches[0]?.clientY ?? null;
+      }
+
+      function onTouchMove(event: TouchEvent) {
+        if (!enabled || touchStartY === null || !frameEngaged()) return;
+        const delta = touchStartY - (event.touches[0]?.clientY ?? touchStartY);
+        const goingDown = delta > 0;
+        // Touch has no pointer-beside-the-widget escape, so both ends release.
+        const canStep = goingDown ? index < maxIndex : index > 0;
+        if (!canStep) return;
+        event.preventDefault();
+        if (Math.abs(delta) < 48 || Date.now() - lastStepAt < STEP_LOCK_MS) return;
+        touchStartY = null;
+        goTo(index + (goingDown ? 1 : -1), true);
+      }
+
+      function onKeydown(event: KeyboardEvent) {
+        if (!enabled) return;
+        if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+          event.preventDefault();
+          stepDown(true);
+        } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+          if (index > 0) {
+            event.preventDefault();
+            goTo(index - 1, true);
+          }
+        }
+      }
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          const nowInView = Boolean(entry && entry.intersectionRatio >= 0.45);
+          // Arriving at the board restarts the hold, so the first push never
+          // fires the instant it scrolls into view.
+          if (nowInView && !inView) lastStepAt = Date.now();
+          inView = nowInView;
+        },
+        { threshold: [0, 0.25, 0.45, 0.65, 0.85] }
+      );
+
+      // The hold-then-push loop. Checks every 500ms instead of scheduling one
+      // long timer so pauses (hover, manual steps, tab hidden) stay accurate.
+      window.setInterval(() => {
+        if (!enabled || !inView || hovering || document.hidden) return;
+        const now = Date.now();
+        if (now < pauseUntil || now - lastStepAt < HOLD_MS) return;
+        goTo((index + 1) % positionCount);
+      }, 500);
+
+      function apply() {
+        syncWindow();
+        const shouldEnable = !reduceMotion.matches && items.length > visibleCount;
+        if (shouldEnable === enabled) {
+          if (enabled) {
+            // Still on, but the window size may have changed (phone rotated,
+            // window resized across the breakpoint): clamp and re-measure.
+            index = Math.min(index, maxIndex);
+            measure();
+          }
+          return;
+        }
+        enabled = shouldEnable;
+        board.classList.toggle('board-on', enabled);
+        nav.hidden = !enabled;
+        if (enabled) {
+          index = Math.min(index, maxIndex);
+          lastStepAt = Date.now();
+          measure();
+          observer.observe(frame);
+        } else {
+          observer.disconnect();
+          frame.style.height = '';
+          list.style.transition = 'none';
+          list.style.transform = '';
+          void list.offsetHeight;
+          list.style.transition = '';
+          items.forEach((item) => {
+            item.style.minHeight = '';
+            (item as any).inert = false;
+            item.setAttribute('aria-hidden', 'false');
+          });
+          dots.forEach((dot) => {
+            dot.classList.remove('is-active', 'is-visible');
+          });
+        }
+      }
+
+      frame.addEventListener('wheel', onWheel, { passive: false });
+      frame.addEventListener('touchstart', onTouchStart, { passive: true });
+      frame.addEventListener('touchmove', onTouchMove, { passive: false });
+      frame.addEventListener('keydown', onKeydown);
+      frame.addEventListener('pointerenter', () => {
+        hovering = true;
+      });
+      frame.addEventListener('pointerleave', () => {
+        hovering = false;
+      });
+      dots.forEach((dot, i) => {
+        // Jump so the chosen stop is in the window, topmost when possible.
+        dot.addEventListener('click', () => goTo(Math.min(i, maxIndex), true));
+      });
+
+      let resizeTimer = 0;
+      window.addEventListener(
+        'resize',
+        () => {
+          window.clearTimeout(resizeTimer);
+          resizeTimer = window.setTimeout(measure, 150);
+        },
+        { passive: true }
+      );
+      // Flyer loads and webfont swaps change card heights after first paint,
+      // so re-measure once each settles; a stale step height leaves slivers
+      // of neighboring stops peeking into the frame.
+      window.addEventListener('load', measure, { once: true });
+      if ('fonts' in document) {
+        (document as any).fonts.ready.then(() => measure());
+      }
+      reduceMotion.addEventListener('change', apply);
+      wideMedia.addEventListener('change', apply);
+
+      apply();
+    }
+  </script>
 </Layout>

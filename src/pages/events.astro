@@ -6,7 +6,7 @@ import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
 import { supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
-import { addDays, formatStopDate, PAST_EVENT_WINDOW_DAYS } from '../lib/dates';
+import { formatStopDate } from '../lib/dates';
 import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
@@ -32,25 +32,6 @@ if (error) {
 }
 
 const events = data ?? [];
-
-// Rolling 60-day archive of stops that have already departed. A second build-time
-// snapshot so the "View past stops" drawer has content, while the upcoming board
-// (and its filters and count) never includes old dates.
-const { data: pastData, error: pastError } = await supabase
-  .from('events')
-  .select('*')
-  .lt('event_date', today)
-  .gte('event_date', addDays(today, -PAST_EVENT_WINDOW_DAYS))
-  .order('event_date', { ascending: false })
-  .order('is_curated', { ascending: false })
-  .order('title', { ascending: true })
-  .returns<TransitEvent[]>();
-
-if (pastError) {
-  throw new Error(`Failed to load past events: ${pastError.message}`);
-}
-
-const pastEvents = pastData ?? [];
 
 function getTodayChicago() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -126,44 +107,6 @@ const boardItemListJsonLd = buildItemListJsonLd(
     dayGroups.map(({ rep }) => ({ name: rep.title, url: buildEventUrl(rep, base, siteUrl) }))
   )
 );
-
-// Same series-collapse + day-grouping as the upcoming board, but ordered most
-// recent first and anchored on each series' last date so a just-finished run
-// surfaces at the top of the archive.
-const pastSeriesMap = new Map<string, TransitEvent[]>();
-for (const event of pastEvents) {
-  const key = `${event.title}||${event.venue}`;
-  const bucket = pastSeriesMap.get(key);
-  if (bucket) bucket.push(event);
-  else pastSeriesMap.set(key, [event]);
-}
-
-const pastEventGroups: EventGroup[] = Array.from(pastSeriesMap.values()).map((rows) => {
-  const dates = rows.map((r) => r.event_date).filter(Boolean).sort();
-  const start = dates[0];
-  const end = dates[dates.length - 1];
-  const sortDate = end;
-  const rep = rows.find((r) => r.event_date === sortDate) ?? rows[0];
-  const recurrenceLabel = start !== end ? `${monthDay(start)} – ${monthDay(end)}` : '';
-  return { rep, start, end, recurrenceLabel, sortDate };
-});
-
-const pastGroupedByDate = pastEventGroups.reduce<Record<string, EventGroup[]>>((groups, group) => {
-  (groups[group.sortDate] ??= []).push(group);
-  return groups;
-}, {});
-
-// Most-recent day first for the archive.
-const pastGroupedEventEntries = Object.entries(pastGroupedByDate)
-  .sort(([a], [b]) => b.localeCompare(a))
-  .map(([eventDate, dayGroups]) => ({
-    eventDate,
-    label: formatStopDate(eventDate),
-    dayGroups: dayGroups.sort((a, b) => {
-      if (a.rep.is_curated !== b.rep.is_curated) return a.rep.is_curated ? -1 : 1;
-      return a.rep.title.localeCompare(b.rep.title);
-    }),
-  }));
 
 // Calendar marks every distinct event date (including individual recurring days).
 const eventDates = Array.from(
@@ -326,6 +269,7 @@ function getEventSearchText(event: TransitEvent) {
           <button type="button" data-quick-filter="weekend" data-ga-event="events_filter" data-ga-label="this_weekend" class="quick-chip" aria-pressed="false">This weekend</button>
           <button type="button" data-quick-filter="all" data-ga-event="events_filter" data-ga-label="all_upcoming" class="quick-chip is-active" aria-pressed="true">All upcoming</button>
           <button type="button" data-quick-filter="free" data-ga-event="events_filter" data-ga-label="free" class="quick-chip" aria-pressed="false">Free</button>
+          <button type="button" data-quick-filter="curated" data-ga-event="events_filter" data-ga-label="conductors_picks" class="quick-chip" aria-pressed="false">★ Conductor's picks</button>
         </div>
 
         <div class:list={['mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5', controlsGridClass]}>
@@ -453,60 +397,6 @@ function getEventSearchText(event: TransitEvent) {
     </div>
   </section>
 
-  {pastGroupedEventEntries.length > 0 && (
-    <section class="px-6 pb-16 md:pb-24">
-      <div class="max-w-5xl mx-auto">
-        <button
-          type="button"
-          data-past-toggle
-          aria-expanded="false"
-          aria-controls="past-stops"
-          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-4 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
-        >
-          <span data-past-toggle-label>View past stops</span>
-          <span data-past-toggle-icon aria-hidden="true">&darr;</span>
-        </button>
-
-        <div id="past-stops" hidden class="mt-12 space-y-14 md:space-y-16">
-          {pastGroupedEventEntries.map(({ label, dayGroups }, sectionIndex) => (
-            <section class="grid grid-cols-1 md:grid-cols-[14rem_minmax(0,1fr)] gap-8 md:gap-10">
-              <div>
-                {sectionIndex === 0 && (
-                  <>
-                    <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mb-3">
-                      Previous departures
-                    </p>
-                    <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-darkWalnut/55 mb-3">
-                      Where we've stopped these past 60 days.
-                    </p>
-                  </>
-                )}
-                <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none">
-                  {label}
-                </h2>
-              </div>
-
-              <ol class="events-route relative space-y-6">
-                {dayGroups.map(({ rep, recurrenceLabel }, index) => (
-                  <li class="relative pl-12 md:pl-14 opacity-70">
-                    <span
-                      class:list={[
-                        'event-stop absolute left-0 top-7 h-[22px] w-[22px] rounded-full border-2 border-darkWalnut shadow-[2px_2px_0_#642713]',
-                        stopColors[index % stopColors.length],
-                      ]}
-                      aria-hidden="true"
-                    ></span>
-
-                    <EventCard event={rep} recurrenceLabel={recurrenceLabel} />
-                  </li>
-                ))}
-              </ol>
-            </section>
-          ))}
-        </div>
-      </div>
-    </section>
-  )}
 </Layout>
 
 <style>
@@ -613,6 +503,7 @@ function getEventSearchText(event: TransitEvent) {
     const DEFAULT_DATE_MODE = 'all';
     let dateMode = DEFAULT_DATE_MODE;
     let freeOnly = false;
+    let curatedOnly = false;
 
     const normalize = (value) => value.toString().trim().toLowerCase();
     const pad = (value) => String(value).padStart(2, '0');
@@ -664,7 +555,8 @@ function getEventSearchText(event: TransitEvent) {
     function syncQuickFilters() {
       quickFilterButtons.forEach((button) => {
         const kind = button.dataset.quickFilter;
-        const active = kind === 'free' ? freeOnly : dateMode === kind;
+        const active =
+          kind === 'free' ? freeOnly : kind === 'curated' ? curatedOnly : dateMode === kind;
         button.classList.toggle('is-active', active);
         button.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
@@ -1022,6 +914,7 @@ function getEventSearchText(event: TransitEvent) {
       if (cardStart && cardStart > hi) return false;
 
       if (freeOnly && !isFree) return false;
+      if (curatedOnly && card.dataset.eventCurated !== 'true') return false;
       if (category && !cardTags.includes(category)) return false;
       if (neighborhood && cardNeighborhood !== neighborhood) return false;
 
@@ -1078,6 +971,7 @@ function getEventSearchText(event: TransitEvent) {
       refreshThemed();
       dateMode = DEFAULT_DATE_MODE;
       freeOnly = false;
+      curatedOnly = false;
       syncQuickFilters();
       setSelectedDate('');
     }
@@ -1088,6 +982,8 @@ function getEventSearchText(event: TransitEvent) {
         const kind = button.dataset.quickFilter;
         if (kind === 'free') {
           freeOnly = !freeOnly;
+        } else if (kind === 'curated') {
+          curatedOnly = !curatedOnly;
         } else {
           dateMode = kind;
           if (selectedDate) {
@@ -1162,26 +1058,3 @@ function getEventSearchText(event: TransitEvent) {
   }
 </script>
 
-<script>
-  // Past-stops drawer. Kept independent of the filter script above so the archive
-  // still opens on pages with no upcoming stops (where the filter panel, and its
-  // guard, never render).
-  const pastToggle = document.querySelector('[data-past-toggle]');
-  const pastPanel = document.getElementById('past-stops');
-  const pastToggleLabel = pastToggle?.querySelector('[data-past-toggle-label]');
-  const pastToggleIcon = pastToggle?.querySelector('[data-past-toggle-icon]');
-
-  if (pastToggle && pastPanel) {
-    pastToggle.addEventListener('click', () => {
-      const willOpen = pastPanel.hidden;
-      pastPanel.hidden = !willOpen;
-      pastToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-      if (pastToggleLabel) {
-        pastToggleLabel.textContent = willOpen ? 'Hide past stops' : 'View past stops';
-      }
-      if (pastToggleIcon) {
-        pastToggleIcon.textContent = willOpen ? '↑' : '↓';
-      }
-    });
-  }
-</script>

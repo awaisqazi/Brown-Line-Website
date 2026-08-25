@@ -1,0 +1,140 @@
+---
+/**
+ * Fund-the-line popup. The old homepage support banner, reworked as a timed
+ * ask: after PROMPT_DELAY_MS on the site it slides up once per browser
+ * session. Dismissing it (X, Escape, or the backdrop) keeps it away for the
+ * rest of the session via sessionStorage, and it never fires on the support
+ * page itself, where the visitor is already at the fare box.
+ */
+const base = import.meta.env.BASE_URL;
+const supportPath = `${base}support`;
+---
+<div
+  id="bl-support-popup"
+  data-support-path={supportPath}
+  hidden
+  class="fixed inset-0 z-[1100] items-end justify-center p-4 sm:items-center"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="bl-support-popup-title"
+>
+  <div data-support-backdrop class="absolute inset-0 bg-darkWalnut/60" aria-hidden="true"></div>
+
+  <div class="support-popup-card relative w-full max-w-lg overflow-hidden border-[3px] border-darkWalnut bg-darkWalnut text-seashell shadow-[6px_6px_0_#F35A0F]">
+    <div class="transit-divider" aria-hidden="true"></div>
+
+    <button
+      type="button"
+      data-support-dismiss
+      aria-label="Close support popup"
+      class="absolute right-3 top-5 inline-flex h-9 w-9 items-center justify-center border-2 border-seashell/40 text-seashell/80 transition-colors hover:border-seashell hover:text-seashell focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+    >
+      <span aria-hidden="true" class="text-lg leading-none">&times;</span>
+    </button>
+
+    <div class="p-7 pr-14 md:p-9 md:pr-16">
+      <p class="font-body uppercase text-[10px] tracking-[0.3em] text-amber font-bold">Fund the line</p>
+      <h2 id="bl-support-popup-title" class="font-heading text-seashell text-2xl md:text-3xl leading-tight tracking-tight mt-3">
+        Keep independent culture coverage on the rails.
+      </h2>
+      <p class="font-body text-seashell/80 text-sm md:text-base leading-relaxed mt-3">
+        Enjoying the ride? The Brown Line is reader-supported. Chip in once or ride monthly to keep the guide free, independent, and growing.
+      </p>
+
+      <div class="mt-7 flex flex-wrap items-center gap-4">
+        <a
+          href={supportPath}
+          data-ga-event="support_click"
+          data-ga-label="support_popup"
+          class="inline-flex items-center gap-2 border-2 border-amber bg-amber px-5 py-2.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[4px_4px_0_#FAF1EC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seashell"
+        >
+          Support The Brown Line <span aria-hidden="true">&rarr;</span>
+        </a>
+        <button
+          type="button"
+          data-support-dismiss
+          class="font-body text-xs font-bold uppercase tracking-widest text-seashell/70 transition-colors hover:text-seashell focus-visible:text-seashell focus-visible:outline-none"
+        >
+          Maybe later
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #bl-support-popup:not([hidden]) {
+    display: flex;
+  }
+
+  .support-popup-card {
+    animation: support-popup-arrive 420ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes support-popup-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .support-popup-card {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  (() => {
+    const PROMPT_DELAY_MS = 45_000;
+    const STORAGE_KEY = 'blSupportPopupShown';
+
+    const popup = document.getElementById('bl-support-popup');
+    if (!popup) return;
+
+    const supportPath = popup.dataset.supportPath ?? '/support';
+    // Never interrupt someone already on the support page.
+    if (window.location.pathname.replace(/\/+$/, '') === supportPath.replace(/\/+$/, '')) return;
+
+    let alreadyShown = false;
+    try {
+      alreadyShown = sessionStorage.getItem(STORAGE_KEY) === 'true';
+    } catch (_) {}
+    if (alreadyShown) return;
+
+    function markShown() {
+      try {
+        sessionStorage.setItem(STORAGE_KEY, 'true');
+      } catch (_) {}
+    }
+
+    function close() {
+      if (!popup) return;
+      popup.hidden = true;
+      document.removeEventListener('keydown', onKeydown);
+    }
+
+    function onKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape') close();
+    }
+
+    window.setTimeout(() => {
+      popup.hidden = false;
+      markShown();
+      (window as any).gtag?.('event', 'support_popup_shown');
+      document.addEventListener('keydown', onKeydown);
+      const closeButton = popup.querySelector('[data-support-dismiss]') as HTMLElement | null;
+      closeButton?.focus({ preventScroll: true });
+    }, PROMPT_DELAY_MS);
+
+    popup.querySelectorAll('[data-support-dismiss]').forEach((button) => {
+      button.addEventListener('click', close);
+    });
+    popup.querySelector('[data-support-backdrop]')?.addEventListener('click', close);
+  })();
+</script>
