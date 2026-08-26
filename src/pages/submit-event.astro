@@ -130,14 +130,18 @@ const pageDescription =
           </span>
         </label>
 
+        {/* Plain text inputs, not type="time": Safari's native time widget can
+            get stuck reporting "Invalid value" on keyboard-typed times, which
+            blocked real submissions. We parse "6pm" / "6:00 PM" / "18:00"
+            ourselves at submit and normalize to HH:MM for the edge function. */}
         <label class={labelClass} for="event-time">
           Start time
-          <input id="event-time" name="event_time" type="time" class={inputClass} />
+          <input id="event-time" name="event_time" type="text" maxlength="20" placeholder="e.g. 6:00 PM" class={inputClass} />
         </label>
 
         <label class={labelClass} for="event-time-end">
           End time
-          <input id="event-time-end" name="event_time_end" type="time" class={inputClass} />
+          <input id="event-time-end" name="event_time_end" type="text" maxlength="20" placeholder="e.g. 9:00 PM" class={inputClass} />
         </label>
 
         <p class={sectionClass}>Where it is</p>
@@ -378,6 +382,31 @@ const pageDescription =
     descriptionInput?.addEventListener('input', updateWordCounter);
     updateWordCounter();
 
+    // Forgiving time parser for the free-text time fields. Accepts "6pm",
+    // "6 PM", "6:00pm", "18:00", "6.30pm", etc. and returns 24-hour "HH:MM",
+    // or null when the text is not a recognizable time.
+    function parseTimeText(raw: string): string | null {
+      const text = raw.trim().toLowerCase().replace(/\./g, ':');
+      if (!text) return '';
+      const match = text.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)?$/);
+      if (!match) return null;
+      let hours = Number(match[1]);
+      const minutes = Number(match[2] ?? '0');
+      const meridiem = match[3];
+      if (minutes > 59) return null;
+      if (meridiem) {
+        if (hours < 1 || hours > 12) return null;
+        if (hours === 12) hours = 0;
+        if (meridiem.startsWith('p')) hours += 12;
+      } else if (hours > 23) {
+        return null;
+      } else if (hours < 13) {
+        // "6:00" or "9" without AM/PM is ambiguous; make the submitter say which.
+        return null;
+      }
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
     function getTurnstileToken() {
       const input = form?.querySelector(
         '[name="cf-turnstile-response"]'
@@ -399,13 +428,28 @@ const pageDescription =
         return;
       }
 
+      const data = new FormData(form);
+
+      const startTime = parseTimeText(String(data.get('event_time') ?? ''));
+      const endTime = parseTimeText(String(data.get('event_time_end') ?? ''));
+      if (startTime === null || endTime === null) {
+        const badField = app.querySelector(
+          startTime === null ? '#event-time' : '#event-time-end'
+        ) as HTMLInputElement | null;
+        setStatus(
+          `We couldn't read the ${startTime === null ? 'start' : 'end'} time. Try a format like "6:00 PM".`,
+          true
+        );
+        badField?.focus();
+        return;
+      }
+
       const token = getTurnstileToken();
       if (!token) {
         setStatus('Please complete the captcha below.', true);
         return;
       }
 
-      const data = new FormData(form);
       const suburbValue =
         suburbSelect && !suburbSelect.disabled && suburbSelect.value === 'Other'
           ? String(data.get('suburb_other') ?? '')
@@ -418,8 +462,8 @@ const pageDescription =
         submitter_email: String(data.get('submitter_email') ?? ''),
         title: String(data.get('title') ?? ''),
         event_date: String(data.get('event_date') ?? ''),
-        event_time: String(data.get('event_time') ?? ''),
-        event_time_end: String(data.get('event_time_end') ?? ''),
+        event_time: startTime,
+        event_time_end: endTime,
         venue: String(data.get('venue') ?? ''),
         address: String(data.get('address') ?? ''),
         organizer: String(data.get('organizer') ?? ''),
