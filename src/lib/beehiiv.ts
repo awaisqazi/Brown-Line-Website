@@ -13,7 +13,7 @@
  * - Issues marked premium arrive as a paywall placeholder rather than the
  *   post. Those are flagged `isPaywalled` and keep linking off-site until the
  *   owner either makes them public on the platform or migrates them through
- *   /admin/articles.
+ *   the admin command center (/admin#newsletter).
  */
 import sanitizeHtml from 'sanitize-html';
 import { ARTICLE_ATTRIBUTES, ARTICLE_SCHEMES, ARTICLE_TAGS, dropEmptyFrames, EMBED_HOSTS } from './sanitize';
@@ -142,7 +142,7 @@ export interface SanitizeOptions {
  * The platform wraps each post in its own chrome (a `<style>` block, a
  * "powered by" footer, inline text-align styles on every paragraph). All of
  * that goes: the result is plain semantic HTML that `.article-prose` styles the
- * same way it styles issues written in /admin/articles. Section breaks become
+ * same way it styles issues written in the admin command center (/admin#newsletter). Section breaks become
  * the site's transit divider, tracking parameters come off the links, and
  * links back to the platform's domain are rerouted to the matching page here.
  */

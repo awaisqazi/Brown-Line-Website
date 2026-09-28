@@ -1,7 +1,7 @@
 /**
  * The newsletter issues that live on the site itself. Two sources feed it:
  *
- * 1. Rows in public.articles, written from /admin/articles and read here at
+ * 1. Rows in public.articles, written from the admin command center (/admin#newsletter) and read here at
  *    build time. These are the hand-migrated issues with their own hero art,
  *    tags, and summary.
  * 2. The newsletter's RSS feed (see beehiiv.ts). Every public issue in the feed

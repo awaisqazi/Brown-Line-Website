@@ -88,10 +88,19 @@ const tiktokUrl = 'https://www.tiktok.com/@thebrownlinechi';
       </div>
     </div>
 
-    <div class="max-w-6xl mx-auto px-6 pb-8">
+    <div class="max-w-6xl mx-auto px-6 pb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
       <p class="font-body text-seashell/60 text-xs uppercase tracking-widest">
         &copy; {year} The Brown Line.
       </p>
+      {/* Quiet door to the admin dashboard for the crew. Noindexed on the
+          other side; kept low-key here so it never reads as a public stop. */}
+      <a
+        href={`${base}admin`}
+        rel="nofollow"
+        class="font-body text-seashell/60 text-xs uppercase tracking-widest transition-colors hover:text-amber focus-visible:text-amber focus-visible:outline-none"
+      >
+        Conductor's cab <span aria-hidden="true">&rarr;</span>
+      </a>
     </div>
   </div>
 </footer>

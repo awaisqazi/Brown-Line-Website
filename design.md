@@ -169,8 +169,20 @@ Every event uses **one** bordered card template (the former "Conductor's Pick" f
 - **Optional photo:** when `events.image_url` is set (usually carried over from a community submission), the standard card renders the image between the meta line and the blurb: bordered, `object-cover`, capped at `max-h-72`, `loading="lazy"`, `referrerpolicy="no-referrer"`, only `http(s)` URLs, and an inline `onerror` hides the element so a dead link never shows a broken-image glyph.
 - Optional `recurrenceLabel` prop renders a mono date-range line (e.g. `Jun 22 – Jul 24`) for collapsed multi-day/recurring events. The en dash here is a true date range, which the no-em-dash rule (§7) permits.
 
-### Events Admin Portal (`/admin/events`)
-The admin portal is intentionally utilitarian but still brand-native.
+### Admin Command Center (`/admin`)
+Since 2026-09-28 the two admin portals are one page: `src/pages/admin/index.astro`. Utilitarian, brand-native, `<Layout minimal noindex>`.
+- **One unlock, one session.** A single "Enter the line room" password panel. The password is verified through the same `public.events_admin_login_check()` RPC, then held in memory only by `src/lib/admin-session.ts`, which owns the one Supabase client (sending the password as the `x-admin-password` header, exactly as before) that every panel shares. Lock forgets the password and client and tears down realtime; a refresh relocks. The form has `onsubmit="return false"` plus `method="post"`, so the password can never reach the URL.
+- **Header:** logo, "Command center" H1, a session chip (pink dot "Locked" / celadon dot "Unlocked, this tab only"), and, once unlocked, the shared **Publish live site** button with its `aria-live` status line and **Lock**.
+- **Rail:** a `role="tablist"` of four stops (Overview, Events, Submissions, Newsletter; dots Maya Blue, Celadon, Amber, Baby Pink). Vertical and sticky on the left at `lg+`, a 2x2 grid (4 across at `sm`) above the panel on narrow screens. The selected tab takes the amber fill and the retro shadow. Arrow keys (all four), Home and End move between tabs with roving `tabindex`; `aria-selected`, `aria-controls`, `aria-orientation` (follows the breakpoint) are kept in sync. The Submissions tab carries a cayenne pending-count badge.
+- **Hash routing:** `/admin#overview|events|submissions|newsletter` picks the panel; `#<panel>-<section>` (e.g. `#events-schedule`, `#events-csv`, `#newsletter-list`) opens the panel and scrolls to that section, opening a collapsed `<details>` if needed. Tab clicks push history (Back returns to the previous panel); arrow-key moves replace it. Arriving from a link or Back moves focus to the panel heading; tab clicks keep focus on the tab. The active tab lives only in the hash.
+- **Overview ("Line status"):** six link tiles built only from what the unlocked client can already read: upcoming stops plus the next-7-days count, pending submissions, published vs draft articles, flyer health (upcoming stops whose `image_url` is in our `event-images` Storage path vs an external link vs empty, as a three-segment bar with a labeled legend), today's scan quota (the scanner's `status` action), and the last Publish live site press this session. Events stats follow the shared realtime channel (debounced 400ms); the rest refresh on unlock, on the Refresh button, and from the other panels' own updates.
+- **Panels talk through the session's emitter** (`unlock`, `lock`, `publish-busy`, `published`, `events-change`, `realtime-status`, `pending-count`, `scan-quota`, `scan-quota-refresh`, `articles-count`), never through each other's DOM.
+- **Publish live site** is one request at a time across every Publish button on the page (header, schedule, article list): all of them go busy together, and the result lands in the header status (and the pressing panel's status line).
+- All the per-portal rules below still hold inside the panels: inline `aria-live` status everywhere (no `alert()`), busy labels on every mutating button (a busy button also refuses re-entry), plain-language network errors ("Could not reach the server...").
+- `/admin/events` and `/admin/articles` are noindexed meta-refresh stubs to `/admin#events` and `/admin#newsletter`.
+
+### Events panel (`/admin#events`, formerly `/admin/events`)
+The events work surfaces, moved unchanged into `src/components/admin/EventsPanel.astro`. Order: a jump list (Scan a flyer, Add one event, Full schedule, CSV import), then "Scan a flyer", "Add one event", "The full schedule", and "Bulk CSV upload" collapsed in a `<details>` whose open state is remembered in `sessionStorage` (`bl-admin-csv-open`). The review queue now has its own panel (`SubmissionsPanel.astro`). The notes below describe the original portal and remain accurate for the panel unless the command center section above says otherwise.
 - Uses `<Layout minimal noindex>` so there is no global nav/footer/splash and search engines receive `noindex, nofollow, noarchive`.
 - Starts with a staff-only password panel. On submit the portal verifies the password against the database via the `public.events_admin_login_check()` RPC (a thin SECURITY DEFINER wrapper around `private.events_admin_password_matches()`); a wrong password shows an inline "Wrong password" message and the portal stays locked. Write authorization is still enforced by RLS on every request.
 - The typed password is attached as the `x-admin-password` header on the Supabase client. It is held in memory only. The login form carries `onsubmit="return false"` so a pre-hydration submit can never put the password in the URL.
@@ -187,8 +199,8 @@ The admin portal is intentionally utilitarian but still brand-native.
 - `event_url` and `image_url` validation requires `http://` or `https://`.
 - Review submissions: on unlock the portal loads pending rows from `public.event_submissions` (gated by the admin password header) and renders each as an editable card with the event fields plus the editorial flags (emoji, author note, Conductor's pick, Giveaway). A submitted photo/flyer URL renders as a constrained preview image with an "Open original" link (the image hides itself on load error), and the card's tags are the same nine-tag checkbox group. "Approve & publish" inserts the edited record into `public.events` and marks the submission `approved` (linking `approved_event_id`); "Reject" marks it `rejected`. If the event publishes but the bookkeeping update fails, Approve stays disabled (a second insert would duplicate the event) and a "Retry marking reviewed" button re-runs just the status update. Submission text is filled into the card via DOM properties, never `innerHTML`, so untrusted input cannot inject markup.
 
-### Articles Admin Portal (`/admin/articles`)
-Same shell, same credential, and the same conventions as the events portal; only the work surfaces differ.
+### Newsletter panel (`/admin#newsletter`, formerly `/admin/articles`)
+The articles portal, moved unchanged into `src/components/admin/NewsletterPanel.astro` (compose/edit form first, then "All articles"). Same credential and conventions as the events panel; only the work surfaces differ. Notes below describe the original portal and remain accurate for the panel.
 - `<Layout minimal noindex>`, staff-only password panel, unlock verified through the same `public.events_admin_login_check()` RPC, password held in memory and sent as the `x-admin-password` header, `onsubmit="return false"` guard on the login form.
 - All feedback is inline `aria-live` status text, and every mutating button disables itself with a busy label while its request is in flight.
 - Two surfaces: a compose/edit form and the full article list. The two admin portals cross-link to each other from their headers.
@@ -269,8 +281,9 @@ Pages live in `src/pages/`:
 - `submit-event.astro`: public "submit an event" request form. Locked master-doc §7 copy: "Put your event on the map." headline, the two-line curated-by-a-human intro, "Who should submit" / "What we look for" blocks, a "7-10 days ahead" timing helper by the date field, and the "your stop is in the queue" confirmation. Conditional location fields (Chicago neighborhood / suburb), Cloudflare Turnstile captcha, and a honeypot. Posts to the `submit-event` edge function, which queues the request in `public.event_submissions` for review.
 - `newsletter/index.astro`: the Newsletter stop. Hero with `<SubscribeForm />` plus the "All dispatches" grid (`grid-cols-1 md:grid-cols-2`, first card featured full-width). Every issue is listed; issues with a page on the site link there, and the premium first-season issues open off-site in a new tab (a caption explains the arrow, rendered only while such issues exist). There is no "View all" link any more: the page is the archive.
 - `newsletter/[slug].astro`: one page per article, built with `getStaticPaths()` over `src/lib/articles.ts`, which covers both the hand-migrated rows in `public.articles` and every public issue rendered from the feed (at its feed slug, e.g. `/newsletter/time-to-clock-out-chicago-is-outside`). Hand-migrated issues keep their existing paths; `MIGRATED_ISSUES` in `beehiiv.ts` maps a feed slug to its article slug when the two differ. `NewsletterArticle.astro` skips the hero frame when an article has no hero art (feed-rendered issues usually do not) and falls back to the share card for the schema and social preview.
-- `admin/articles.astro`: internal articles admin portal. Password-gated list of every article (drafts included), a compose/edit form, publish toggle, delete, a self-contained rich-text body editor, and the same Publish live site deploy trigger. Minimal, noindexed, protected by Supabase RLS.
-- `admin/events.astro`: internal events admin portal for Gemini flyer scanning, single-event inserts, CSV imports, a live editable view of the full events table (edit/delete with realtime refresh and an on-demand "Publish live site" deploy trigger), and a review queue for public submissions (edit, approve into `public.events`, or reject). Minimal, noindexed, and protected by Supabase RLS.
+- `admin/index.astro`: the admin command center (2026-09-28). One password unlock for everything, a header with session state, the shared Publish live site button and Lock, a hash-routed tab rail, and four panels: Overview, Events, Submissions, Newsletter (see § 5). Minimal, noindexed, protected by Supabase RLS.
+- `admin/events.astro`: noindexed meta-refresh redirect stub to `/admin#events` (the events portal moved into the command center on 2026-09-28).
+- `admin/articles.astro`: noindexed meta-refresh redirect stub to `/admin#newsletter` (the articles portal moved into the command center on 2026-09-28).
 - `standards.astro`: noindexed meta-refresh redirect stub to `/about#ethics` (the Standards & Ethics content moved onto the About page on 2026-08-09).
 - `links.astro`: Link-in-Bio destination optimized for IG / TikTok in-app browser traffic. Uses `<Layout minimal>` so no site chrome (no Nav, Footer, top TransitDivider, or splash) renders. The noise overlay and ::selection still apply.
 
@@ -287,6 +300,17 @@ Library modules live in `src/lib/`:
 - `dates.ts`: `formatStopDate(event_date)` returns the standardized day label ("Sun. Jun 28"), parsed in UTC so the day never shifts. The single source of truth for descriptive dates after the `display_date` column was dropped. Also exports `formatMonthDay` ("Sep 27", used for the date-range labels on collapsed runs), `formatStartTime` / `formatTimeRange`, `getChicagoDateString`, `addDays` (UTC date math), and `PAST_EVENT_WINDOW_DAYS` (60), the one place the past-stops window is defined for both the board and the detail pages.
 - `seo.ts`: build-time structured data (JSON-LD) builders plus the event URL scheme. Pure functions, so a rebuild never churns output: `buildEventSlug` / `buildEventPath` / `buildEventUrl`, `buildEventMetaDescription`, `buildEventJsonLd`, `buildSiteJsonLd` (Organization + WebSite), `buildBreadcrumbJsonLd`, `buildItemListJsonLd`, `buildArticleJsonLd`, and `stringifyJsonLd` (escapes `<` so a stray `</script>` in listing text cannot close the tag early). See § 11.
 - `locations.ts`: dropdown data for the submit form (the diaspora `DIASPORA_TAGS`, the four `LOCATION_TYPES`, the 77 Chicago `NEIGHBORHOOD_GROUPS` by side, and `SUBURBS`).
+
+Admin command center components live in `src/components/admin/` (all used only by `admin/index.astro`; each has its own bundled `<script>` that imports the shared session):
+- `OverviewPanel.astro`: the "Line status" board: six link tiles (upcoming and next-7-days counts, pending submissions, published vs draft articles, flyer health bar, scan quota, last publish), a Refresh button, and an `aria-live` status line.
+- `EventsPanel.astro`: flyer scanner, add one event (date-range expansion, 150-word counter), the full schedule manager (search, scope, inline editor, delete, realtime refresh with editor-open gating), and the collapsible CSV import. Flyer mirroring runs on every write path, as before.
+- `SubmissionsPanel.astro`: the community review queue (approve into `public.events`, reject, retry bookkeeping). Emits the pending count for the rail badge and the overview.
+- `NewsletterPanel.astro`: article list with drafts, publish toggle, delete, and the compose/edit form with the self-contained rich-text body editor (its `.admin-body-editor` styles are `is:global` here).
+- `classes.ts`: the shared Tailwind class strings (inputs, labels, buttons, cards) the panels use in markup.
+
+Admin client modules in `src/lib/`:
+- `admin-session.ts`: the one session. Holds the password and Supabase client in memory only, exposes `unlock(password)`, `lock()`, `getClient()`, `getPassword()`, `functionsBase`, `publishLiveSite()`, and a tiny `on`/`emit` event bus; opens the single `public.events` realtime channel on unlock and removes it (and the socket) on lock.
+- `admin-shared.ts`: client-safe helpers shared by the panels, with no Supabase import: the event record type and nine-tag list, field validators, time normalization, the 150-word limit and counters, `setInlineStatus`, `withBusy` (with a re-entry guard), `errorMessage` (plain-language network errors), `chicagoToday`, `mirrorImageUrl` (same body as before, now taking the password and functions URL as arguments), and `sessionStorage` helpers that never throw.
 
 The `Layout` component accepts optional `minimal?: boolean` (default `false`) and `noindex?: boolean` (default `false`) props. Set `minimal` when a page should render standalone without the global Nav, top TransitDivider, Footer, Marquee, or TrainSplash. Set `noindex` for internal or utility surfaces.
 
@@ -348,8 +372,11 @@ Client-side filter behavior:
 ### Event Detail (`/events/<slug>`)
 One stop, at reading width, with full site chrome. Back link to that card's anchor on the board, "This stop" eyebrow, departure tag (date + time), the shared `EventCard` as the page `h1`, `<TransitDivider />`, then "See all stops" and a submit-an-event link. Adding an event is an admin action; the page appears on the next build. See § 5 for the slug scheme and § 11 for the Event JSON-LD.
 
-### Events Admin (`/admin/events`)
-Internal page using `<Layout minimal noindex>`. Structure:
+### Admin Command Center (`/admin`)
+Internal page using `<Layout minimal noindex>`. Structure: header bar (logo, "Command center", session chip, Publish live site + status, Lock), transit divider, then the login panel while locked, or the rail plus the active panel once unlocked. Panels: Overview (status tiles), Events (jump list, scanner, add one event, full schedule, collapsed CSV import), Submissions (review queue), Newsletter (compose form, article list). The two older templates below describe what each panel holds.
+
+### Events Admin (formerly `/admin/events`, now the Events and Submissions panels)
+Structure of the original page:
 1. Logo, "Internal platform" eyebrow, H1, and lock button.
 2. Login panel with password input.
 3. Transit divider.
@@ -361,8 +388,8 @@ Internal page using `<Layout minimal noindex>`. Structure:
 
 The page is not a full auth system. It is a static admin tool backed by RLS. Do not put passwords or hashes in tracked files; use the ignored `PRIVATE_README.md` for recovery details.
 
-### Articles Admin (`/admin/articles`)
-Internal page using `<Layout minimal noindex>`. Structure:
+### Articles Admin (formerly `/admin/articles`, now the Newsletter panel)
+Structure of the original page:
 1. Logo, "Internal platform" eyebrow, H1, link across to the events admin, and lock button.
 2. Login panel with password input.
 3. Transit divider.
@@ -405,6 +432,12 @@ Important policy shape:
 - Gemini quota bookkeeping lives in `private.gemini_usage` behind `public.gemini_quota_consume/status/refund` (SECURITY DEFINER); EXECUTE is revoked from `anon`/`authenticated` and granted only to `service_role`, so browsers cannot touch the ledger.
 - The password helper function lives in the private schema. One deliberate public wrapper exists: `public.events_admin_login_check()` (SECURITY DEFINER, returns only a boolean) so the admin portal can verify the password at unlock instead of failing silently later; it exposes nothing the RLS policies do not already reveal.
 - The publishable key is allowed in frontend/build contexts; never use a service-role key in this static site.
+
+### Admin command center (client side)
+- One page, `/admin`, one session: `src/lib/admin-session.ts` creates the only admin Supabase client after `public.events_admin_login_check()` returns true, and every panel uses it, so every request still carries the `x-admin-password` header the RLS policies and the admin-only edge functions (`parse-event-image`, `mirror-event-image`, `trigger-deploy`) check. Nothing about the database, policies, or functions changed.
+- One realtime channel (`admin-events-db`, `postgres_changes` on `public.events`) per session, opened on unlock and removed with the socket on lock. The schedule manager and the overview both listen to it through the session's event bus.
+- The overview reads only what the unlocked client already could: `events` (id, date, image_url for upcoming rows), a head-only count of pending `event_submissions`, `articles` (id, is_published), and the scanner's `status` action. No new endpoints.
+- The functions base URL still comes from `data-functions-base` on the app root (now `[data-admin-app]` in `admin/index.astro`).
 
 ### Storage
 - `event-images`: public bucket (5 MB per object; JPEG, PNG, WebP, GIF) holding permanent copies of event flyers. Read policy on `storage.objects` for `anon` and `authenticated`; writes happen only through the edge functions with the service role. Objects are served with a one-year cache header. Nothing on the site links to a flyer's original host once a copy exists; `image_url` on the row is rewritten to the Storage URL at the moment the link enters the system (admin add, row edit, CSV import, submission approval, flyer scan, public submission). A copy that cannot be made (expired link, not an image, over 5 MB) never blocks a save: the link is kept as pasted with a warning, and the public site skips it if it is dead (see `src/lib/images.ts`).
@@ -468,6 +501,13 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-09-28 (Admin command center):** The two password-protected portals became one dashboard at `/admin`.
+  - **One unlock, one session:** a single password screen (same `events_admin_login_check` RPC, same `x-admin-password` header) opens every panel. `src/lib/admin-session.ts` keeps the password and the one shared Supabase client in memory only; Lock clears them and removes the realtime channel; a refresh relocks.
+  - **Rail and routing:** Overview, Events, Submissions, Newsletter as an accessible tab rail (left at `lg+`, a grid on top below that), hash-routed (`/admin#events`, `#events-schedule`, and so on) so links deep-link and Back works; arrow keys, Home, and End move between tabs. The header always shows the wordmark and session state, and once unlocked the shared Publish live site button, its status, and Lock.
+  - **New Overview board:** upcoming and next-7-days counts, pending submissions, published vs draft articles, flyer health (stored vs external vs empty for upcoming stops), today's scan quota, and the last Publish press this session, each tile a link into its panel. Built only from data the client could already read; events stats update live.
+  - **Moved, not rewritten:** the events scripts and markup went into `EventsPanel.astro` and `SubmissionsPanel.astro`, the articles portal into `NewsletterPanel.astro`, with shared helpers in `src/lib/admin-shared.ts`. Every `data-*` hook, status line, word counter, date-range expansion, flyer-mirroring call, editor-open gating rule, and message is preserved. The CSV import now sits collapsed in a `<details>` that remembers its open state for the tab.
+  - **Robustness:** every Publish button shares one in-flight request and busy state; `withBusy` refuses re-entry; lock-while-loading no longer lets a stale response repaint a cleared list; network failures read "Could not reach the server..." instead of browser wording.
+  - **Old URLs:** `/admin/events` and `/admin/articles` are noindexed meta-refresh stubs to `/admin#events` and `/admin#newsletter`; the sitemap filter still drops everything under `/admin/`.
 - **2026-09-28 (support tier amount):** the monthly "Solidarity Fare" card and hero copy now say $9/mo, matching the Stripe product the link has sold all along. Owner decision to keep the $9 product rather than create a $7 one; closes an open item that dated back to 2026-06-25.
 
 - **2026-09-27 (full QA and stress test):** A sweep of the whole site after the website-edits pass: static audit of the built HTML, fuzzing of the parsing and sanitizing helpers with hostile input, an adversarial read of every client script and form, and a browser pass at phone and desktop widths with an automated accessibility scan. Fixes, most important first:

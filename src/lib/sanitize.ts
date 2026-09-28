@@ -2,7 +2,7 @@
  * HTML allow-lists shared by everything that prints stored markup with
  * `set:html`. Two sources reach the page that way: newsletter issues rendered
  * from the feed (see beehiiv.ts, which adds its own platform-specific cleanup
- * on top of this) and issues written in /admin/articles. The admin editor
+ * on top of this) and issues written in the admin command center (/admin#newsletter). The admin editor
  * scrubs pastes as they land, but the build is the last line, so both go
  * through the same allow-list here before a visitor sees them.
  */

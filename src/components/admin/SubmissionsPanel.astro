@@ -1,0 +1,569 @@
+---
+// Submissions panel of the admin command center (/admin#submissions): the
+// community review queue. Moved from the former src/pages/admin/events.astro
+// with behavior unchanged; the client and password come from
+// src/lib/admin-session.ts, and the pending count feeds the rail badge.
+import { ALLOWED_TAGS as DIASPORA_TAGS } from '../../lib/admin-shared';
+import {
+  buttonClass,
+  cardClass,
+  fieldMarkerClass,
+  inputClass,
+  labelClass,
+  secondaryButtonClass,
+} from './classes';
+---
+
+<div data-admin-panel="submissions" class="space-y-8">
+  <section data-submissions-section aria-labelledby="submissions-title" class={cardClass}>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
+          Community inbox
+        </p>
+        <h2 id="submissions-title" data-panel-heading tabindex="-1" class="mt-3 font-heading text-[2.25rem] leading-none text-darkWalnut focus:outline-none md:text-5xl">
+          Review submissions
+          <span data-submissions-count class="ml-2 align-middle font-body text-base font-bold text-darkWalnut/60"></span>
+        </h2>
+      </div>
+      <button type="button" data-refresh-submissions class={secondaryButtonClass}>Refresh</button>
+    </div>
+
+    <p class="mt-5 font-body text-sm leading-relaxed text-darkWalnut/75">
+      Public requests from the submit form land here. Edit anything, set the editorial flags, then
+      Approve to publish into the live events table, or Reject to dismiss.
+    </p>
+
+    <p data-submissions-status class="mt-5 font-body text-sm font-bold text-darkWalnut/70" role="status" aria-live="polite"></p>
+
+    <div data-submissions-list class="mt-6 space-y-8"></div>
+  </section>
+
+  <template data-submission-template>
+    <article data-submission-card class="border-2 border-darkWalnut bg-seashell p-5 shadow-[3px_3px_0_#642713] md:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-3 border-b-2 border-dashed border-darkWalnut/35 pb-4">
+        <div class="min-w-0">
+          <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk">
+            From <span data-display="submitter_name"></span>
+          </p>
+          <p class="mt-1 font-body text-xs text-darkWalnut/70">
+            <span data-display="submitter_email"></span>
+            <span data-display="created_at" class="ml-2 text-darkWalnut/45"></span>
+          </p>
+        </div>
+        <div class="border-2 border-darkWalnut bg-[#FDFBF7] px-2 py-1 font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut">
+          <span data-display="location_type"></span>
+        </div>
+      </div>
+
+      <div data-raw-location class="mt-3 font-body text-xs leading-relaxed text-darkWalnut/65" hidden>
+        <span class="font-bold uppercase tracking-widest text-darkWalnut/45">Submitted location</span>
+        <span data-display="raw_location" class="ml-2"></span>
+      </div>
+
+      <div data-photo-wrap class="mt-4 border-2 border-dashed border-darkWalnut/35 bg-[#FDFBF7] p-3" hidden>
+        <p class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/45">
+          Submitted photo
+        </p>
+        <img
+          data-photo
+          alt="Submitted event photo or flyer"
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          class="mt-2 max-h-64 w-auto max-w-full border-2 border-darkWalnut object-contain"
+        />
+        <a
+          data-photo-link
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          class="mt-2 inline-block break-all font-body text-xs font-bold text-cayenneInk underline"
+        >Open original</a>
+      </div>
+
+      <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class={`${labelClass} md:col-span-2`}>
+          Title<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="title" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Event date<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="event_date" type="date" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Start time<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="start_time" type="time" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          End time<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+          <input data-field="end_time" type="time" class={inputClass} />
+        </label>
+
+        <label class={labelClass}>
+          Venue<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="venue" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Neighborhood<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="neighborhood" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Organizer<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="organizer" type="text" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Cost info<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+          <input data-field="cost_info" type="text" class={inputClass} />
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`}>
+          Event URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="event_url" type="url" class={inputClass} required />
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`}>
+          Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
+          <input data-field="image_url" type="url" class={inputClass} required />
+        </label>
+
+        <label class={labelClass}>
+          Emoji<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+          <input data-field="emoji" type="text" class={inputClass} />
+        </label>
+
+        <fieldset class="md:col-span-2">
+          <legend class={labelClass}>
+            Community tags<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Pick any that apply</span>
+          </legend>
+          <div data-tag-group class="mt-2 flex flex-wrap gap-2">
+            {DIASPORA_TAGS.map((tag) => (
+              <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut has-[:checked]:bg-amber">
+                <input data-tag-option value={tag} type="checkbox" class="h-4 w-4 accent-cayenne" />
+                {tag}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <label class={`${labelClass} md:col-span-2`}>
+          Description<span class={`${fieldMarkerClass} text-cayenneInk`}>Required, 150 words max</span>
+          <textarea data-field="description" rows="4" data-word-limit="150" class={inputClass} required></textarea>
+          <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
+        </label>
+
+        <label class={`${labelClass} md:col-span-2`}>
+          Author note<span class={`${fieldMarkerClass} text-darkWalnut/45`}>Optional</span>
+          <textarea data-field="author_note" rows="2" class={inputClass}></textarea>
+        </label>
+
+        <div class="flex flex-wrap gap-3 md:col-span-2">
+          <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+            <input data-field="is_curated" type="checkbox" class="h-4 w-4 accent-cayenne" />
+            Conductor's pick
+          </label>
+          <label class="inline-flex cursor-pointer items-center gap-2 border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[11px] font-bold uppercase tracking-widest text-darkWalnut">
+            <input data-field="is_giveaway" type="checkbox" class="h-4 w-4 accent-cayenne" />
+            Giveaway
+          </label>
+        </div>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center gap-3 border-t-2 border-dashed border-darkWalnut/35 pt-4">
+        <button type="button" data-approve class={`${buttonClass} disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-x-0 disabled:hover:translate-y-0`}>Approve &amp; publish</button>
+        <button type="button" data-reject class="border-2 border-darkWalnut bg-seashell px-4 py-3 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60">
+          Reject
+        </button>
+        <button type="button" data-retry-approved hidden class={secondaryButtonClass}>
+          Retry marking reviewed
+        </button>
+        <p data-card-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+      </div>
+    </article>
+  </template>
+</div>
+
+<script>
+  import type { SupabaseClient } from '@supabase/supabase-js';
+  import {
+    attachWordCounters,
+    cleanText,
+    errorMessage,
+    mirrorImageUrl as mirrorImageUrlWithAuth,
+    normalizeTimeOfDay,
+    nullableText,
+    requiredDate,
+    requiredDescription,
+    requiredText,
+    requiredTimeOfDay,
+    requiredUrl,
+    updateWordCounters,
+    validateTags,
+    withBusy,
+  } from '../../lib/admin-shared';
+  import { emit, functionsBase, getClient, getPassword, on } from '../../lib/admin-session';
+
+  const app = document.querySelector('[data-admin-panel="submissions"]') as HTMLElement | null;
+
+  if (app) {
+    // Mirrors the shared session client (set on unlock, cleared on lock).
+    let adminSupabase: SupabaseClient | null = null;
+
+    const submissionsList = app.querySelector('[data-submissions-list]') as HTMLElement | null;
+    const submissionsStatus = app.querySelector('[data-submissions-status]') as HTMLElement | null;
+    const submissionsCount = app.querySelector('[data-submissions-count]') as HTMLElement | null;
+    const refreshSubmissionsButton = app.querySelector('[data-refresh-submissions]') as HTMLButtonElement | null;
+    const submissionTemplate = app.querySelector('[data-submission-template]') as HTMLTemplateElement | null;
+
+    function setUnlocked(isUnlocked: boolean) {
+      if (isUnlocked) {
+        void loadSubmissions();
+      } else if (submissionsList) {
+        submissionsList.innerHTML = '';
+        if (submissionsCount) submissionsCount.textContent = '';
+        if (submissionsStatus) submissionsStatus.textContent = '';
+      }
+    }
+
+    // Review cards carry the same 150-word description counter.
+    attachWordCounters(app);
+
+    // Flyer mirroring: the shared helper, fed the session's password.
+    function mirrorImageUrl(url: string | null) {
+      return mirrorImageUrlWithAuth(url, getPassword(), functionsBase);
+    }
+
+    /* ---------- Community submissions review ---------- */
+    type SubmissionRow = Record<string, any>;
+
+    function setSubmissionsStatus(message: string) {
+      if (submissionsStatus) submissionsStatus.textContent = message;
+    }
+
+    function updateSubmissionsCount() {
+      if (!submissionsCount || !submissionsList) return;
+      const count = submissionsList.querySelectorAll('[data-submission-card]').length;
+      submissionsCount.textContent = count > 0 ? `(${count} pending)` : '';
+      // Feeds the rail badge and the overview board.
+      emit('pending-count', count);
+    }
+
+    function cardField(card: HTMLElement, name: string) {
+      return card.querySelector(`[data-field="${name}"]`) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+    }
+
+    function cardFieldValue(card: HTMLElement, name: string) {
+      return cardField(card, name)?.value ?? '';
+    }
+
+    function cardFieldChecked(card: HTMLElement, name: string) {
+      const el = card.querySelector(`[data-field="${name}"]`) as HTMLInputElement | null;
+      return Boolean(el?.checked);
+    }
+
+    function setDisplay(card: HTMLElement, name: string, value: string) {
+      const el = card.querySelector(`[data-display="${name}"]`);
+      if (el) el.textContent = value;
+    }
+
+    function setFieldValue(card: HTMLElement, name: string, value: string) {
+      const el = cardField(card, name);
+      if (el) el.value = value;
+    }
+
+    function setFieldChecked(card: HTMLElement, name: string, checked: boolean) {
+      const el = card.querySelector(`[data-field="${name}"]`) as HTMLInputElement | null;
+      if (el) el.checked = checked;
+    }
+
+    function formatSubmittedAt(value: unknown) {
+      const raw = cleanText(value);
+      if (!raw) return '';
+      const date = new Date(raw);
+      if (Number.isNaN(date.getTime())) return '';
+      return `Submitted ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+
+    function cardTags(card: HTMLElement) {
+      const checked = Array.from(
+        card.querySelectorAll('[data-tag-option]:checked')
+      ) as HTMLInputElement[];
+      const tags = checked.map((el) => cleanText(el.value)).filter(Boolean);
+      return tags.length > 0 ? tags : null;
+    }
+
+    function eventRecordFromCard(card: HTMLElement) {
+      return {
+        title: requiredText(cardFieldValue(card, 'title'), 'title'),
+        event_date: requiredDate(cardFieldValue(card, 'event_date')),
+        venue: requiredText(cardFieldValue(card, 'venue'), 'venue'),
+        start_time: requiredTimeOfDay(cardFieldValue(card, 'start_time'), 'start_time'),
+        end_time: normalizeTimeOfDay(cardFieldValue(card, 'end_time'), 'end_time'),
+        neighborhood: requiredText(cardFieldValue(card, 'neighborhood'), 'neighborhood'),
+        organizer: requiredText(cardFieldValue(card, 'organizer'), 'organizer'),
+        cost_info: nullableText(cardFieldValue(card, 'cost_info')),
+        event_url: requiredUrl(cardFieldValue(card, 'event_url'), 'event_url'),
+        image_url: requiredUrl(cardFieldValue(card, 'image_url'), 'image_url'),
+        description: requiredDescription(cardFieldValue(card, 'description')),
+        author_note: nullableText(cardFieldValue(card, 'author_note')),
+        emoji: nullableText(cardFieldValue(card, 'emoji')),
+        tags: validateTags(cardTags(card)),
+        is_curated: cardFieldChecked(card, 'is_curated'),
+        is_giveaway: cardFieldChecked(card, 'is_giveaway'),
+      };
+    }
+
+    function removeCard(card: HTMLElement) {
+      card.remove();
+      updateSubmissionsCount();
+      if (
+        submissionsList &&
+        submissionsList.querySelectorAll('[data-submission-card]').length === 0
+      ) {
+        setSubmissionsStatus('No pending submissions right now.');
+      }
+    }
+
+    function cardButtons(card: HTMLElement) {
+      return {
+        approve: card.querySelector('[data-approve]') as HTMLButtonElement | null,
+        reject: card.querySelector('[data-reject]') as HTMLButtonElement | null,
+        retry: card.querySelector('[data-retry-approved]') as HTMLButtonElement | null,
+      };
+    }
+
+    // Marks the submission row reviewed after its event was published. Split out
+    // so the Retry button can re-run just this step if it fails the first time.
+    async function markSubmissionApproved(id: string, eventId: string) {
+      if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+      const { error } = await adminSupabase
+        .from('event_submissions')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          approved_event_id: eventId,
+        })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+    }
+
+    async function approveSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
+      if (!adminSupabase) return;
+      const { approve, reject, retry } = cardButtons(card);
+      if (approve?.disabled) return;
+      if (approve) approve.disabled = true;
+      if (reject) reject.disabled = true;
+      try {
+        const record = eventRecordFromCard(card);
+        if (statusEl) statusEl.textContent = 'Copying the flyer into our storage...';
+        const mirrored = await mirrorImageUrl(record.image_url);
+        record.image_url = mirrored.url;
+        if (mirrored.warning) console.warn(mirrored.warning);
+        if (statusEl) statusEl.textContent = 'Publishing...';
+        if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+        const { data, error } = await adminSupabase
+          .from('events')
+          .insert(record)
+          .select('id')
+          .single();
+        if (error) throw new Error(error.message);
+        if (!data) throw new Error('Could not read the new event id.');
+
+        try {
+          await markSubmissionApproved(id, String(data.id));
+        } catch (_) {
+          // The event IS live; only the bookkeeping failed. Keep Approve disabled
+          // (a second click would publish a duplicate) and offer a retry.
+          if (statusEl) {
+            statusEl.textContent =
+              'Event published, but marking the submission reviewed failed. Use "Retry marking reviewed" so it leaves this queue.';
+          }
+          if (retry) {
+            retry.hidden = false;
+            retry.onclick = () => {
+              void withBusy(retry, 'Retrying...', async () => {
+                try {
+                  await markSubmissionApproved(id, String(data.id));
+                  removeCard(card);
+                } catch (retryError) {
+                  const message = errorMessage(retryError, 'Still failing.');
+                  if (statusEl) statusEl.textContent = `Still failing: ${message}`;
+                }
+              });
+            };
+          }
+          return;
+        }
+        removeCard(card);
+      } catch (error) {
+        const message = errorMessage(error, 'Could not approve this submission.');
+        if (statusEl) statusEl.textContent = message;
+        if (approve) approve.disabled = false;
+        if (reject) reject.disabled = false;
+      }
+    }
+
+    async function rejectSubmission(card: HTMLElement, id: string, statusEl: HTMLElement | null) {
+      if (!adminSupabase) return;
+      const { approve, reject } = cardButtons(card);
+      // Already in flight (approve or reject): ignore the extra press.
+      if (reject?.disabled) return;
+      if (!window.confirm('Reject this submission? It will not be published.')) return;
+      if (approve) approve.disabled = true;
+      if (reject) reject.disabled = true;
+      try {
+        if (statusEl) statusEl.textContent = 'Rejecting...';
+        if (!adminSupabase) throw new Error('Unlock the admin portal first.');
+        const { error } = await adminSupabase
+          .from('event_submissions')
+          .update({ status: 'rejected', reviewed_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw new Error(error.message);
+        removeCard(card);
+      } catch (error) {
+        const message = errorMessage(error, 'Could not reject this submission.');
+        if (statusEl) statusEl.textContent = message;
+        if (approve) approve.disabled = false;
+        if (reject) reject.disabled = false;
+      }
+    }
+
+    function buildSubmissionCard(submission: SubmissionRow) {
+      if (!submissionTemplate) return null;
+      const fragment = submissionTemplate.content.cloneNode(true) as DocumentFragment;
+      const card = fragment.querySelector('[data-submission-card]') as HTMLElement | null;
+      if (!card) return null;
+
+      setDisplay(card, 'submitter_name', cleanText(submission.submitter_name) || 'Anonymous');
+      setDisplay(card, 'submitter_email', cleanText(submission.submitter_email) || 'No email provided');
+      setDisplay(card, 'created_at', formatSubmittedAt(submission.created_at));
+      setDisplay(card, 'location_type', cleanText(submission.location_type));
+
+      const rawParts = [submission.address, submission.chicago_neighborhood, submission.suburb]
+        .map((value) => cleanText(value))
+        .filter(Boolean);
+      const rawWrap = card.querySelector('[data-raw-location]') as HTMLElement | null;
+      if (rawWrap && rawParts.length > 0) {
+        rawWrap.hidden = false;
+        setDisplay(card, 'raw_location', rawParts.join(' · '));
+      }
+
+      setFieldValue(card, 'title', cleanText(submission.title));
+      setFieldValue(card, 'event_date', cleanText(submission.event_date));
+      setFieldValue(card, 'start_time', cleanText(submission.start_time).slice(0, 5));
+      setFieldValue(card, 'end_time', cleanText(submission.end_time).slice(0, 5));
+      setFieldValue(card, 'venue', cleanText(submission.venue));
+      setFieldValue(card, 'neighborhood', cleanText(submission.neighborhood));
+      setFieldValue(card, 'organizer', cleanText(submission.organizer));
+      setFieldValue(card, 'cost_info', cleanText(submission.cost_info));
+      setFieldValue(card, 'event_url', cleanText(submission.event_url));
+      setFieldValue(card, 'image_url', cleanText(submission.image_url));
+      setFieldValue(card, 'emoji', cleanText(submission.emoji));
+      setFieldValue(card, 'description', cleanText(submission.description));
+      setFieldValue(card, 'author_note', cleanText(submission.author_note));
+      setFieldChecked(card, 'is_curated', Boolean(submission.is_curated));
+      setFieldChecked(card, 'is_giveaway', Boolean(submission.is_giveaway));
+
+      // Check the taxonomy boxes matching the submitted tags.
+      const submittedTags = Array.isArray(submission.tags)
+        ? submission.tags.map((tag: unknown) => cleanText(tag).toLowerCase())
+        : [];
+      (card.querySelectorAll('[data-tag-option]') as NodeListOf<HTMLInputElement>).forEach((el) => {
+        el.checked = submittedTags.includes(el.value.toLowerCase());
+      });
+
+      // Photo preview: only http(s) URLs, hide the image (keep the link) if it 404s.
+      const photoUrl = cleanText(submission.image_url);
+      const photoWrap = card.querySelector('[data-photo-wrap]') as HTMLElement | null;
+      const photo = card.querySelector('[data-photo]') as HTMLImageElement | null;
+      const photoLink = card.querySelector('[data-photo-link]') as HTMLAnchorElement | null;
+      if (photoWrap && photo && photoLink && /^https?:\/\//i.test(photoUrl)) {
+        photoWrap.hidden = false;
+        photoLink.href = photoUrl;
+        photo.addEventListener('error', () => {
+          photo.hidden = true;
+        });
+        photo.src = photoUrl;
+      }
+
+      const cardStatus = card.querySelector('[data-card-status]') as HTMLElement | null;
+      card.querySelector('[data-approve]')?.addEventListener('click', () => {
+        void approveSubmission(card, String(submission.id), cardStatus);
+      });
+      card.querySelector('[data-reject]')?.addEventListener('click', () => {
+        void rejectSubmission(card, String(submission.id), cardStatus);
+      });
+
+      updateWordCounters(card);
+
+      return card;
+    }
+
+    // In-flight guard: overlapping loads would each append a full copy of the
+    // queue (duplicate cards mean a submission could be approved twice).
+    let submissionsLoading = false;
+
+    async function loadSubmissions() {
+      if (!adminSupabase || !submissionsList || submissionsLoading) return;
+      const client = adminSupabase;
+      submissionsLoading = true;
+      setSubmissionsStatus('Loading submissions...');
+      try {
+        const { data, error } = await client
+          .from('event_submissions')
+          .select('*')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: true });
+        // Locked while loading: leave the cleared queue alone.
+        if (adminSupabase !== client) return;
+        if (error) throw new Error(error.message);
+
+        const rows = (data ?? []) as SubmissionRow[];
+        // Clear only after the fetch resolves so a failed load keeps the
+        // current cards instead of blanking the queue.
+        submissionsList.innerHTML = '';
+        rows.forEach((submission) => {
+          const card = buildSubmissionCard(submission);
+          if (card) submissionsList.appendChild(card);
+        });
+        updateSubmissionsCount();
+        setSubmissionsStatus(rows.length === 0 ? 'No pending submissions right now.' : '');
+      } catch (error) {
+        if (adminSupabase !== client) return;
+        const message = errorMessage(error, 'Could not load submissions.');
+        setSubmissionsStatus(message);
+      } finally {
+        submissionsLoading = false;
+        // Locked and unlocked again while this load was in flight: the new
+        // session's load was skipped by the guard above, so run it now.
+        if (adminSupabase && adminSupabase !== client) void loadSubmissions();
+      }
+    }
+
+    refreshSubmissionsButton?.addEventListener('click', () => {
+      void withBusy(refreshSubmissionsButton, 'Refreshing...', () => loadSubmissions());
+    });
+
+    /* ---------- Session ---------- */
+
+    on('unlock', () => {
+      adminSupabase = getClient();
+      setUnlocked(true);
+    });
+
+    on('lock', () => {
+      adminSupabase = null;
+      setUnlocked(false);
+    });
+
+    setUnlocked(false);
+  }
+</script>

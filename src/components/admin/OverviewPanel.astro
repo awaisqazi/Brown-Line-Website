@@ -1,0 +1,370 @@
+---
+// Overview panel of the admin command center (/admin#overview): a glanceable
+// "line status" board built only from data the unlocked client can already
+// read (no new endpoints). Events stats follow the session's realtime channel;
+// everything else refreshes on unlock, on the Refresh button, and from the
+// other panels' own updates (pending count, article counts, scan quota,
+// Publish live site presses).
+import { quietButtonClass } from './classes';
+
+const tileClass =
+  'group flex h-full flex-col border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue';
+const tileLabelClass = 'font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk';
+const tileValueClass = 'mt-3 font-heading text-5xl leading-none text-darkWalnut';
+const tileMetaClass = 'mt-3 font-body text-sm leading-relaxed text-darkWalnut/75';
+const tileCtaClass =
+  'mt-auto pt-4 font-mono text-[11px] font-bold uppercase tracking-widest text-darkWalnut/75 group-hover:text-cayenneInk';
+---
+
+<div data-admin-panel="overview" class="space-y-8">
+  <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">Line status</p>
+      <h2 data-panel-heading tabindex="-1" class="mt-3 font-heading text-[2.25rem] leading-none text-darkWalnut focus:outline-none md:text-5xl">
+        Overview
+      </h2>
+      <p class="mt-4 max-w-2xl font-body text-sm leading-relaxed text-darkWalnut/75 md:text-base">
+        Everything on the line at a glance. Each tile opens the panel where you can act on it.
+      </p>
+    </div>
+    <div class="flex flex-col items-start gap-2 sm:items-end">
+      <button type="button" data-overview-refresh class={quietButtonClass}>Refresh</button>
+      <p data-overview-updated class="font-mono text-[11px] font-bold uppercase tracking-widest text-darkWalnut/75"></p>
+    </div>
+  </header>
+
+  <p data-overview-status class="font-body text-sm font-bold text-darkWalnut" role="status" aria-live="polite"></p>
+
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    <a href="#events-schedule" class={tileClass}>
+      <span class={tileLabelClass}>Upcoming stops</span>
+      <span data-stat="upcoming" class={tileValueClass}>--</span>
+      <span class={tileMetaClass}>
+        <span data-stat="week">--</span> in the next 7 days
+        <span data-stat="live" class="mt-1 block font-mono text-[11px] font-bold uppercase tracking-widest text-darkWalnut/75"></span>
+      </span>
+      <span class={tileCtaClass}>Open the schedule &rarr;</span>
+    </a>
+
+    <a href="#submissions" class={tileClass}>
+      <span class={tileLabelClass}>Now waiting</span>
+      <span data-stat="pending" class={tileValueClass}>--</span>
+      <span class={tileMetaClass}>community submissions to review</span>
+      <span class={tileCtaClass}>Review submissions &rarr;</span>
+    </a>
+
+    <a href="#newsletter-list" class={tileClass}>
+      <span class={tileLabelClass}>Newsletter</span>
+      <span class={tileValueClass}><span data-stat="published">--</span></span>
+      <span class={tileMetaClass}>
+        published on the site. Drafts held back: <span data-stat="drafts">--</span>
+      </span>
+      <span class={tileCtaClass}>Open articles &rarr;</span>
+    </a>
+
+    <a href="#events-schedule" class={tileClass}>
+      <span class={tileLabelClass}>Flyer health</span>
+      <span class={tileMetaClass}>Upcoming stops by where their flyer lives.</span>
+      <span
+        data-flyer-bar
+        aria-hidden="true"
+        class="mt-4 flex h-4 w-full gap-[2px] border-2 border-darkWalnut bg-seashell"
+      >
+        <span data-flyer-seg="stored" class="h-full bg-celadon" style="width:0%"></span>
+        <span data-flyer-seg="external" class="h-full bg-amber" style="width:0%"></span>
+        <span data-flyer-seg="empty" class="h-full bg-babyPink" style="width:0%"></span>
+      </span>
+      <span class="mt-4 grid grid-cols-1 gap-1.5 font-body text-sm text-darkWalnut">
+        <span class="flex items-center gap-2">
+          <span aria-hidden="true" class="h-3 w-3 shrink-0 border-2 border-darkWalnut bg-celadon"></span>
+          <span><strong data-stat="flyer-stored">--</strong> in our storage (permanent)</span>
+        </span>
+        <span class="flex items-center gap-2">
+          <span aria-hidden="true" class="h-3 w-3 shrink-0 border-2 border-darkWalnut bg-amber"></span>
+          <span><strong data-stat="flyer-external">--</strong> external links (may expire)</span>
+        </span>
+        <span class="flex items-center gap-2">
+          <span aria-hidden="true" class="h-3 w-3 shrink-0 border-2 border-darkWalnut bg-babyPink"></span>
+          <span><strong data-stat="flyer-empty">--</strong> with no flyer</span>
+        </span>
+      </span>
+      <span class={tileCtaClass}>Fix in the schedule &rarr;</span>
+    </a>
+
+    <a href="#events-scan" class={tileClass}>
+      <span class={tileLabelClass}>Camera car</span>
+      <span data-stat="quota" class={tileValueClass}>--</span>
+      <span data-stat="quota-meta" class={tileMetaClass}>flyer scans left today</span>
+      <span class={tileCtaClass}>Scan a flyer &rarr;</span>
+    </a>
+
+    <a href="#events-schedule" class={tileClass}>
+      <span class={tileLabelClass}>Last publish</span>
+      <span data-stat="publish" class="mt-3 font-heading text-2xl leading-tight text-darkWalnut">Not yet this session</span>
+      <span data-stat="publish-meta" class={tileMetaClass}>
+        Publish live site pushes database changes to the public pages in a couple of minutes.
+      </span>
+      <span class={tileCtaClass}>Go to the schedule &rarr;</span>
+    </a>
+  </div>
+</div>
+
+<script>
+  import type { SupabaseClient } from '@supabase/supabase-js';
+  import {
+    addDaysToDateString,
+    chicagoToday,
+    errorMessage,
+    setInlineStatus,
+    STORED_IMAGE_PATH,
+    withBusy,
+  } from '../../lib/admin-shared';
+  import {
+    emit,
+    getClient,
+    getLastPublish,
+    getRealtimeStatus,
+    on,
+    type PublishRecord,
+    type ScanQuota,
+  } from '../../lib/admin-session';
+
+  const app = document.querySelector('[data-admin-panel="overview"]') as HTMLElement | null;
+
+  if (app) {
+    let adminSupabase: SupabaseClient | null = null;
+    let eventsTimer: ReturnType<typeof setTimeout> | undefined;
+    let eventsGeneration = 0;
+
+    const refreshButton = app.querySelector('[data-overview-refresh]') as HTMLButtonElement | null;
+    const statusEl = app.querySelector('[data-overview-status]') as HTMLElement | null;
+    const updatedEl = app.querySelector('[data-overview-updated]') as HTMLElement | null;
+    const problems = new Map<string, string>();
+
+    function stat(name: string) {
+      return app?.querySelector(`[data-stat="${name}"]`) as HTMLElement | null;
+    }
+
+    function setStat(name: string, value: string) {
+      const el = stat(name);
+      if (el) el.textContent = value;
+    }
+
+    function formatClock(date: Date) {
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function renderProblems() {
+      const lines = Array.from(problems.values());
+      setInlineStatus(statusEl, lines.join(' '), lines.length > 0);
+    }
+
+    function setProblem(key: string, message: string | null) {
+      if (message) problems.set(key, message);
+      else problems.delete(key);
+      renderProblems();
+    }
+
+    function markUpdated() {
+      if (updatedEl) updatedEl.textContent = `Updated ${formatClock(new Date())}`;
+    }
+
+    /* ---------- Events: upcoming, next 7 days, flyer health ---------- */
+
+    async function loadEventStats() {
+      if (!adminSupabase) return;
+      const client = adminSupabase;
+      const generation = ++eventsGeneration;
+      try {
+        const today = chicagoToday();
+        const { data, error } = await client
+          .from('events')
+          .select('id,event_date,image_url')
+          .gte('event_date', today);
+        if (generation !== eventsGeneration || adminSupabase !== client) return;
+        if (error) throw new Error(error.message);
+        const rows = (data ?? []) as Array<{ event_date: string; image_url: string | null }>;
+        const weekEnd = addDaysToDateString(today, 6);
+        let stored = 0;
+        let external = 0;
+        let empty = 0;
+        rows.forEach((row) => {
+          const url = (row.image_url ?? '').trim();
+          if (!url) empty += 1;
+          else if (url.includes(STORED_IMAGE_PATH)) stored += 1;
+          else external += 1;
+        });
+        setStat('upcoming', String(rows.length));
+        setStat('week', String(rows.filter((row) => row.event_date <= weekEnd).length));
+        setStat('flyer-stored', String(stored));
+        setStat('flyer-external', String(external));
+        setStat('flyer-empty', String(empty));
+        const total = rows.length || 1;
+        const setSeg = (name: string, count: number) => {
+          const seg = app?.querySelector(`[data-flyer-seg="${name}"]`) as HTMLElement | null;
+          if (seg) seg.style.width = rows.length ? `${(count / total) * 100}%` : '0%';
+        };
+        setSeg('stored', stored);
+        setSeg('external', external);
+        setSeg('empty', empty);
+        setProblem('events', null);
+        markUpdated();
+      } catch (error) {
+        if (generation !== eventsGeneration || adminSupabase !== client) return;
+        setProblem('events', `Could not load event stats: ${errorMessage(error)}`);
+      }
+    }
+
+    /* ---------- Submissions: pending count ---------- */
+
+    async function loadPendingCount() {
+      if (!adminSupabase) return;
+      const client = adminSupabase;
+      try {
+        const { count, error } = await client
+          .from('event_submissions')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        if (adminSupabase !== client) return;
+        if (error) throw new Error(error.message);
+        // Emitting updates this tile and the rail badge through one path.
+        emit('pending-count', count ?? 0);
+        setProblem('pending', null);
+      } catch (error) {
+        if (adminSupabase !== client) return;
+        setProblem('pending', `Could not count submissions: ${errorMessage(error)}`);
+      }
+    }
+
+    /* ---------- Articles: published vs drafts ---------- */
+
+    async function loadArticleCounts() {
+      if (!adminSupabase) return;
+      const client = adminSupabase;
+      try {
+        const { data, error } = await client.from('articles').select('id,is_published');
+        if (adminSupabase !== client) return;
+        if (error) throw new Error(error.message);
+        const rows = (data ?? []) as Array<{ is_published: boolean }>;
+        renderArticleCounts({
+          total: rows.length,
+          drafts: rows.filter((row) => !row.is_published).length,
+        });
+        setProblem('articles', null);
+      } catch (error) {
+        if (adminSupabase !== client) return;
+        setProblem('articles', `Could not count articles: ${errorMessage(error)}`);
+      }
+    }
+
+    function renderArticleCounts(counts: { total: number; drafts: number }) {
+      setStat('published', String(counts.total - counts.drafts));
+      setStat('drafts', String(counts.drafts));
+    }
+
+    /* ---------- Scanner quota and last publish ---------- */
+
+    function renderQuota(quota: ScanQuota) {
+      if (!quota || typeof quota.remaining !== 'number' || typeof quota.limit !== 'number') {
+        setStat('quota', '--');
+        setStat('quota-meta', 'Scan counter unavailable right now.');
+        return;
+      }
+      setStat('quota', String(quota.remaining));
+      setStat('quota-meta', `of ${quota.limit} flyer scans left today (shared pool, resets at midnight Chicago time)`);
+    }
+
+    function renderPublish(record: PublishRecord | null) {
+      if (!record) {
+        setStat('publish', 'Not yet this session');
+        setStat(
+          'publish-meta',
+          'Publish live site pushes database changes to the public pages in a couple of minutes.'
+        );
+        return;
+      }
+      setStat('publish', `${record.ok ? 'Pressed' : 'Failed'} at ${formatClock(record.at)}`);
+      setStat('publish-meta', record.message);
+    }
+
+    function renderLive(status: string) {
+      setStat(
+        'live',
+        status === 'SUBSCRIBED' ? 'Live updates on' : status === 'off' ? '' : 'Live updates connecting'
+      );
+    }
+
+    function clearAll() {
+      clearTimeout(eventsTimer);
+      eventsGeneration += 1;
+      ['upcoming', 'week', 'pending', 'published', 'drafts', 'flyer-stored', 'flyer-external', 'flyer-empty', 'quota'].forEach(
+        (name) => setStat(name, '--')
+      );
+      app?.querySelectorAll<HTMLElement>('[data-flyer-seg]').forEach((seg) => {
+        seg.style.width = '0%';
+      });
+      setStat('quota-meta', 'flyer scans left today');
+      setStat('live', '');
+      renderPublish(null);
+      problems.clear();
+      renderProblems();
+      if (updatedEl) updatedEl.textContent = '';
+    }
+
+    async function refreshAll() {
+      if (!adminSupabase) return;
+      setInlineStatus(statusEl, 'Checking the line...');
+      problems.clear();
+      await Promise.all([loadEventStats(), loadPendingCount(), loadArticleCounts()]);
+      if (!adminSupabase) return;
+      renderProblems();
+      markUpdated();
+    }
+
+    refreshButton?.addEventListener('click', () => {
+      void withBusy(refreshButton, 'Refreshing...', async () => {
+        // The Events panel owns the one scan-quota request; ask it to re-run.
+        emit('scan-quota-refresh');
+        await refreshAll();
+      });
+    });
+
+    /* ---------- Session ---------- */
+
+    on('pending-count', (count) => {
+      if (adminSupabase) setStat('pending', String(count));
+    });
+    on('articles-count', (counts) => {
+      if (adminSupabase) renderArticleCounts(counts);
+    });
+    on('scan-quota', (quota) => {
+      if (adminSupabase) renderQuota(quota);
+    });
+    on('published', (record) => {
+      if (adminSupabase) renderPublish(record);
+    });
+    on('realtime-status', renderLive);
+    on('events-change', () => {
+      if (!adminSupabase) return;
+      // Same debounce as the schedule manager: a CSV import fires one change per row.
+      clearTimeout(eventsTimer);
+      eventsTimer = setTimeout(() => {
+        void loadEventStats();
+      }, 400);
+    });
+
+    on('unlock', () => {
+      adminSupabase = getClient();
+      renderPublish(getLastPublish());
+      renderLive(getRealtimeStatus());
+      void refreshAll();
+    });
+
+    on('lock', () => {
+      adminSupabase = null;
+      clearAll();
+    });
+
+    clearAll();
+  }
+</script>

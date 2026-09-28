@@ -22,7 +22,7 @@ const { slug, bodyHtml } = Astro.props;
 
 const article = await getArticle(slug);
 if (!article) {
-  throw new Error(`No article row for "${slug}". Publish it from /admin/articles first.`);
+  throw new Error(`No article row for "${slug}". Publish it from the admin command center (/admin#newsletter) first.`);
 }
 
 const { category, title, description, pubDate, heroImage, heroAlt, heroCreditHtml = '', tags } = article;

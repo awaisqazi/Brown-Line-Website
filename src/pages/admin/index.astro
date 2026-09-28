@@ -1,0 +1,464 @@
+---
+// The admin command center: one password, one session, four panels.
+// Replaces the separate /admin/events and /admin/articles portals (both are
+// now redirect stubs into this page). The shell owns unlock/lock, the header
+// (session state, Publish live site, Lock), and the hash-routed tab rail;
+// each panel component owns its own work surfaces and script, and all of them
+// share src/lib/admin-session.ts.
+import Layout from '../../layouts/Layout.astro';
+import TransitDivider from '../../components/TransitDivider.astro';
+import OverviewPanel from '../../components/admin/OverviewPanel.astro';
+import EventsPanel from '../../components/admin/EventsPanel.astro';
+import SubmissionsPanel from '../../components/admin/SubmissionsPanel.astro';
+import NewsletterPanel from '../../components/admin/NewsletterPanel.astro';
+import { buttonClass, inputClass, labelClass, quietButtonClass } from '../../components/admin/classes';
+
+const supabaseUrl = import.meta.env.SUPABASE_URL;
+const supabasePublishableKey = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
+const base = import.meta.env.BASE_URL;
+
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error('Missing Supabase environment variables.');
+}
+
+const tabs = [
+  { id: 'overview', label: 'Overview', dot: 'bg-mayaBlue' },
+  { id: 'events', label: 'Events', dot: 'bg-celadon' },
+  { id: 'submissions', label: 'Submissions', dot: 'bg-amber' },
+  { id: 'newsletter', label: 'Newsletter', dot: 'bg-babyPink' },
+];
+
+const tabClass =
+  'admin-tab relative flex min-h-[3rem] w-full items-center gap-2.5 border-2 border-darkWalnut bg-seashell px-3 py-2.5 text-left font-body text-[10px] font-bold uppercase tracking-wider text-darkWalnut transition-transform sm:text-[11px] sm:tracking-widest duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue aria-selected:bg-amber aria-selected:shadow-retro';
+---
+
+<Layout
+  title="Command Center | The Brown Line"
+  description="Internal command center for The Brown Line."
+  minimal
+  noindex
+>
+  <div
+    data-admin-app
+    data-supabase-url={supabaseUrl}
+    data-supabase-key={supabasePublishableKey}
+    data-functions-base={`${supabaseUrl}/functions/v1`}
+    data-site-base={base}
+    class="min-h-screen"
+  >
+    <header class="border-b-[3px] border-darkWalnut bg-seashell px-4 py-4 md:px-8">
+      <div class="mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex min-w-0 items-center gap-3">
+          <a href={base} class="shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
+            <img src={`${base}logos/logo.png`} alt="The Brown Line home" class="h-10 w-auto" />
+          </a>
+          <div class="min-w-0">
+            <h1 class="font-heading text-xl leading-none text-darkWalnut md:text-2xl">Command center</h1>
+            <p
+              data-session-state
+              class="mt-1.5 inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-darkWalnut/75"
+            >
+              <span data-session-dot aria-hidden="true" class="h-2.5 w-2.5 border-2 border-darkWalnut bg-babyPink"></span>
+              <span data-session-label>Locked</span>
+            </p>
+          </div>
+        </div>
+
+        <div data-session-actions hidden class="flex flex-col gap-2 md:items-end">
+          <div class="flex flex-wrap gap-2">
+            <button type="button" data-header-publish data-publish-live class={buttonClass}>
+              Publish live site
+            </button>
+            <button type="button" data-admin-logout class={quietButtonClass}>Lock</button>
+          </div>
+          <p
+            data-publish-live-status
+            class="max-w-md font-body text-xs font-bold leading-relaxed text-darkWalnut md:text-right"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </div>
+      </div>
+    </header>
+
+    <TransitDivider />
+
+    <div class="mx-auto max-w-7xl px-4 py-8 md:px-8 md:py-10">
+      <section
+        data-login-panel
+        aria-labelledby="login-title"
+        class="max-w-xl border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7"
+      >
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
+          Staff only
+        </p>
+        <h2 id="login-title" class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
+          Enter the line room.
+        </h2>
+        <p class="mt-4 font-body text-sm leading-relaxed text-darkWalnut/75">
+          One password opens every panel: events, submissions, and the newsletter. It stays in this
+          tab's memory only, so a refresh locks the room again.
+        </p>
+        {/* onsubmit guard: if the module script has not attached yet, a native submit
+            would send the password somewhere. Block it outright; method="post" is a
+            second line so it could never land in the URL either way. */}
+        <form data-password-form method="post" action="#" class="mt-6 space-y-4" onsubmit="return false">
+          <label class={labelClass} for="admin-password">
+            Password
+            <input
+              id="admin-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              class={inputClass}
+              required
+            />
+          </label>
+          <button type="submit" data-login-submit class={buttonClass}>Unlock admin</button>
+          <p data-login-status class="font-body text-sm font-bold text-cayenneInk" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <div data-admin-workspace hidden class="grid grid-cols-1 gap-8 lg:grid-cols-[13rem_minmax(0,1fr)]">
+        <nav aria-label="Command center" class="lg:sticky lg:top-6 lg:self-start">
+          <div
+            role="tablist"
+            aria-label="Command center panels"
+            aria-orientation="horizontal"
+            data-admin-tablist
+            class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-1 lg:gap-3"
+          >
+            {tabs.map((tab, index) => (
+              <button
+                type="button"
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-controls={`panel-${tab.id}`}
+                aria-selected={index === 0 ? 'true' : 'false'}
+                tabindex={index === 0 ? 0 : -1}
+                data-tab={tab.id}
+                class={tabClass}
+              >
+                <span aria-hidden="true" class={`h-3.5 w-3.5 shrink-0 border-2 border-darkWalnut ${tab.dot}`}></span>
+                <span class="min-w-0 break-words">{tab.label}</span>
+                {tab.id === 'submissions' && (
+                  <span
+                    data-pending-badge
+                    hidden
+                    class="absolute -right-2 -top-2 border-2 border-darkWalnut bg-cayenne px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-seashell lg:static lg:ml-auto"
+                  >
+                    <span data-pending-badge-count></span><span class="sr-only"> pending</span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <div class="min-w-0">
+          <section role="tabpanel" id="panel-overview" aria-labelledby="tab-overview" data-tabpanel="overview" tabindex="-1" class="focus:outline-none">
+            <OverviewPanel />
+          </section>
+          <section role="tabpanel" id="panel-events" aria-labelledby="tab-events" data-tabpanel="events" tabindex="-1" hidden class="focus:outline-none">
+            <EventsPanel />
+          </section>
+          <section role="tabpanel" id="panel-submissions" aria-labelledby="tab-submissions" data-tabpanel="submissions" tabindex="-1" hidden class="focus:outline-none">
+            <SubmissionsPanel />
+          </section>
+          <section role="tabpanel" id="panel-newsletter" aria-labelledby="tab-newsletter" data-tabpanel="newsletter" tabindex="-1" hidden class="focus:outline-none">
+            <NewsletterPanel />
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style is:global>
+  [data-admin-app] [hidden] {
+    display: none !important;
+  }
+
+  /* No page-level sideways scroll at phone widths, whatever a panel holds. */
+  [data-admin-app] {
+    overflow-x: clip;
+  }
+
+  [data-admin-app] .admin-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  [data-admin-app] .admin-summary-marker::before {
+    content: 'Open';
+  }
+
+  [data-admin-app] details[open] > .admin-summary .admin-summary-marker::before {
+    content: 'Close';
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-admin-app] * {
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+
+<script>
+  import { cleanText, errorMessage, setInlineStatus, withBusy } from '../../lib/admin-shared';
+  import { isUnlocked, lock, on, publishLiveSite, unlock } from '../../lib/admin-session';
+
+  const TAB_IDS = ['overview', 'events', 'submissions', 'newsletter'] as const;
+  type TabId = (typeof TAB_IDS)[number];
+  const DEFAULT_TAB: TabId = 'overview';
+
+  const app = document.querySelector('[data-admin-app]') as HTMLElement | null;
+
+  if (app) {
+    const loginPanel = app.querySelector('[data-login-panel]') as HTMLElement | null;
+    const workspace = app.querySelector('[data-admin-workspace]') as HTMLElement | null;
+    const passwordForm = app.querySelector('[data-password-form]') as HTMLFormElement | null;
+    const passwordInput = app.querySelector('#admin-password') as HTMLInputElement | null;
+    const loginSubmit = app.querySelector('[data-login-submit]') as HTMLButtonElement | null;
+    const loginStatus = app.querySelector('[data-login-status]') as HTMLElement | null;
+    const sessionActions = app.querySelector('[data-session-actions]') as HTMLElement | null;
+    const sessionLabel = app.querySelector('[data-session-label]') as HTMLElement | null;
+    const sessionDot = app.querySelector('[data-session-dot]') as HTMLElement | null;
+    const logoutButton = app.querySelector('[data-admin-logout]') as HTMLButtonElement | null;
+    const headerPublish = app.querySelector('[data-header-publish]') as HTMLButtonElement | null;
+    const publishStatus = app.querySelector('[data-publish-live-status]') as HTMLElement | null;
+    const tablist = app.querySelector('[data-admin-tablist]') as HTMLElement | null;
+    const tabs = Array.from(app.querySelectorAll<HTMLButtonElement>('[role="tab"][data-tab]'));
+    const panels = Array.from(app.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tabpanel]'));
+    const pendingBadge = app.querySelector('[data-pending-badge]') as HTMLElement | null;
+    const pendingBadgeCount = app.querySelector('[data-pending-badge-count]') as HTMLElement | null;
+
+    let activeTab: TabId = DEFAULT_TAB;
+
+    /* ---------- Hash routing ---------- */
+
+    // "#events" opens a panel; "#events-schedule" opens the Events panel and
+    // scrolls to that section. Anything else falls back to the overview.
+    function parseHash(hash: string): { tab: TabId; target: string | null } {
+      const raw = decodeURIComponent(hash.replace(/^#/, ''));
+      const tab = TAB_IDS.find((id) => raw === id || raw.startsWith(`${id}-`));
+      if (!tab) return { tab: DEFAULT_TAB, target: null };
+      return { tab, target: raw === tab ? null : raw };
+    }
+
+    function showTab(tab: TabId) {
+      activeTab = tab;
+      tabs.forEach((button) => {
+        const selected = button.dataset.tab === tab;
+        button.setAttribute('aria-selected', selected ? 'true' : 'false');
+        button.tabIndex = selected ? 0 : -1;
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.tabpanel !== tab;
+      });
+    }
+
+    function revealTarget(targetId: string | null) {
+      if (!targetId) return false;
+      const target = document.getElementById(targetId);
+      if (!target) return false;
+      // A section inside a collapsed <details> (the CSV import) opens first.
+      const details = target instanceof HTMLDetailsElement ? target : target.closest('details');
+      if (details && !details.open) details.open = true;
+      target.scrollIntoView({ block: 'start' });
+      return true;
+    }
+
+    function focusPanel(tab: TabId) {
+      const panel = panels.find((el) => el.dataset.tabpanel === tab);
+      const heading = panel?.querySelector('[data-panel-heading]') as HTMLElement | null;
+      (heading ?? panel)?.focus({ preventScroll: true });
+    }
+
+    // Applies the current hash. `moveFocus` is for arrivals from a link or the
+    // back button, where the reader should land in the panel, not on the tab.
+    function applyHash(moveFocus: boolean) {
+      const { tab, target } = parseHash(window.location.hash);
+      showTab(tab);
+      if (!isUnlocked()) return;
+      const scrolled = revealTarget(target);
+      if (!scrolled && moveFocus) window.scrollTo({ top: 0 });
+      if (moveFocus) {
+        if (target && scrolled) {
+          const el = document.getElementById(target);
+          const focusable = el?.querySelector('h2, h3, summary') as HTMLElement | null;
+          if (focusable) {
+            if (!focusable.matches('summary')) focusable.tabIndex = -1;
+            focusable.focus({ preventScroll: true });
+          }
+        } else {
+          focusPanel(tab);
+        }
+      }
+    }
+
+    // Pushes a history entry (so Back returns to the previous panel) unless
+    // `replace` is set, which arrow-key moves use to avoid flooding history.
+    function navigateToTab(tab: TabId, replace = false) {
+      const hash = `#${tab}`;
+      if (window.location.hash === hash) {
+        showTab(tab);
+        return;
+      }
+      if (replace) {
+        history.replaceState(null, '', hash);
+        showTab(tab);
+      } else {
+        // Fires hashchange, which applies it.
+        tabDrivenHashChange = true;
+        window.location.hash = hash;
+      }
+    }
+
+    // Set while a tab click is changing the hash: focus stays on the tab
+    // (the ARIA tabs pattern) instead of jumping into the panel.
+    let tabDrivenHashChange = false;
+
+    window.addEventListener('hashchange', () => {
+      const fromTab = tabDrivenHashChange;
+      tabDrivenHashChange = false;
+      applyHash(!fromTab);
+    });
+
+    /* ---------- Tabs: click and keyboard ---------- */
+
+    const wideQuery = window.matchMedia('(min-width: 1024px)');
+    function syncOrientation() {
+      tablist?.setAttribute('aria-orientation', wideQuery.matches ? 'vertical' : 'horizontal');
+    }
+    syncOrientation();
+    wideQuery.addEventListener?.('change', syncOrientation);
+
+    tabs.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        const tab = button.dataset.tab as TabId;
+        navigateToTab(tab);
+        button.focus();
+      });
+
+      button.addEventListener('keydown', (event) => {
+        let next = -1;
+        switch (event.key) {
+          case 'ArrowRight':
+          case 'ArrowDown':
+            next = (index + 1) % tabs.length;
+            break;
+          case 'ArrowLeft':
+          case 'ArrowUp':
+            next = (index - 1 + tabs.length) % tabs.length;
+            break;
+          case 'Home':
+            next = 0;
+            break;
+          case 'End':
+            next = tabs.length - 1;
+            break;
+          default:
+            return;
+        }
+        event.preventDefault();
+        const nextButton = tabs[next];
+        navigateToTab(nextButton.dataset.tab as TabId, true);
+        nextButton.focus();
+      });
+    });
+
+    /* ---------- Unlock / lock ---------- */
+
+    function renderSession(unlocked: boolean) {
+      if (loginPanel) loginPanel.hidden = unlocked;
+      if (workspace) workspace.hidden = !unlocked;
+      if (sessionActions) sessionActions.hidden = !unlocked;
+      if (sessionLabel) sessionLabel.textContent = unlocked ? 'Unlocked, this tab only' : 'Locked';
+      if (sessionDot) {
+        sessionDot.classList.toggle('bg-celadon', unlocked);
+        sessionDot.classList.toggle('bg-babyPink', !unlocked);
+      }
+    }
+
+    passwordForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void withBusy(loginSubmit, 'Checking...', async () => {
+        const password = cleanText(new FormData(passwordForm).get('password'));
+        setInlineStatus(loginStatus, '');
+        if (!password) {
+          setInlineStatus(loginStatus, 'Enter the password first.', true);
+          passwordInput?.focus();
+          return;
+        }
+        try {
+          // Same RPC and x-admin-password header as before: verified against
+          // the database before anything unlocks.
+          const ok = await unlock(password);
+          if (!ok) {
+            setInlineStatus(loginStatus, 'Wrong password. Try again.', true);
+            passwordInput?.select();
+            return;
+          }
+          passwordForm.reset();
+        } catch (error) {
+          setInlineStatus(loginStatus, `Could not unlock the portal: ${errorMessage(error)}`, true);
+        }
+      });
+    });
+
+    logoutButton?.addEventListener('click', () => {
+      lock();
+    });
+
+    on('unlock', () => {
+      renderSession(true);
+      setInlineStatus(publishStatus, '');
+      applyHash(false);
+      // Move focus off the (now hidden) login form into the open panel.
+      focusPanel(activeTab);
+    });
+
+    on('lock', () => {
+      renderSession(false);
+      setInlineStatus(publishStatus, '');
+      if (pendingBadge) pendingBadge.hidden = true;
+      passwordInput?.focus();
+    });
+
+    /* ---------- Publish live site (shared across every Publish button) ---------- */
+
+    const publishButtons = Array.from(app.querySelectorAll<HTMLButtonElement>('[data-publish-live]'));
+    const PUBLISH_LABEL = 'Publish live site';
+
+    on('publish-busy', (busy) => {
+      publishButtons.forEach((button) => {
+        button.disabled = busy;
+        button.textContent = busy ? 'Publishing...' : PUBLISH_LABEL;
+        if (busy) button.setAttribute('aria-busy', 'true');
+        else button.removeAttribute('aria-busy');
+      });
+      if (busy) setInlineStatus(publishStatus, 'Sending the rebuild signal...');
+    });
+
+    on('published', (record) => {
+      const time = record.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      setInlineStatus(publishStatus, `${time}: ${record.message}`, !record.ok);
+    });
+
+    headerPublish?.addEventListener('click', () => {
+      if (headerPublish.disabled) return;
+      void publishLiveSite('header');
+    });
+
+    /* ---------- Rail badge ---------- */
+
+    on('pending-count', (count) => {
+      if (!pendingBadge || !pendingBadgeCount) return;
+      pendingBadgeCount.textContent = String(count);
+      pendingBadge.hidden = count <= 0 || !isUnlocked();
+    });
+
+    renderSession(false);
+    applyHash(false);
+  }
+</script>
