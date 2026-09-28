@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.parse-event-image]
 verify_jwt = false
 
+[functions.mirror-event-image]
+verify_jwt = false
+
 [functions.trigger-deploy]
 verify_jwt = false

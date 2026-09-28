@@ -6,22 +6,23 @@ import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
 import { supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
-import { formatStopDate } from '../lib/dates';
-import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
+import { addDays, formatMonthDay, formatStopDate, SERIES_LOOKBACK_DAYS } from '../lib/dates';
+import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, buildStopAnchor, stringifyJsonLd } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
 const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
 
-// Only fetch upcoming events. The board is a build-time snapshot, so filtering
-// server-side (mirroring the homepage query) keeps the static HTML from shipping
-// months of past stops and shows the right count to no-JS visitors; the
-// client-side quick filters still narrow within the upcoming set.
+// The board is a build-time snapshot of upcoming stops. The query looks back
+// far enough to see the start of a run already underway (an exhibit stored as
+// one row per day), so its collapsed card carries the full date range, the
+// same way the homepage rail does; only rows on or after today are counted,
+// filtered, and marked on the calendar.
 const today = getTodayChicago();
 
 const { data, error } = await supabase
   .from('events')
   .select('*')
-  .gte('event_date', today)
+  .gte('event_date', addDays(today, -SERIES_LOOKBACK_DAYS))
   .order('event_date', { ascending: true })
   .order('is_curated', { ascending: false })
   .order('title', { ascending: true })
@@ -31,7 +32,8 @@ if (error) {
   throw new Error(`Failed to load events: ${error.message}`);
 }
 
-const events = data ?? [];
+const rows = data ?? [];
+const events = rows.filter((event) => event.event_date >= today);
 
 function getTodayChicago() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -42,13 +44,6 @@ function getTodayChicago() {
   }).formatToParts(new Date());
   const byType = Object.fromEntries(parts.map((p) => [p.type, p.value]));
   return `${byType.year}-${byType.month}-${byType.day}`;
-}
-
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function monthDay(dateString: string) {
-  const [y, m, d] = dateString.split('-').map(Number);
-  if (!y || !m || !d) return dateString;
-  return `${MONTHS_SHORT[m - 1]} ${d}`;
 }
 
 // Collapse identical recurring / multi-day events (same title + venue) into a
@@ -62,23 +57,24 @@ interface EventGroup {
 }
 
 const seriesMap = new Map<string, TransitEvent[]>();
-for (const event of events) {
+for (const event of rows) {
   const key = `${event.title}||${event.venue}`;
   const bucket = seriesMap.get(key);
   if (bucket) bucket.push(event);
   else seriesMap.set(key, [event]);
 }
 
-const eventGroups: EventGroup[] = Array.from(seriesMap.values()).map((rows) => {
-  const dates = rows.map((r) => r.event_date).filter(Boolean).sort();
+const eventGroups: EventGroup[] = Array.from(seriesMap.values()).flatMap((group) => {
+  const dates = group.map((r) => r.event_date).filter(Boolean).sort();
+  // The card sits on the run's first still-relevant date; a run whose every
+  // date has passed is not on the board at all.
+  const sortDate = dates.find((d) => d >= today);
+  if (!sortDate) return [];
   const start = dates[0];
   const end = dates[dates.length - 1];
-  // Place the card on its first still-relevant date so an ongoing series surfaces
-  // on the board even if it began before today.
-  const sortDate = dates.find((d) => d >= today) ?? end;
-  const rep = rows.find((r) => r.event_date === sortDate) ?? rows[0];
-  const recurrenceLabel = start !== end ? `${monthDay(start)} – ${monthDay(end)}` : '';
-  return { rep, start, end, recurrenceLabel, sortDate };
+  const rep = group.find((r) => r.event_date === sortDate) ?? group[0];
+  const recurrenceLabel = start !== end ? `${formatMonthDay(start)} – ${formatMonthDay(end)}` : '';
+  return [{ rep, start, end, recurrenceLabel, sortDate }];
 });
 
 const groupedByDate = eventGroups.reduce<Record<string, EventGroup[]>>((groups, group) => {
@@ -151,7 +147,7 @@ const controlsGridClass =
     : 'lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))]';
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 const pageDescription =
-  "A curated guide to Chicago's Global South diaspora arts, culture, and community events. Updated weekly.";
+  "Chicago's Global South diaspora events, curated by a human: arts, culture, food, film, music, and community stops across the city's neighborhoods. Updated weekly.";
 
 function getEventKind(event: TransitEvent) {
   if (event.is_giveaway) return 'giveaway';
@@ -177,13 +173,19 @@ function getEventSearchText(event: TransitEvent) {
   ]
     .filter(Boolean)
     .join(' ');
-  // Index both spellings so either one matches a search.
+  // Index both spellings so either one matches a search, and fold accents so
+  // "dimelo" finds "Dímelo" (the client folds the typed query the same way).
   const fixed = fixSpelling(raw);
-  return (fixed === raw ? raw : `${raw} ${fixed}`).toLowerCase();
+  const text = (fixed === raw ? raw : `${raw} ${fixed}`).toLowerCase();
+  return `${text} ${foldAccents(text)}`;
+}
+
+function foldAccents(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 ---
 <Layout
-  title="Events | The Brown Line"
+  title="Chicago Global South Diaspora Events | The Brown Line"
   description={pageDescription}
 >
   {events.length > 0 && (
@@ -192,7 +194,7 @@ function getEventSearchText(event: TransitEvent) {
 
   <section class="px-6 py-16 md:py-24 lg:py-28">
     <div class="max-w-5xl mx-auto">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-5">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-5">
         Now boarding
       </p>
 
@@ -220,7 +222,7 @@ function getEventSearchText(event: TransitEvent) {
               href={`${base}about#ethics`}
               data-ga-event="standards_click"
               data-ga-label="events_hero"
-              class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+              class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
             >
               How we curate
               <span aria-hidden="true">&rarr;</span>
@@ -244,7 +246,7 @@ function getEventSearchText(event: TransitEvent) {
       >
         <div class="flex items-start justify-between gap-3 md:items-center">
           <div class="min-w-0">
-            <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">
+            <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold">
               Filter the route
             </p>
             <p
@@ -252,7 +254,7 @@ function getEventSearchText(event: TransitEvent) {
               class="font-heading text-darkWalnut text-[2rem] sm:text-4xl md:text-5xl leading-none mt-1.5"
               aria-live="polite"
             >
-              {events.length} stops
+              {eventGroups.length === 1 ? '1 stop' : `${eventGroups.length} stops`}
             </p>
           </div>
           <button
@@ -274,7 +276,7 @@ function getEventSearchText(event: TransitEvent) {
 
         <div class:list={['mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-5', controlsGridClass]}>
           <label class="block min-w-0 sm:col-span-2 lg:col-span-1">
-            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/75">
               Search
             </span>
             <input
@@ -286,14 +288,14 @@ function getEventSearchText(event: TransitEvent) {
           </label>
 
           <div class="block min-w-0">
-            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/75">
               Date
             </span>
             <EventDatePicker />
           </div>
 
           <div class="block min-w-0">
-            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+            <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/75">
               Category
             </span>
             <EventSelect field="category-filter" label="Category" placeholder="All categories" options={categories} />
@@ -301,7 +303,7 @@ function getEventSearchText(event: TransitEvent) {
 
           {neighborhoods.length > 0 && (
             <div class="block min-w-0">
-              <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/65">
+              <span class="font-body text-[10px] font-bold uppercase tracking-widest text-darkWalnut/75">
                 Neighborhood
               </span>
               <EventSelect field="neighborhood-filter" label="Neighborhood" placeholder="All neighborhoods" options={neighborhoods} />
@@ -316,7 +318,7 @@ function getEventSearchText(event: TransitEvent) {
     <div class="max-w-5xl mx-auto">
       {events.length === 0 ? (
         <div class="border-2 border-darkWalnut bg-seashell p-8 md:p-10 shadow-retro">
-          <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenne font-bold">No scheduled stops</p>
+          <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenneInk font-bold">No scheduled stops</p>
           <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none mt-3">
             New stops are on the way.
           </h2>
@@ -331,7 +333,7 @@ function getEventSearchText(event: TransitEvent) {
             hidden
             class="border-2 border-darkWalnut bg-seashell p-8 md:p-10 shadow-retro"
           >
-            <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenne font-bold">
+            <p class="font-body uppercase text-xs tracking-[0.3em] text-cayenneInk font-bold">
               No matching stops
             </p>
             <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-none mt-3">
@@ -351,7 +353,7 @@ function getEventSearchText(event: TransitEvent) {
             >
               <div>
                 {sectionIndex === 0 && (
-                  <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold mb-3">
+                  <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold mb-3">
                     Platform
                   </p>
                 )}
@@ -363,6 +365,7 @@ function getEventSearchText(event: TransitEvent) {
               <ol class="events-route relative space-y-6">
                 {dayGroups.map(({ rep, start, end, recurrenceLabel }, index) => (
                   <li
+                    id={buildStopAnchor(rep)}
                     data-event-card
                     data-event-date={rep.event_date}
                     data-event-start={start}
@@ -505,7 +508,10 @@ function getEventSearchText(event: TransitEvent) {
     let freeOnly = false;
     let curatedOnly = false;
 
-    const normalize = (value) => value.toString().trim().toLowerCase();
+    // Lowercase and fold accents so a query typed without diacritics still
+    // matches (the build-time search text is folded the same way).
+    const normalize = (value) =>
+      value.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     const pad = (value) => String(value).padStart(2, '0');
 
     function addDays(dateString, days) {
@@ -688,7 +694,7 @@ function getEventSearchText(event: TransitEvent) {
       function syncLabel() {
         if (!label) return;
         label.textContent = selectedDate ? formatDateLabel(selectedDate) : 'Any date';
-        label.classList.toggle('text-cayenne', Boolean(selectedDate));
+        label.classList.toggle('text-cayenneInk', Boolean(selectedDate));
       }
 
       trigger?.addEventListener('click', () => {
@@ -785,7 +791,7 @@ function getEventSearchText(event: TransitEvent) {
       function sync() {
         const selected = native.options[native.selectedIndex];
         label.textContent = selected ? selected.textContent : placeholder;
-        label.classList.toggle('text-cayenne', Boolean(native.value));
+        label.classList.toggle('text-cayenneInk', Boolean(native.value));
         optionEls().forEach((el) => {
           const active = el.dataset.themedOption === native.value;
           el.setAttribute('aria-selected', active ? 'true' : 'false');
@@ -1036,18 +1042,35 @@ function getEventSearchText(event: TransitEvent) {
 
     syncQuickFilters();
 
+    // A date that exists on the calendar, not just one shaped like it, so a
+    // mangled link ("2026-13-45") is ignored instead of rendering a bad month.
+    function isRealDateString(value) {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (!match) return false;
+      const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+      const date = new Date(Date.UTC(year, month - 1, day));
+      return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+    }
+
     // Deep link: /events?date=YYYY-MM-DD (used by the nav mini calendar)
     // preselects that day and jumps to it, same as picking it in the filter
     // calendar. setSelectedDate re-renders, so skip the plain renderFilters.
     const paramDate = new URLSearchParams(window.location.search).get('date') ?? '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(paramDate)) {
+    if (isRealDateString(paramDate)) {
       setSelectedDate(paramDate);
       // The browser's own load-time scrolling cancels the smooth scroll that
       // setSelectedDate queues, so re-jump instantly once the page settles.
       const jumpToParamDate = () => {
-        const target = daySections.find(
-          (section) => !section.hidden && (section.dataset.eventDate ?? '') >= paramDate
-        );
+        const target =
+          daySections.find(
+            (section) => !section.hidden && (section.dataset.eventDate ?? '') >= paramDate
+          ) ??
+          // No stop on or after that day: land on a run that covers it (its
+          // card sits on the run's first day, not on the day that was picked).
+          eventCards.find(
+            (card) =>
+              (card.dataset.eventStart ?? '') <= paramDate && paramDate <= (card.dataset.eventEnd ?? '')
+          );
         target?.scrollIntoView({ block: 'start' });
       };
       if (document.readyState === 'complete') jumpToParamDate();

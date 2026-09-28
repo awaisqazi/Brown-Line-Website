@@ -15,10 +15,30 @@ import { EVENT_TIME_ZONE, parseEventDate, parseEventTime } from './calendar';
 
 export const BRAND_NAME = 'The Brown Line';
 export const INSTAGRAM_URL = 'https://www.instagram.com/thebrownlinechi';
+export const TIKTOK_URL = 'https://www.tiktok.com/@thebrownlinechi';
+
+/** Names people search by, so a query for either lands on this site. */
+export const BRAND_ALTERNATE_NAMES = ['The Brown Line Chicago', 'thebrownlinechi'];
+
+/**
+ * Site-wide search keywords (owner's list, plus the terms the site is about).
+ * Rendered as the keywords meta tag on every page and as `keywords` on the
+ * Organization and WebSite schemas.
+ */
+export const BRAND_KEYWORDS = [
+  'Chicago events',
+  'Global South',
+  'diaspora',
+  'media',
+  'arts and culture',
+  'community',
+  'newsletter',
+  'Chicago neighborhoods',
+];
 
 /** One-line description of the publication, reused across the site schemas. */
 export const BRAND_DESCRIPTION =
-  'Chicago arts, culture, and community through a Global South diaspora lens. A curated guide to diaspora events plus a weekly newsletter.';
+  'Chicago events, arts, culture, community, and media through a Global South diaspora lens. A curated guide to diaspora events plus a weekly newsletter.';
 
 const SCHEMA_CONTEXT = 'https://schema.org';
 
@@ -39,7 +59,8 @@ const pad2 = (value: number) => String(value).padStart(2, '0');
 /** Only real web links belong in structured data. Mirrors `calendar.ts`. */
 function safeUrl(value: string | null | undefined): string {
   const trimmed = value?.trim() ?? '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+  // eslint-disable-next-line no-control-regex
+  return /^https?:\/\/\S+$/i.test(trimmed) && !/[\x00-\x1f\x7f]/.test(trimmed) ? trimmed : '';
 }
 
 /**
@@ -132,6 +153,23 @@ export function buildEventSlug(event: TransitEvent): string {
   return slug ? `${slug}-${event.id}` : event.id;
 }
 
+/**
+ * Anchor id shared by every row of one run (same title and venue), so a detail
+ * page for any day of a series links to the one card the board shows for it.
+ * Single events get the same shape, so every card carries exactly one of these.
+ */
+export function buildStopAnchor(event: Pick<TransitEvent, 'id' | 'title' | 'venue'>): string {
+  const key = `${event.title ?? ''} ${event.venue ?? ''}`
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+    .replace(/-+$/, '');
+  return `stop-${key || event.id}`;
+}
+
 /** Site-relative path to an event's detail page, e.g. `/events/<slug>`. */
 export function buildEventPath(event: TransitEvent, base: string): string {
   return `${base}events/${buildEventSlug(event)}`;
@@ -159,6 +197,14 @@ function displayVenue(event: TransitEvent): string {
     : venue;
 }
 
+/** The neighborhood, unless the venue already is the neighborhood ("Pilsen"). */
+function displayNeighborhood(event: TransitEvent): string {
+  const neighborhood = event.neighborhood?.trim() ?? '';
+  const venue = displayVenue(event);
+  const normalize = (value: string) => value.trim().replace(/^the\s+/i, '').toLowerCase();
+  return neighborhood && normalize(venue) !== normalize(neighborhood) ? neighborhood : '';
+}
+
 /** Collapse a stored text block onto one line for meta tags and descriptions. */
 function flatten(value: string | null | undefined): string {
   return (value ?? '').replace(/\s+/g, ' ').trim();
@@ -169,7 +215,7 @@ function truncate(value: string, limit: number): string {
   if (value.length <= limit) return value;
   const clipped = value.slice(0, limit - 1);
   const lastSpace = clipped.lastIndexOf(' ');
-  return `${(lastSpace > limit * 0.6 ? clipped.slice(0, lastSpace) : clipped).replace(/[,.;:]$/, '')}…`;
+  return `${(lastSpace > limit * 0.6 ? clipped.slice(0, lastSpace) : clipped).replace(/[,.;:\s]+$/, '')}…`;
 }
 
 /**
@@ -180,7 +226,7 @@ export function buildEventMetaDescription(event: TransitEvent): string {
   const when = [formatStopDate(event.event_date), formatTimeRange(event.start_time, event.end_time)]
     .filter(Boolean)
     .join(', ');
-  const where = [displayVenue(event), event.neighborhood?.trim()].filter(Boolean).join(', ');
+  const where = [displayVenue(event), displayNeighborhood(event)].filter(Boolean).join(', ');
   const lead = [when, where].filter(Boolean).join(' at ');
   const blurb =
     flatten(event.description) ||
@@ -234,9 +280,14 @@ function buildOffers(event: TransitEvent, fallbackUrl: string): JsonLd | undefin
   };
 }
 
-/** Dollar amounts named in a free-text cost line, in the order they appear. */
+/**
+ * Dollar amounts named in a free-text cost line, in the order they appear.
+ * Thousands separators are understood ("$1,500" is 1500, not 1).
+ */
 function priceAmounts(cost: string): number[] {
-  return Array.from(cost.matchAll(/\$\s*(\d+(?:\.\d{1,2})?)/g)).map((match) => Number(match[1]));
+  return Array.from(cost.matchAll(/\$\s*(\d{1,3}(?:,\d{3})+|\d+)(\.\d{1,2})?/g)).map((match) =>
+    Number(`${match[1].replace(/,/g, '')}${match[2] ?? ''}`)
+  );
 }
 
 /** Same "is this free" reading the events board filters by. */
@@ -254,7 +305,11 @@ function organizerName(event: TransitEvent): string {
   const venue = event.venue?.trim() ?? '';
   if (!organizer) return '';
   if (organizer === venue || organizer === displayVenue(event)) return '';
-  return /surfaced through|not inspected|in this pass|roundup|listing\b/i.test(organizer)
+  // Research phrasing, not a name. Whole phrases only, so a real organizer
+  // called "The Listing Room" or "Roundup Records" is not thrown out.
+  return /surfaced through|not inspected|in this pass|reviewed (?:listing|snippet)|listing (?:not )?(?:inspected|reviewed)|from (?:a |the )?roundup/i.test(
+    organizer
+  )
     ? ''
     : organizer;
 }
@@ -307,7 +362,7 @@ export function buildEventJsonLd(event: TransitEvent, options: EventJsonLdOption
         addressCountry: 'US',
       },
     };
-    const neighborhood = event.neighborhood?.trim();
+    const neighborhood = displayNeighborhood(event);
     if (neighborhood) {
       place.containedInPlace = { '@type': 'Place', name: neighborhood };
     }
@@ -328,7 +383,12 @@ export function buildEventJsonLd(event: TransitEvent, options: EventJsonLdOption
   if (offers) schema.offers = offers;
   // "Free" only counts when the listing names no other price. A line like
   // "Free entry, $10 for the workshop" is mixed, so claiming free would be a lie.
-  if (isFreeEvent(event) && priceAmounts(event.cost_info ?? '').length === 0) {
+  // A line that only names $0 is free too.
+  const amounts = priceAmounts(event.cost_info ?? '');
+  if (
+    (isFreeEvent(event) && amounts.length === 0) ||
+    (amounts.length > 0 && amounts.every((amount) => amount === 0))
+  ) {
     schema.isAccessibleForFree = true;
   }
   if (image) schema.image = [image];
@@ -357,17 +417,22 @@ export function buildSiteJsonLd(options: { siteUrl: string; logoUrl: string }): 
         '@type': 'Organization',
         '@id': `${siteUrl}#organization`,
         name: BRAND_NAME,
+        alternateName: BRAND_ALTERNATE_NAMES,
         url: siteUrl,
         logo: { '@type': 'ImageObject', url: logoUrl },
         description: BRAND_DESCRIPTION,
-        sameAs: [INSTAGRAM_URL],
+        keywords: BRAND_KEYWORDS.join(', '),
+        areaServed: { '@type': 'City', name: 'Chicago' },
+        sameAs: [INSTAGRAM_URL, TIKTOK_URL],
       },
       {
         '@type': 'WebSite',
         '@id': `${siteUrl}#website`,
         name: BRAND_NAME,
+        alternateName: BRAND_ALTERNATE_NAMES,
         url: siteUrl,
         description: BRAND_DESCRIPTION,
+        keywords: BRAND_KEYWORDS.join(', '),
         inLanguage: 'en-US',
         publisher: { '@id': `${siteUrl}#organization` },
       },

@@ -35,8 +35,11 @@ jobs:
         with:
           node-version: 24
         env:
-          PUBLIC_BEEHIIV_URL: ${{ vars.PUBLIC_BEEHIIV_URL }}
           PUBLIC_SITE_URL: https://thebrownlinechi.com
+          # Google Search Console "HTML tag" verification token (the content
+          # value only). Set the repo variable once the property is claimed;
+          # the meta tag renders only while it is set.
+          PUBLIC_GOOGLE_SITE_VERIFICATION: ${{ vars.PUBLIC_GOOGLE_SITE_VERIFICATION }}
           SUPABASE_URL: https://xuursvzrlbqiwcevzhao.supabase.co
           SUPABASE_PUBLISHABLE_KEY: sb_publishable_aqwn4tleOVrkkFS1NUJLxw_xW2NExGD
           # Cloudflare Turnstile site key for the public submit-event form. When the

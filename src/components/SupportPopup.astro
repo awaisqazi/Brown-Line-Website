@@ -113,10 +113,38 @@ const supportPath = `${base}support`;
       } catch (_) {}
     }
 
+    // A real modal: while the popup is up, everything else on the page is
+    // inert (so Tab cannot wander behind the backdrop), the page does not
+    // scroll, and closing hands focus back to wherever it was.
+    let restoreFocus: HTMLElement | null = null;
+    let inertSiblings: Element[] = [];
+
+    function setBackgroundInert(on: boolean) {
+      if (on) {
+        inertSiblings = Array.from(document.body.children).filter(
+          (el) => el !== popup && !(el as HTMLElement).inert && !['SCRIPT', 'STYLE'].includes(el.tagName)
+        );
+        inertSiblings.forEach((el) => {
+          (el as HTMLElement).inert = true;
+        });
+      } else {
+        inertSiblings.forEach((el) => {
+          (el as HTMLElement).inert = false;
+        });
+        inertSiblings = [];
+      }
+      document.documentElement.style.overflow = on ? 'hidden' : '';
+    }
+
     function close() {
       if (!popup) return;
       popup.hidden = true;
+      setBackgroundInert(false);
       document.removeEventListener('keydown', onKeydown);
+      if (restoreFocus && document.contains(restoreFocus)) {
+        restoreFocus.focus({ preventScroll: true });
+      }
+      restoreFocus = null;
     }
 
     function onKeydown(event: KeyboardEvent) {
@@ -124,8 +152,14 @@ const supportPath = `${base}support`;
     }
 
     window.setTimeout(() => {
+      // Never cover a form someone is in the middle of filling out.
+      const active = document.activeElement as HTMLElement | null;
+      if (active && active.closest('form') && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
+
+      restoreFocus = active && active !== document.body ? active : null;
       popup.hidden = false;
       markShown();
+      setBackgroundInert(true);
       (window as any).gtag?.('event', 'support_popup_shown');
       document.addEventListener('keydown', onKeydown);
       const closeButton = popup.querySelector('[data-support-dismiss]') as HTMLElement | null;

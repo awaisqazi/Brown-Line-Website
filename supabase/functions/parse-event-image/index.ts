@@ -21,6 +21,7 @@
 //   GEMINI_DAILY_LIMIT    optional, default 20
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { decodeBase64, storeImageBytes } from "../_shared/mirror.ts";
 
 const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.5-flash";
 // Google's overload errors (500/503/504) are transient and usually clear in a
@@ -545,5 +546,21 @@ Deno.serve(async (req: Request) => {
     }, 502);
   }
 
-  return json({ event: result.event, quota: withLimit(consumeData), model: result.model });
+  // Keep the flyer itself: the scanned bytes go into our Storage so the draft
+  // arrives with a permanent image link and nothing needs pasting.
+  let imageUrl: string | null = null;
+  if (["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+    const bytes = decodeBase64(imageBase64);
+    if (bytes) {
+      const stored = await storeImageBytes(service, bytes, mimeType);
+      if (stored.ok) imageUrl = stored.url;
+      else console.warn(`flyer not stored: ${stored.error}`);
+    }
+  }
+
+  return json({
+    event: { ...result.event, image_url: imageUrl },
+    quota: withLimit(consumeData),
+    model: result.model,
+  });
 });

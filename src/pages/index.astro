@@ -4,9 +4,10 @@ import SubscribeForm from '../components/SubscribeForm.astro';
 import EventCard from '../components/EventCard.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { supabase } from '../lib/supabase';
-import { formatStopDate, getChicagoDateString } from '../lib/dates';
+import { addDays, formatMonthDay, formatStopDate, getChicagoDateString, SERIES_LOOKBACK_DAYS } from '../lib/dates';
 import { buildEventPath } from '../lib/seo';
-import { getSortedArticles } from '../lib/articles';
+import { displayImageUrl } from '../lib/images';
+import { buildArticlePath, getSortedArticles } from '../lib/articles';
 import type { TransitEvent } from '../lib/supabase';
 
 const base = import.meta.env.BASE_URL;
@@ -14,6 +15,10 @@ const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 const tiktokUrl = 'https://www.tiktok.com/@thebrownlinechi';
 
 const HOMEPAGE_EVENTS_LIMIT = 5;
+// Long runs (an exhibit, a course, a festival) take at most this many of the
+// rail's seats, so a two-month series never crowds out the week's one-night
+// stops.
+const HOMEPAGE_SERIES_LIMIT = 2;
 
 // Real testimonials only (reader + organizer/partner mix). Leave empty until
 // quotes are collected via DM/form, then fill in here. The section renders only
@@ -36,23 +41,90 @@ const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-
 
 const todayDateString = getChicagoDateString();
 // The rail shows the next stops in date order, curated or not, so the homepage
-// always reflects what is actually coming up soonest. Conductor's Picks still
-// lead within a same-day tie.
-const { data: upcomingEventsData, error: upcomingEventsError } = await supabase
+// always reflects what is actually coming up soonest. Rows that belong to one
+// run (same title and venue, one row per day, which is how the admin stores a
+// date range) collapse into a single stop with a date range, mirroring the
+// events board, and at most HOMEPAGE_SERIES_LIMIT runs ride the rail at once.
+// Conductor's Picks still lead within a same-day tie.
+const { data: railRows, error: upcomingEventsError } = await supabase
   .from('events')
   .select('*')
-  .gte('event_date', todayDateString)
+  .gte('event_date', addDays(todayDateString, -SERIES_LOOKBACK_DAYS))
   .order('event_date', { ascending: true })
   .order('is_curated', { ascending: false, nullsFirst: false })
   .order('title', { ascending: true })
-  .limit(HOMEPAGE_EVENTS_LIMIT)
   .returns<TransitEvent[]>();
 
 if (upcomingEventsError) {
   throw new Error(`Failed to load homepage events: ${upcomingEventsError.message}`);
 }
 
-const upcomingEvents = upcomingEventsData ?? [];
+interface UpcomingStop {
+  /** The row for the run's next date, the one the card renders. */
+  event: TransitEvent;
+  /** "Sep 27 – Nov 29" for a run; '' for a single date. */
+  recurrenceLabel: string;
+  /** More than one row shares this title and venue. */
+  isSeries: boolean;
+  /** First date on or after today. */
+  nextDate: string;
+  /** The run's final date. */
+  lastDate: string;
+}
+
+const seriesMap = new Map<string, TransitEvent[]>();
+for (const row of railRows ?? []) {
+  const key = `${row.title}||${row.venue}`;
+  const bucket = seriesMap.get(key);
+  if (bucket) bucket.push(row);
+  else seriesMap.set(key, [row]);
+}
+
+const candidateStops: UpcomingStop[] = [];
+for (const rows of seriesMap.values()) {
+  const dates = rows.map((row) => row.event_date).filter(Boolean).sort();
+  const nextDate = dates.find((date) => date >= todayDateString);
+  // The whole run has departed.
+  if (!nextDate) continue;
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  candidateStops.push({
+    event: rows.find((row) => row.event_date === nextDate) ?? rows[0],
+    recurrenceLabel: first !== last ? `${formatMonthDay(first)} – ${formatMonthDay(last)}` : '',
+    isSeries: rows.length > 1,
+    nextDate,
+    lastDate: last,
+  });
+}
+
+// Date order first; within a day, Conductor's Picks, then single stops ahead
+// of runs, then title.
+const byDeparture = (a: UpcomingStop, b: UpcomingStop) =>
+  a.nextDate.localeCompare(b.nextDate) ||
+  Number(Boolean(b.event.is_curated)) - Number(Boolean(a.event.is_curated)) ||
+  Number(a.isSeries) - Number(b.isSeries) ||
+  a.event.title.localeCompare(b.event.title);
+
+const singleStops = candidateStops.filter((stop) => !stop.isSeries).sort(byDeparture);
+// Runs are seated by how soon they wrap up: a festival's closing week is news,
+// a two-month exhibit will still be there next week.
+const seriesStops = candidateStops
+  .filter((stop) => stop.isSeries)
+  .sort((a, b) => a.lastDate.localeCompare(b.lastDate) || byDeparture(a, b));
+
+// Seat the runs first (capped), then singles, then let leftover runs fill any
+// seats singles could not, so the rail is as full as the calendar allows.
+const seatedSeries = seriesStops.slice(0, HOMEPAGE_SERIES_LIMIT);
+const seatedSingles = singleStops.slice(0, HOMEPAGE_EVENTS_LIMIT - seatedSeries.length);
+const spareSeats = HOMEPAGE_EVENTS_LIMIT - seatedSeries.length - seatedSingles.length;
+const upcomingStops = [
+  ...seatedSingles,
+  ...seatedSeries,
+  ...seriesStops.slice(seatedSeries.length, seatedSeries.length + spareSeats),
+]
+  .sort(byDeparture)
+  .slice(0, HOMEPAGE_EVENTS_LIMIT);
+const upcomingEvents = upcomingStops.map((stop) => stop.event);
 
 // No-flyer slides fall back to a brand-color panel keyed off the first tag,
 // with the emoji as a sticker stamp (mirrors EventCard's media panel).
@@ -71,10 +143,9 @@ const TAG_PANEL_COLORS: Record<string, string> = {
 // Slides for the events-calendar product box: real flyers with the stop's
 // date and title riding underneath.
 const eventSlides = upcomingEvents.map((event) => {
-  const imageUrl = event.image_url?.trim() ?? '';
   return {
     href: buildEventPath(event, base),
-    image: /^https?:\/\//i.test(imageUrl) ? imageUrl : '',
+    image: displayImageUrl(event.image_url),
     panelColor: TAG_PANEL_COLORS[event.tags?.[0] ?? ''] ?? '#90D393',
     emoji: event.emoji ?? '',
     date: formatStopDate(event.event_date),
@@ -85,19 +156,25 @@ const eventSlides = upcomingEvents.map((event) => {
 // Slides for the newsletter product box: hero art plus the issue's title and
 // a one-line hook, so the carousel sells the writing, not just the art.
 const articles = await getSortedArticles();
-const newsletterSlides = articles.slice(0, 3).map((article) => ({
-  href: `${base}newsletter/${article.slug}`,
-  image: /^https?:\/\//i.test(article.heroImage) ? article.heroImage : `${base}${article.heroImage}`,
-  alt: article.heroAlt,
-  title: article.title,
-  description: article.description,
-}));
+// Issues rendered from the newsletter feed usually carry no hero art; the
+// share card stands in so a slide never shows a broken image.
+const FALLBACK_ISSUE_ART = 'og/og-card.png';
+const newsletterSlides = articles.slice(0, 3).map((article) => {
+  const hero = article.heroImage || FALLBACK_ISSUE_ART;
+  return {
+    href: buildArticlePath(article.slug, base),
+    image: /^https?:\/\//i.test(hero) ? hero : `${base}${hero}`,
+    alt: article.heroAlt,
+    title: article.title,
+    description: article.description,
+  };
+});
 ---
 <Layout>
   {/* ---------- Hero ---------- */}
   <section id="subscribe" class="px-6 pt-10 pb-4 md:pt-12 md:pb-5">
     <div class="max-w-4xl mx-auto text-center">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-4">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-4">
         Underground culture, elevated
       </p>
 
@@ -181,7 +258,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
         </div>
 
         <div class="flex flex-1 flex-col p-5">
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The events calendar</p>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold">The events calendar</p>
           <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
             Find your next stop.
           </h2>
@@ -233,7 +310,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
         </div>
 
         <div class="flex flex-1 flex-col p-5">
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Social media</p>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold">Social media</p>
           <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
             Follow the line.
           </h2>
@@ -278,7 +355,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
         </div>
 
         <div class="flex flex-1 flex-col p-5">
-          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">The newsletter</p>
+          <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold">The newsletter</p>
           <h2 class="font-heading font-semibold text-darkWalnut text-xl leading-tight mt-1.5">
             Catch the weekly dispatch.
           </h2>
@@ -299,7 +376,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
   <div class="px-6 pt-1 pb-6 md:pb-7 text-center">
     <a
       href="#upcoming-stops"
-      class="scroll-cue-link group inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenne focus-visible:text-cayenne"
+      class="scroll-cue-link group inline-flex flex-col items-center gap-1.5 font-body text-[0.7rem] font-bold uppercase tracking-[0.3em] text-darkWalnut/75 transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk"
       aria-label="Scroll down to upcoming stops"
     >
       <span>Upcoming stops</span>
@@ -312,7 +389,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
     <div class="max-w-5xl mx-auto">
       <div class="px-4 sm:px-6">
         <div class="mb-7 md:mb-9 md:pl-16">
-          <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-2">
+          <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-2">
             Board here
           </p>
           <h2 class="font-heading tracking-tight font-semibold text-darkWalnut text-4xl md:text-[2.5rem] leading-none">
@@ -350,7 +427,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
               tabindex="-1"
             >
               <ol class="upcoming-route relative space-y-6 md:space-y-8" data-stops-list>
-                {upcomingEvents.map((event, index) => (
+                {upcomingStops.map(({ event, recurrenceLabel }, index) => (
                   <li class="relative pl-12 md:pl-20" data-stops-item>
                     <span
                       class:list={[
@@ -360,7 +437,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
                       aria-hidden="true"
                     ></span>
 
-                    <EventCard event={event} />
+                    <EventCard event={event} recurrenceLabel={recurrenceLabel} />
                   </li>
                 ))}
               </ol>
@@ -414,7 +491,7 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
   {testimonials.length > 0 && (
     <section class="px-6 py-12 md:py-16 bg-seashell">
       <div class="max-w-5xl mx-auto">
-        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3 text-center">
+        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-3 text-center">
           From the platform
         </p>
         <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] leading-none tracking-tight text-center">
@@ -613,10 +690,21 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
       transition: transform 220ms ease, box-shadow 220ms ease;
     }
 
+    /* Invisible 24px hit area around each dot (touch target minimum). */
+    .stops-dot::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+    }
+
     .stops-dot:hover,
     .stops-dot:focus-visible {
       transform: scale(1.2);
       outline: none;
+    }
+
+    .stops-dot:focus-visible {
+      box-shadow: 0 0 0 3px #5BC3FF;
     }
 
     /* Stops outside the visible window sit back; the window trio steps up. */
@@ -717,9 +805,15 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
 
       let index = 0;
       window.setInterval(() => {
+        // Hold while a slide has keyboard focus so a link never vanishes
+        // from under the cursor mid-tab.
+        if (show.contains(document.activeElement)) return;
         slides[index].classList.remove('is-active');
+        // Only the visible slide is in the tab order.
+        slides[index].setAttribute('tabindex', '-1');
         index = (index + 1) % slides.length;
         slides[index].classList.add('is-active');
+        slides[index].removeAttribute('tabindex');
       }, 3500);
     });
   </script>
@@ -873,15 +967,25 @@ const newsletterSlides = articles.slice(0, 3).map((article) => ({
         goTo(index + (goingDown ? 1 : -1), true);
       }
 
+      // After a keyboard step, land focus on the stop that just arrived so the
+      // next arrow press keeps working (the card that left turns inert, which
+      // would otherwise drop focus to the page body).
+      function focusVisibleStop() {
+        const target = items[index]?.querySelector('a, button') as HTMLElement | null;
+        target?.focus({ preventScroll: true });
+      }
+
       function onKeydown(event: KeyboardEvent) {
         if (!enabled) return;
         if (event.key === 'ArrowDown' || event.key === 'PageDown') {
           event.preventDefault();
           stepDown(true);
+          focusVisibleStop();
         } else if (event.key === 'ArrowUp' || event.key === 'PageUp') {
           if (index > 0) {
             event.preventDefault();
             goTo(index - 1, true);
+            focusVisibleStop();
           }
         }
       }

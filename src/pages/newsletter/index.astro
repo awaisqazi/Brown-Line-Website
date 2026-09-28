@@ -6,15 +6,18 @@ import TransitDivider from '../../components/TransitDivider.astro';
 import { getRecentIssues } from '../../lib/issues';
 
 const issues = await getRecentIssues();
+// Premium issues from the first season cannot be rendered here yet and open on
+// the newsletter platform instead; the caption below explains the arrow.
+const offSiteCount = issues.filter((issue) => /^https?:\/\//.test(issue.href)).length;
 
 const description =
-  'Read The Brown Line newsletter: weekly dispatches on Chicago Global South diaspora arts, culture, and community. Subscribe free and ride along.';
+  'Read The Brown Line newsletter: weekly dispatches on Chicago Global South diaspora events, arts, culture, community, and media. Subscribe free and ride along.';
 ---
-<Layout title="Newsletter · The Brown Line" description={description}>
+<Layout title="Newsletter | The Brown Line: Chicago Global South Diaspora Media" description={description}>
   {/* ---------- Hero + subscribe ---------- */}
   <section id="subscribe" class="px-6 pt-16 md:pt-24 pb-12">
     <div class="max-w-3xl mx-auto text-center">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-6">
         The newsletter
       </p>
       <h1 class="font-heading text-darkWalnut text-4xl md:text-6xl leading-[1.02] tracking-tight text-balance">
@@ -34,21 +37,18 @@ const description =
     <TransitDivider />
   </div>
 
-  {/* ---------- Recent dispatches (moved here from the homepage) ---------- */}
+  {/* ---------- All dispatches: every issue, on-site pages first ---------- */}
   <section class="px-6 py-16 md:py-24">
     <div class="max-w-5xl mx-auto">
-      <div class="flex items-end justify-between flex-wrap gap-4 mb-12">
+      <div class="mb-12">
         <h2 class="font-heading font-semibold text-darkWalnut text-4xl md:text-[2.5rem] tracking-tight leading-none">
-          Recent dispatches
+          All dispatches
         </h2>
-        <a
-          href="https://www.thebrownline.co"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="link-transit font-body text-darkWalnut text-sm font-bold uppercase tracking-widest"
-        >
-          View all &nearr;
-        </a>
+        {offSiteCount > 0 && (
+          <p class="font-body text-darkWalnut/70 text-sm mt-3">
+            Every issue, newest first. Issues from our first season open in a new tab.
+          </p>
+        )}
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

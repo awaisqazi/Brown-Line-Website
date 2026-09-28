@@ -49,7 +49,17 @@ export function parseEventDate(value: string | null | undefined) {
   const year = Number(match[1]);
   const month = Number(match[2]);
   const day = Number(match[3]);
-  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return null;
+  // Round-trip through the calendar so "2026-02-30" is rejected, not rolled
+  // into March by the date math downstream.
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (
+    !year ||
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
   return { year, month, day };
 }
 
@@ -131,10 +141,15 @@ function resolveInterval(event: TransitEvent): { start: LocalDateTime; end: Loca
   return { start, end: { ...date, minutes: Math.min(capped, MINUTES_PER_DAY - 1) } };
 }
 
-/** Only real web links belong in a calendar entry. */
+/**
+ * Only real web links belong in a calendar entry. A link with whitespace or a
+ * control character in it is refused outright: a newline inside the `URL:`
+ * line would otherwise start a new property in the .ics file.
+ */
 function safeUrl(value: string | null | undefined): string {
   const trimmed = value?.trim() ?? '';
-  return /^https?:\/\//i.test(trimmed) ? trimmed : '';
+  // eslint-disable-next-line no-control-regex
+  return /^https?:\/\/\S+$/i.test(trimmed) && !/[\x00-\x1f\x7f]/.test(trimmed) ? trimmed : '';
 }
 
 /**
@@ -154,7 +169,8 @@ function buildLocation(event: TransitEvent): string {
     const lastComma = venue.lastIndexOf(',');
     const venueEndsWithArea =
       lastComma !== -1 && normalize(venue.slice(lastComma + 1)) === normalize(neighborhood);
-    if (!venueEndsWithArea) parts.push(neighborhood);
+    const venueIsArea = normalize(venue) === normalize(neighborhood);
+    if (!venueEndsWithArea && !venueIsArea) parts.push(neighborhood);
   }
 
   parts.push('Chicago, IL');

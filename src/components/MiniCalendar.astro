@@ -1,6 +1,5 @@
 ---
-import { getChicagoDateString, formatStopDate, formatTimeRange } from '../lib/dates';
-import { supabase } from '../lib/supabase';
+import { getMiniCalendarData } from '../lib/mini-calendar';
 
 interface Props {
   class?: string;
@@ -14,9 +13,9 @@ const MONTH_NAMES = [
 const WEEKDAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const PANEL_WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// Anchored to Chicago time (not the build server's local clock) so the
-// widget always matches the "today" used elsewhere on the site.
-const todayString = getChicagoDateString();
+// Shared with the mobile drawer's instance (and cached for the build), so the
+// event list is fetched once and printed on the page once, by Nav.astro.
+const { todayString, windowStart, windowEnd, panelEvents, loadError } = await getMiniCalendarData();
 const [todayYear, todayMonth, todayDay] = todayString.split('-').map(Number);
 
 const firstOfMonth = new Date(Date.UTC(todayYear, todayMonth - 1, 1));
@@ -24,56 +23,6 @@ const daysInMonth = new Date(Date.UTC(todayYear, todayMonth, 0)).getUTCDate();
 const leadingBlanks = firstOfMonth.getUTCDay();
 
 const pad = (value: number) => String(value).padStart(2, '0');
-const toDateString = (date: Date) =>
-  `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
-
-// Build-time window: a month back (so recently passed days still show context)
-// through roughly four months out, which is enough for the panel's month arrows.
-const todayUtc = Date.UTC(todayYear, todayMonth - 1, todayDay);
-const DAY_MS = 86400000;
-const windowStart = toDateString(new Date(todayUtc - 30 * DAY_MS));
-const windowEnd = toDateString(new Date(todayUtc + 120 * DAY_MS));
-
-type PanelEvent = {
-  date: string;
-  title: string;
-  venue: string;
-  dateLabel: string;
-  timeLabel: string;
-  blurb: string;
-};
-
-const panelEvents: PanelEvent[] = [];
-let loadError = false;
-
-try {
-  const { data, error } = await supabase
-    .from('events')
-    .select('event_date, title, venue, start_time, end_time, description')
-    .gte('event_date', windowStart)
-    .lte('event_date', windowEnd)
-    .order('event_date', { ascending: true })
-    .order('start_time', { ascending: true, nullsFirst: true });
-
-  if (error) throw error;
-
-  for (const row of data ?? []) {
-    const blurb = (row.description ?? '').replace(/\s+/g, ' ').trim();
-    panelEvents.push({
-      date: row.event_date,
-      title: row.title ?? '',
-      venue: row.venue ?? '',
-      dateLabel: formatStopDate(row.event_date),
-      timeLabel: formatTimeRange(row.start_time, row.end_time),
-      blurb: blurb.length > 160 ? `${blurb.slice(0, 157)}...` : blurb,
-    });
-  }
-} catch (error) {
-  // Never let a Supabase hiccup break the nav; the calendar still renders,
-  // just without event dots and with a note in the panel.
-  loadError = true;
-  console.warn('MiniCalendar: could not load events', error);
-}
 
 // Dots on the small calendar come from the same dataset as the panel.
 const monthPrefix = `${todayYear}-${pad(todayMonth)}-`;
@@ -119,13 +68,13 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
     data-mini-calendar-button
     class="mini-calendar block w-[10.5rem] border-2 border-darkWalnut bg-[#FDFBF7] p-2.5 text-left shadow-[2px_2px_0_#642713] transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
   >
-    <div class="flex items-baseline justify-between">
-      <span class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenne">{monthLabel}</span>
-      <span class="font-body text-[8px] font-bold uppercase tracking-widest text-darkWalnut/50">Events &rarr;</span>
-    </div>
-    <div class="mt-1.5 grid grid-cols-7 gap-y-0.5 text-center">
+    <span class="flex items-baseline justify-between">
+      <span class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk">{monthLabel}</span>
+      <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/75">Events &rarr;</span>
+    </span>
+    <span class="mt-1.5 grid grid-cols-7 gap-y-0.5 text-center">
       {WEEKDAY_LABELS.map((label) => (
-        <span class="font-body text-[8px] font-bold uppercase text-darkWalnut/50">{label}</span>
+        <span class="font-body text-[8px] font-bold uppercase text-darkWalnut/70">{label}</span>
       ))}
       {cells.map((cell) => (
         <span class="relative flex h-4 items-center justify-center">
@@ -146,7 +95,7 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
           )}
         </span>
       ))}
-    </div>
+    </span>
   </button>
 
   <div
@@ -164,7 +113,7 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
       >&lsaquo;</button>
       <span
         data-mini-cal-month
-        class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenne"
+        class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenneInk"
       >{fullMonthLabel} {todayYear}</span>
       <button
         type="button"
@@ -176,7 +125,7 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
 
     <div class="mt-3 grid grid-cols-7 text-center">
       {PANEL_WEEKDAY_LABELS.map((label) => (
-        <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/50">{label}</span>
+        <span class="font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/70">{label}</span>
       ))}
     </div>
 
@@ -192,16 +141,25 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
 
     <a
       href={eventsHref}
-      class="mt-3 block border-t-2 border-darkWalnut/15 pt-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenne hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+      class="mt-3 block border-t-2 border-darkWalnut/15 pt-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
     >View all events &rarr;</a>
   </div>
 </div>
 
 <script
   is:inline
-  define:vars={{ uid, panelEvents, todayString, minMonthIndex, maxMonthIndex, eventsHref }}
+  define:vars={{ uid, todayString, minMonthIndex, maxMonthIndex, eventsHref }}
 >
   (() => {
+    // The event list is printed once per page by Nav.astro (#bl-mini-cal-data)
+    // and shared by both calendar instances.
+    const panelEvents = (() => {
+      try {
+        return JSON.parse(document.getElementById('bl-mini-cal-data')?.textContent || '[]');
+      } catch (_) {
+        return [];
+      }
+    })();
     const root = document.getElementById(`${uid}-button`)?.closest('[data-mini-calendar]');
     if (!root) return;
     const button = root.querySelector('[data-mini-calendar-button]');
@@ -302,20 +260,20 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
       row.appendChild(title);
 
       const meta = document.createElement('span');
-      meta.className = 'block font-body text-[10px] leading-snug text-cayenne';
+      meta.className = 'block font-body text-[10px] leading-snug text-cayenneInk';
       meta.textContent = [event.dateLabel, event.timeLabel].filter(Boolean).join(' · ');
       row.appendChild(meta);
 
       if (event.venue) {
         const venue = document.createElement('span');
-        venue.className = 'block font-body text-[10px] leading-snug text-darkWalnut/60';
+        venue.className = 'block font-body text-[10px] leading-snug text-darkWalnut/75';
         venue.textContent = event.venue;
         row.appendChild(venue);
       }
 
       if (event.blurb) {
         const blurb = document.createElement('span');
-        blurb.className = 'mini-cal-blurb block font-body text-[10px] leading-snug text-darkWalnut/50';
+        blurb.className = 'mini-cal-blurb block font-body text-[10px] leading-snug text-darkWalnut/70';
         blurb.textContent = event.blurb;
         row.appendChild(blurb);
       }
@@ -327,7 +285,7 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
       list.textContent = '';
 
       const heading = document.createElement('p');
-      heading.className = 'font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/50';
+      heading.className = 'font-body text-[9px] font-bold uppercase tracking-widest text-darkWalnut/70';
       list.appendChild(heading);
 
       let rows = byDate[selected] ? byDate[selected].slice() : [];
@@ -350,7 +308,7 @@ const maxMonthIndex = endYear * 12 + (endMonth - 1);
 
       if (!rows.length) {
         const empty = document.createElement('p');
-        empty.className = 'mt-1 font-body text-[10px] text-darkWalnut/50';
+        empty.className = 'mt-1 font-body text-[10px] text-darkWalnut/70';
         empty.textContent = 'No events within a few days of this date.';
         list.appendChild(empty);
         return;

@@ -45,9 +45,14 @@ const displayDate = published.toLocaleDateString('en-US', {
 // Layout resolves the Open Graph image.
 const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
-const heroImageUrl = heroImage.startsWith('http')
-  ? heroImage
-  : new URL(`${base}${heroImage.replace(/^\//, '')}`, siteUrl).toString();
+// Issues rendered from the newsletter feed usually carry no hero art; the
+// site's share card stands in for the schema and the social preview so neither
+// is ever empty.
+const FALLBACK_ISSUE_ART = 'og/og-card.png';
+const heroSrc = heroImage.startsWith('http') ? heroImage : `${base}${heroImage.replace(/^\//, '')}`;
+const heroImageUrl = heroImage
+  ? new URL(heroSrc, siteUrl).toString()
+  : new URL(`${base}${FALLBACK_ISSUE_ART}`, siteUrl).toString();
 const articleJsonLd = buildArticleJsonLd({
   headline: title,
   description,
@@ -85,8 +90,8 @@ const similarGridClass =
 <Layout
   title={`${title} · The Brown Line`}
   description={description}
-  ogImage={heroImage}
-  ogImageAlt={heroAlt}
+  ogImage={heroImage || undefined}
+  ogImageAlt={heroAlt || undefined}
   ogType="article"
 >
   <script type="application/ld+json" set:html={stringifyJsonLd(articleJsonLd)} />
@@ -96,7 +101,7 @@ const similarGridClass =
     {/* ---------- Article header ---------- */}
     <header class="px-6 pt-14 md:pt-20 pb-10">
       <div class="max-w-3xl mx-auto">
-        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+        <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-6">
           {category}
         </p>
         <h1 class="font-heading text-darkWalnut text-3xl md:text-5xl leading-[1.08] tracking-tight text-balance">
@@ -115,24 +120,26 @@ const similarGridClass =
         )}
       </div>
 
-      <div class="max-w-3xl mx-auto mt-10">
-        <div class="relative">
-          <img
-            src={`${base}${heroImage}`}
-            alt={heroAlt}
-            class="w-full h-auto border-2 border-darkWalnut shadow-retro"
-            width="1600"
-            height="837"
-            decoding="async"
-            loading="eager"
-            fetchpriority="high"
-          />
-          <div class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48" aria-hidden="true"></div>
+      {heroImage && (
+        <div class="max-w-3xl mx-auto mt-10">
+          <div class="relative">
+            <img
+              src={heroSrc}
+              alt={heroAlt}
+              class="w-full h-auto border-2 border-darkWalnut shadow-retro"
+              width="1600"
+              height="837"
+              decoding="async"
+              loading="eager"
+              fetchpriority="high"
+            />
+            <div class="transit-divider absolute -bottom-3 -right-3 w-32 md:w-48" aria-hidden="true"></div>
+          </div>
+          {heroCreditHtml && (
+            <p class="article-credit font-body text-darkWalnut/60 text-xs italic mt-6" set:html={heroCreditHtml} />
+          )}
         </div>
-        {heroCreditHtml && (
-          <p class="article-credit font-body text-darkWalnut/60 text-xs italic mt-6" set:html={heroCreditHtml} />
-        )}
-      </div>
+      )}
     </header>
 
     {/* ---------- Body ---------- */}
@@ -154,7 +161,7 @@ const similarGridClass =
           <div class="mt-5 grid gap-4 md:grid-cols-2">
             {prev && (
               <a href={articleHref(prev)} class={railCardClass}>
-                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenne">
+                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenneInk">
                   <span aria-hidden="true">&larr;</span> Previous stop
                 </span>
                 <span class="font-body font-extrabold text-darkWalnut text-lg leading-snug tracking-tight mt-2">
@@ -169,7 +176,7 @@ const similarGridClass =
             )}
             {next && (
               <a href={articleHref(next)} class={`${railCardClass} md:text-right md:items-end md:col-start-2`}>
-                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenne">
+                <span class="font-body text-[11px] font-bold uppercase tracking-widest text-cayenneInk">
                   Next stop <span aria-hidden="true">&rarr;</span>
                 </span>
                 <span class="font-body font-extrabold text-darkWalnut text-lg leading-snug tracking-tight mt-2">
@@ -262,7 +269,7 @@ const similarGridClass =
         <p class="mt-8">
           <a
             href={`${base}newsletter`}
-            class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+            class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
           >
             <span aria-hidden="true">&larr;</span>
             All dispatches
@@ -340,6 +347,59 @@ const similarGridClass =
 
   .article-prose strong {
     font-weight: 700;
+  }
+
+  /* Numbered lists keep their numerals; only bullets get the stop marker. */
+  .article-prose ol {
+    padding-left: 1.5rem;
+  }
+
+  .article-prose ol li {
+    padding-left: 0.25rem;
+  }
+
+  .article-prose ol li::before {
+    content: none;
+  }
+
+  /* Inline art from feed-rendered issues gets the hero frame treatment. */
+  .article-prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border: 2px solid #642713;
+    box-shadow: 4px 4px 0 #642713;
+  }
+
+  .article-prose figure {
+    margin: 2rem 0 0;
+  }
+
+  .article-prose figcaption {
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    font-style: italic;
+    color: rgba(100, 39, 19, 0.7);
+  }
+
+  /* Plain rules (not the transit divider) read as a quiet track line. */
+  .article-prose hr {
+    border: 0;
+    border-top: 2px solid rgba(100, 39, 19, 0.25);
+  }
+
+  .article-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+  }
+
+  .article-prose th,
+  .article-prose td {
+    border: 2px solid #642713;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    vertical-align: top;
   }
 
   .article-prose a,

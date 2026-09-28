@@ -1,14 +1,22 @@
 /**
- * The newsletter issues that live on the site itself (older issues stay on
- * Beehiiv; see MIGRATED_ISSUES in issues.ts). Articles are rows in
- * public.articles, written from /admin/articles and read here at build time.
- * src/pages/newsletter/[slug].astro turns each one into a page, so publishing
- * a new issue never needs a repo change.
+ * The newsletter issues that live on the site itself. Two sources feed it:
  *
- * Everything is loaded once per build and cached, the same way ticker.ts caches
- * its query, because several pages ask for the same list.
+ * 1. Rows in public.articles, written from /admin/articles and read here at
+ *    build time. These are the hand-migrated issues with their own hero art,
+ *    tags, and summary.
+ * 2. The newsletter's RSS feed (see beehiiv.ts). Every public issue in the feed
+ *    that has no row of its own is rendered on site from the feed's HTML, so a
+ *    new issue lands at /newsletter/<slug> on the next build with no repo or
+ *    admin work. Premium (paywalled) issues cannot be rendered from the feed
+ *    and stay off-site until the owner migrates them.
+ *
+ * src/pages/newsletter/[slug].astro turns each article into a page. Everything
+ * is loaded once per build and cached, the same way ticker.ts caches its query,
+ * because several pages ask for the same list.
  */
 import { FALLBACK_ARTICLES } from './articles-fallback';
+import { getFeedItems, MIGRATED_ISSUES, sanitizeFeedHtml } from './beehiiv';
+import { sanitizeAuthoredHtml } from './sanitize';
 
 export interface Article {
   /** URL segment under /newsletter/. */
@@ -20,8 +28,9 @@ export interface Article {
   pubDate: string;
   /**
    * Either a path under public/ without a leading slash (e.g.
-   * "images/newsletter/<slug>/hero.png") or an absolute http(s) URL. Callers
-   * prefix the relative form with BASE_URL.
+   * "images/newsletter/<slug>/hero.png"), an absolute http(s) URL, or '' when
+   * the issue has no hero art (feed-sourced issues usually do not). Callers
+   * prefix the relative form with BASE_URL and skip the frame when empty.
    */
   heroImage: string;
   heroAlt: string;
@@ -44,6 +53,8 @@ export interface Article {
    * printing it with set:html.
    */
   bodyHtml: string;
+  /** Where the body came from: an admin-written row, or the newsletter feed. */
+  source: 'site' | 'feed';
 }
 
 interface ArticleRow {
@@ -62,6 +73,9 @@ interface ArticleRow {
 
 const ARTICLE_COLUMNS =
   'slug,title,category,tags,summary,description,body_html,hero_image_url,hero_alt,hero_credit_html,published_at';
+
+/** Kicker for feed-sourced issues that carry no category of their own. */
+const DEFAULT_CATEGORY = 'Culture';
 
 /** Marker stored in body_html wherever the site's TransitDivider belongs. */
 const DIVIDER_MARKER = /<hr\s+class="transit-divider-slot"\s*\/?>/g;
@@ -151,7 +165,22 @@ export function renderArticleBody(bodyHtml: string, base = '/'): string {
   return withDividers.replace(/(href|src)="\/(?!\/)/g, `$1="${base}`);
 }
 
+/**
+ * Site-relative path for an article page, e.g. `/newsletter/<slug>`. One place
+ * to build it so the index, the homepage, and the links page never disagree.
+ */
+export function buildArticlePath(slug: string, base: string): string {
+  return `${base}newsletter/${slug}`;
+}
+
 async function loadArticles(): Promise<Article[]> {
+  const siteArticles = await loadSiteArticles();
+  const feedArticles = await loadFeedArticles(siteArticles);
+
+  return sortByDateDesc([...siteArticles, ...feedArticles]);
+}
+
+async function loadSiteArticles(): Promise<Article[]> {
   try {
     const { supabase } = await import('./supabase');
     const { data, error } = await supabase
@@ -163,16 +192,62 @@ async function loadArticles(): Promise<Article[]> {
     if (error) throw error;
 
     const articles = ((data ?? []) as ArticleRow[]).map(fromRow);
-    if (articles.length > 0) return sortByDateDesc(articles);
+    if (articles.length > 0) return articles;
 
     // An empty table means the schema is applied but not seeded yet. Falling
-    // back keeps both existing issues on the site instead of 404ing them.
+    // back keeps the seed issues on the site instead of 404ing them.
     console.warn('No published articles in Supabase; using the in-repo seed articles.');
   } catch (error) {
     console.error('Error fetching articles, falling back to the in-repo seed articles:', error);
   }
 
-  return sortByDateDesc(FALLBACK_ARTICLES);
+  return FALLBACK_ARTICLES.map((article) => ({ ...article, source: 'site' as const }));
+}
+
+/**
+ * Public feed issues that have no hand-migrated row become articles of their
+ * own, rendered from the feed's HTML. An issue counts as covered (and is
+ * skipped here) when a site article exists under its feed slug or under the
+ * slug MIGRATED_ISSUES maps it to.
+ */
+async function loadFeedArticles(siteArticles: Article[]): Promise<Article[]> {
+  const items = await getFeedItems();
+  if (items.length === 0) return [];
+
+  const base = import.meta.env.BASE_URL;
+  const siteSlugs = new Set(siteArticles.map((article) => article.slug));
+  const localSlugFor = (feedSlug: string) => {
+    const mapped = MIGRATED_ISSUES[feedSlug] ?? feedSlug;
+    return siteSlugs.has(mapped) ? mapped : undefined;
+  };
+
+  const renderable = items.filter(
+    (item) => !item.isPaywalled && item.contentHtml.trim() !== '' && !localSlugFor(item.slug)
+  );
+
+  // Every issue with a page here, so links between issues inside a body stay
+  // on the site: the migrated ones plus the ones about to be rendered.
+  const onSiteSlugs = new Map<string, string>();
+  for (const item of items) {
+    const local = localSlugFor(item.slug);
+    if (local) onSiteSlugs.set(item.slug, local);
+  }
+  for (const item of renderable) onSiteSlugs.set(item.slug, item.slug);
+
+  return renderable.map((item) => ({
+    slug: item.slug,
+    title: item.title,
+    category: item.categories[0] ?? DEFAULT_CATEGORY,
+    pubDate: new Date(item.publishedAt || 0).toISOString(),
+    heroImage: item.coverImage,
+    heroAlt: item.coverImage ? `Cover art for ${item.title}` : '',
+    heroCreditHtml: '',
+    description: item.description,
+    tags: item.categories,
+    summary: item.description,
+    bodyHtml: sanitizeFeedHtml(item.contentHtml, { base, onSiteSlugs }),
+    source: 'feed' as const,
+  }));
 }
 
 function fromRow(row: ArticleRow): Article {
@@ -185,11 +260,14 @@ function fromRow(row: ArticleRow): Article {
     // BASE_URL-relative form, so drop it for anything that is not absolute.
     heroImage: (row.hero_image_url ?? '').replace(/^\/(?!\/)/, ''),
     heroAlt: row.hero_alt ?? '',
-    heroCreditHtml: row.hero_credit_html ?? '',
+    // Both markup fields are printed with set:html, so they pass the same
+    // allow-list the feed does; the editor's paste scrub is not the last line.
+    heroCreditHtml: sanitizeAuthoredHtml(row.hero_credit_html ?? ''),
     description: row.description ?? '',
     tags: row.tags ?? [],
     summary: row.summary ?? '',
-    bodyHtml: row.body_html ?? '',
+    bodyHtml: sanitizeAuthoredHtml(row.body_html ?? ''),
+    source: 'site',
   };
 }
 

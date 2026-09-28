@@ -1,3 +1,12 @@
+/**
+ * The dispatch list: every issue of the newsletter, newest first, with the
+ * link each card should carry. Issues that exist on the site (hand-migrated
+ * rows or feed-rendered pages, see articles.ts) link to their page here;
+ * premium issues the feed cannot render keep their off-site link.
+ */
+import { getFeedItems, MIGRATED_ISSUES } from './beehiiv';
+import { buildArticlePath, getSortedArticles } from './articles';
+
 export interface Issue {
   category: string;
   date: string;
@@ -7,15 +16,19 @@ export interface Issue {
   publishedAt?: number;
 }
 
-const BEEHIIV_RSS_URL = 'https://rss.beehiiv.com/feeds/utXCBZV29P.xml';
+/** Kicker for issues that carry no category in the feed. */
+const DEFAULT_CATEGORY = 'Culture';
 
-const fallbackIssues: Issue[] = [
+/**
+ * The issues that predate the feed's public run, all premium on the platform.
+ * Only used when the feed itself cannot be fetched, so the list is never empty.
+ */
+const fallbackIssues: Omit<Issue, 'accent'>[] = [
   {
     category: 'Culture',
     date: 'Sep 4, 2025',
     title: '💃🏾Chicago Latinos dance in defiance of 🧊deportation',
     href: 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation',
-    accent: 'cayenne',
     publishedAt: Date.parse('2025-09-04T12:00:00-05:00'),
   },
   {
@@ -23,7 +36,6 @@ const fallbackIssues: Issue[] = [
     date: 'Aug 25, 2025',
     title: '🌆 Last stops, late summer vibes, & all that jazz before Labor Day',
     href: 'https://www.thebrownline.co/p/last-stops-late-summer-vibes-all-that-jazz-before-labor-day',
-    accent: 'amber',
     publishedAt: Date.parse('2025-08-25T12:00:00-05:00'),
   },
   {
@@ -31,7 +43,6 @@ const fallbackIssues: Issue[] = [
     date: 'Aug 19, 2025',
     title: 'This train runs on solidarity 🚉🤎✊🏾',
     href: 'https://www.thebrownline.co/p/this-train-runs-on-solidarity',
-    accent: 'cayenne',
     publishedAt: Date.parse('2025-08-19T12:00:00-05:00'),
   },
   {
@@ -39,7 +50,6 @@ const fallbackIssues: Issue[] = [
     date: 'Aug 10, 2025',
     title: 'Issue #2: Back in service! 🚆',
     href: 'https://www.thebrownline.co/p/issue-2-back-in-service-527769c8d207ab1d',
-    accent: 'amber',
     publishedAt: Date.parse('2025-08-10T12:00:00-05:00'),
   },
   {
@@ -47,114 +57,70 @@ const fallbackIssues: Issue[] = [
     date: 'Jul 29, 2025',
     title: 'Welcome aboard The Brown Line 🚉',
     href: 'https://www.thebrownline.co/p/welcome-aboard-the-brown-line-35bfa6886556f128',
-    accent: 'cayenne',
     publishedAt: Date.parse('2025-07-29T12:00:00-05:00'),
   },
 ];
 
-let issueCache: Issue[] | undefined;
+let issueCache: Promise<Issue[]> | undefined;
 
-export async function getRecentIssues() {
-  if (issueCache) return issueCache;
-
-  try {
-    const response = await fetch(BEEHIIV_RSS_URL);
-    if (!response.ok) {
-      throw new Error(`Beehiiv RSS request failed with ${response.status}`);
-    }
-
-    const issues = parseIssueRss(await response.text());
-    issueCache = issues.length > 0 ? issues : fallbackIssues;
-  } catch (error) {
-    console.error('Error fetching or parsing Beehiiv RSS feed, falling back to static list:', error);
-    issueCache = fallbackIssues;
+export function getRecentIssues(): Promise<Issue[]> {
+  if (!issueCache) {
+    issueCache = buildIssues();
   }
 
   return issueCache;
 }
 
-function parseIssueRss(xmlText: string): Issue[] {
-  const items = Array.from(xmlText.matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/gi));
+async function buildIssues(): Promise<Issue[]> {
+  const base = import.meta.env.BASE_URL;
+  const [items, articles] = await Promise.all([getFeedItems(), getSortedArticles()]);
 
-  return items
-    .map((match, feedIndex) => {
-      const itemXml = match[1];
-      const title = decodeXmlText(getFirstXmlValue(itemXml, 'title'));
-      const href = normalizeIssueHref(decodeXmlText(getFirstXmlValue(itemXml, 'link')));
-      const pubDateRaw = decodeXmlText(getFirstXmlValue(itemXml, 'pubDate'));
-      const category = decodeXmlText(getFirstXmlValue(itemXml, 'category')) || 'Culture';
-      const publishedAt = Date.parse(pubDateRaw);
+  const articleBySlug = new Map(articles.map((article) => [article.slug, article]));
+  const covered = new Set<string>();
+  const issues: Omit<Issue, 'accent'>[] = [];
 
-      if (!title || !href) return null;
+  for (const item of items) {
+    const article = articleBySlug.get(MIGRATED_ISSUES[item.slug] ?? item.slug);
+    if (article) covered.add(article.slug);
 
-      return {
-        category,
-        date: formatIssueDate(pubDateRaw, publishedAt),
-        title,
-        href,
-        publishedAt: Number.isNaN(publishedAt) ? 0 : publishedAt,
-        feedIndex,
-      };
-    })
-    .filter((issue): issue is Omit<Issue, 'accent'> & { feedIndex: number } => Boolean(issue))
-    .sort((a, b) => b.publishedAt - a.publishedAt || a.feedIndex - b.feedIndex)
-    .map(({ feedIndex: _feedIndex, ...issue }, index) => ({
+    issues.push({
+      category: article?.category ?? item.categories[0] ?? DEFAULT_CATEGORY,
+      date: formatIssueDate(item.publishedAt),
+      title: item.title,
+      href: article ? buildArticlePath(article.slug, base) : item.link,
+      publishedAt: item.publishedAt,
+    });
+  }
+
+  // Issues published on the site without a feed counterpart still belong in
+  // the list.
+  for (const article of articles) {
+    if (covered.has(article.slug)) continue;
+    const publishedAt = Date.parse(article.pubDate);
+    issues.push({
+      category: article.category,
+      date: formatIssueDate(publishedAt),
+      title: article.title,
+      href: buildArticlePath(article.slug, base),
+      publishedAt: Number.isNaN(publishedAt) ? 0 : publishedAt,
+    });
+  }
+
+  if (items.length === 0) {
+    console.warn('Newsletter feed unavailable; listing the bundled issues alongside on-site articles.');
+    issues.push(...fallbackIssues);
+  }
+
+  return issues
+    .sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0))
+    .map((issue, index) => ({
       ...issue,
       accent: index % 2 === 0 ? 'cayenne' : 'amber',
     }));
 }
 
-// Issues live on the .co (Beehiiv) domain; normalize any .com the feed emits so
-// the "Recent dispatches" links always point at the newsletter (see design.md §5).
-function normalizeIssueHref(href: string) {
-  const normalized = href.replace(/\/\/(?:www\.)?thebrownline\.com/i, '//www.thebrownline.co');
-  return rewriteMigratedIssueHref(normalized);
-}
-
-// 2026+ issues are being migrated onto the site itself; older issues stay on
-// Beehiiv. Map each migrated issue's /p/ slug to its local path so both the
-// RSS-parsed list and any future entries link to the on-site version.
-const MIGRATED_ISSUES: Record<string, string> = {
-  'what-i-d-cross-chicago-for-this-week-black-august-tarab-fufu': 'newsletter/black-august-tarab-fufu',
-  'geopolitical-f-tbol-the-brown-line-guide-to-the-world-cup-in-chicago': 'newsletter/whose-world-cup',
-  'back-in-service-for-good': 'newsletter/back-in-service-for-good',
-};
-
-function rewriteMigratedIssueHref(href: string) {
-  const match = href.match(/\/p\/([^/?#]+)/);
-  const slug = match?.[1];
-  if (!slug || !(slug in MIGRATED_ISSUES)) return href;
-
-  return `${import.meta.env.BASE_URL}${MIGRATED_ISSUES[slug]}`;
-}
-
-function getFirstXmlValue(xml: string, tagName: string) {
-  const match = xml.match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
-  return stripCdata(match?.[1] ?? '');
-}
-
-function stripCdata(value: string) {
-  return value.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim();
-}
-
-// Decode &amp; last so double-encoded entities (e.g. &amp;#39;) only decode one
-// level per pass instead of collapsing all the way down in a single call.
-function decodeXmlText(value: string) {
-  return value
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\da-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)))
-    .replace(/&amp;/g, '&')
-    .trim();
-}
-
-function formatIssueDate(rawDate: string, publishedAt: number) {
-  if (!rawDate || Number.isNaN(publishedAt)) return rawDate;
+function formatIssueDate(publishedAt: number) {
+  if (!publishedAt) return '';
 
   return new Date(publishedAt).toLocaleDateString('en-US', {
     month: 'short',

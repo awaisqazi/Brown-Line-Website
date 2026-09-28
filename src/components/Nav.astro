@@ -1,9 +1,15 @@
 ---
 import MiniCalendar from './MiniCalendar.astro';
+import { getMiniCalendarData } from '../lib/mini-calendar';
 
 const base = import.meta.env.BASE_URL;
 const instagramUrl = 'https://www.instagram.com/thebrownlinechi';
 const tiktokUrl = 'https://www.tiktok.com/@thebrownlinechi';
+// The mini calendar's event list, printed once below and read by both
+// calendar instances (desktop header, mobile drawer). `<` is escaped so
+// listing text can never close the script tag early.
+const calendar = await getMiniCalendarData();
+const calendarJson = JSON.stringify(calendar.panelEvents).replace(/</g, '\\u003c');
 // Route stops = destinations, in the order the team set: About, Events,
 // Submit an Event, Social Media, Newsletter, Keep the Line Running (support).
 // Social Media rides out to Instagram; every other stop stays on the line.
@@ -19,6 +25,7 @@ const route = [
 ];
 ---
 <header class="bg-seashell sticky top-0 z-30 lg:static lg:z-auto">
+  <script type="application/json" id="bl-mini-cal-data" set:html={calendarJson}></script>
   <div class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
     <a href={base} class="flex items-center gap-3 shrink-0 relative z-40" aria-label="The Brown Line, home">
       <img
@@ -91,7 +98,7 @@ const route = [
     <div class="transit-divider"></div>
 
     <div class="px-6 pt-6 pb-2">
-      <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenne font-bold">Now boarding</p>
+      <p class="font-body uppercase text-[10px] tracking-[0.3em] text-cayenneInk font-bold">Now boarding</p>
       <p class="font-wordmark text-3xl text-darkWalnut leading-none mt-1">the Brown Line</p>
     </div>
 
@@ -169,6 +176,7 @@ const route = [
     const links = drawer.querySelectorAll('[data-mobile-link]');
 
     function setOpen(open) {
+      const wasOpen = toggle.getAttribute('aria-expanded') === 'true';
       drawer.classList.toggle('translate-x-full', !open);
       drawer.classList.toggle('translate-x-0', open);
       drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -179,6 +187,14 @@ const route = [
       toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
       toggle.classList.toggle('is-open', open);
       document.documentElement.style.overflow = open ? 'hidden' : '';
+      // Keyboard and screen-reader focus follows the drawer: into the first
+      // stop when it opens, back to the menu button when it closes.
+      if (open) {
+        const first = drawer.querySelector('[data-mobile-link]');
+        if (first) window.setTimeout(() => first.focus({ preventScroll: true }), 60);
+      } else if (wasOpen && (drawer.contains(document.activeElement) || document.activeElement === document.body)) {
+        toggle.focus({ preventScroll: true });
+      }
     }
 
     toggle.addEventListener('click', () => {
@@ -307,7 +323,7 @@ const route = [
 
   .desktop-route-link:hover,
   .desktop-route-link:focus-visible {
-    color: #F35A0F;
+    color: #B8420A;
     transform: translateY(-2px);
     outline: none;
   }
@@ -387,7 +403,7 @@ const route = [
   }
   #mobile-nav .social-icon:hover,
   #mobile-nav .social-icon:focus-visible {
-    color: #F35A0F;
+    color: #B8420A;
     transform: translateY(-2px);
     outline: none;
   }
@@ -433,7 +449,7 @@ const route = [
 
   .mobile-nav-link:hover,
   .mobile-nav-link:focus-visible {
-    color: #F35A0F;
+    color: #B8420A;
     transform: translateX(4px);
     outline: none;
   }

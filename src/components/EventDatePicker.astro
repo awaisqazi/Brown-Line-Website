@@ -41,7 +41,8 @@ const navButtonClass =
   <div
     data-calendar-popover
     hidden={!inline}
-    role="group"
+    role={inline ? 'group' : 'dialog'}
+    aria-modal={inline ? undefined : 'false'}
     aria-label="Choose a date"
     class:list={[
       inline

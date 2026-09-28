@@ -28,10 +28,10 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
   </div>
 
   <!-- No-JS fallback: the Beehiiv loader renders nothing without JavaScript,
-       so send readers to the newsletter site to subscribe directly. -->
+       so offer the publication's own address instead of the platform's domain. -->
   <noscript>
     <a
-      href="https://www.thebrownline.co"
+      href="mailto:hi@thebrownlinechi.com?subject=Subscribe%20me%20to%20The%20Brown%20Line"
       class="inline-flex w-full items-center justify-center border-2 border-darkWalnut bg-[#FDFBF7] px-6 py-3 font-body text-sm font-bold uppercase tracking-widest text-darkWalnut"
     >
       Subscribe to The Brown Line
@@ -46,6 +46,22 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
     </p>
   )}
 </div>
+
+<script>
+  // The embed loader injects an <iframe> with no accessible name. Give every
+  // subscribe iframe a title as soon as it appears so screen readers announce
+  // what the frame is for. The observer stays on: the loader can re-render.
+  const FRAME_TITLE = 'Subscribe to The Brown Line newsletter';
+  const nameFrames = (root: ParentNode) => {
+    root.querySelectorAll('iframe:not([title])').forEach((frame) => {
+      frame.setAttribute('title', FRAME_TITLE);
+    });
+  };
+  document.querySelectorAll('.beehiiv-embed-wrapper').forEach((wrapper) => {
+    nameFrames(wrapper);
+    new MutationObserver(() => nameFrames(wrapper)).observe(wrapper, { childList: true, subtree: true });
+  });
+</script>
 
 <style>
   /* 

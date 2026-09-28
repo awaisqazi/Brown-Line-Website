@@ -14,6 +14,7 @@
 // reason lands in the function logs.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { mirrorImageFromUrl } from "../_shared/mirror.ts";
 
 const TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -88,7 +89,11 @@ Deno.serve(async (req: Request) => {
 
   let body: Record<string, unknown>;
   try {
-    body = await req.json();
+    const parsed = await req.json();
+    // `null` and arrays parse fine but are not a submission; reading fields
+    // off them would throw a 500 with no CORS headers.
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not an object");
+    body = parsed as Record<string, unknown>;
   } catch (_) {
     return json({ error: "Invalid request." }, 400);
   }
@@ -151,6 +156,11 @@ Deno.serve(async (req: Request) => {
   if (event_date < chicagoToday) {
     return json({ error: "That event date has already passed. Pick an upcoming date." }, 400);
   }
+  // Two years out is generous for a listing; anything beyond it is a typo.
+  const farthestDate = `${Number(chicagoToday.slice(0, 4)) + 2}${chicagoToday.slice(4)}`;
+  if (event_date > farthestDate) {
+    return json({ error: "That event date is too far out. Submit events within the next two years." }, 400);
+  }
 
   const chicago_neighborhood = nullable(body.chicago_neighborhood);
   const suburb = nullable(body.suburb);
@@ -176,17 +186,36 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Please enter a valid email or leave it blank." }, 400);
   }
 
+  // The form sends 24-hour HH:MM; anything else is dropped rather than handed
+  // to the time column, where it would fail the insert.
+  const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
   const event_time = str(body.event_time);
-  const start_time = /^\d{2}:\d{2}/.test(event_time) ? event_time : null;
+  const start_time = TIME_PATTERN.test(event_time) ? event_time : null;
 
   const event_time_end = str(body.event_time_end);
-  const end_time = /^\d{2}:\d{2}/.test(event_time_end) ? event_time_end : null;
+  const end_time = TIME_PATTERN.test(event_time_end) ? event_time_end : null;
 
   const neighborhood = location_type === "Chicago"
     ? chicago_neighborhood
     : location_type === "Suburb"
     ? suburb
     : null;
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  // A pasted flyer link is freshest right now (Instagram's signed links expire
+  // within weeks), so copy it into our own Storage while it still resolves.
+  // Best effort: a link that cannot be copied is kept as submitted, and the
+  // admin gets another chance at approval time.
+  let stored_image_url = image_url;
+  if (image_url) {
+    const mirrored = await mirrorImageFromUrl(supabase, image_url, 8000);
+    if (mirrored.ok) stored_image_url = mirrored.url;
+    else console.warn("submit-event: flyer not mirrored:", mirrored.error);
+  }
 
   const record = {
     submitter_name: submitter_name.slice(0, 200),
@@ -199,7 +228,7 @@ Deno.serve(async (req: Request) => {
     organizer: nullable(body.organizer),
     cost_info: nullable(body.cost),
     event_url,
-    image_url,
+    image_url: stored_image_url,
     description: description.slice(0, 6000),
     tags: [diaspora_tag],
     neighborhood,
@@ -209,10 +238,6 @@ Deno.serve(async (req: Request) => {
     suburb,
   };
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
   const { error } = await supabase.from("event_submissions").insert(record);
   if (error) {
     console.error("submit-event insert failed:", error.message);

@@ -1,0 +1,46 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+// GitHub Pages serves /404.html for any path that has no file, so this is the
+// page a mistyped or retired URL lands on. Same voice as the closed-stop
+// notice, with the two places a lost rider is most likely heading.
+const base = import.meta.env.BASE_URL;
+
+const description = 'That stop is not on the line. Head back to the platform or check the events board.';
+---
+<Layout
+  title="Stop Not Found · The Brown Line"
+  description={description}
+  noindex
+>
+  <section class="px-6 pt-16 md:pt-24 pb-20">
+    <div class="max-w-2xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-6">
+        Service notice
+      </p>
+      <h1 class="font-heading text-darkWalnut text-5xl md:text-7xl leading-[0.95] tracking-tight">
+        This stop is not on the line
+      </h1>
+      <p class="font-body text-darkWalnut/80 text-lg md:text-xl mt-8 leading-relaxed">
+        The address you followed does not match any page here. It may have moved, or the link had a
+        typo in it. Every stop we publish is reachable from the platform.
+      </p>
+      <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <a
+          href={base}
+          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-cayenne px-6 py-3 font-body font-bold uppercase tracking-widest text-seashell shadow-retro transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 focus-visible:-translate-y-1 focus-visible:-translate-x-1 focus-visible:outline-none"
+        >
+          <span aria-hidden="true">&larr;</span>
+          Back to the platform
+        </a>
+        <a
+          href={`${base}events`}
+          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-mayaBlue px-6 py-3 font-body font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:-translate-y-1 focus-visible:-translate-x-1 focus-visible:outline-none"
+        >
+          See all stops
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

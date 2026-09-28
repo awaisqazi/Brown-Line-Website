@@ -17,8 +17,10 @@ import {
   buildEventJsonLd,
   buildEventMetaDescription,
   buildEventSlug,
+  buildStopAnchor,
   stringifyJsonLd,
 } from '../../lib/seo';
+import { displayImageUrl, durableImageUrl } from '../../lib/images';
 
 /**
  * One page per stop, so each event has a real address on the web (something to
@@ -60,22 +62,26 @@ const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
 const canonicalUrl = new URL(Astro.url.pathname, siteUrl).toString();
 const boardUrl = new URL(`${base}events`, siteUrl).toString();
 
-// Matches EventCard: only http(s) art renders, and only then does it become the
-// share card and the Event schema's image.
-const imageUrl = event.image_url?.trim() ?? '';
-const safeImageUrl = /^https?:\/\//i.test(imageUrl) ? imageUrl : '';
+// Matches EventCard: only renderable art shows on the page. Only art on a host
+// whose links do not expire becomes the share card and the Event schema's
+// image (see src/lib/images.ts).
+const safeImageUrl = displayImageUrl(event.image_url);
+const durableImage = durableImageUrl(event.image_url);
 
 const title = event.title?.trim() || 'Brown Line event';
 const pageDescription = buildEventMetaDescription(event);
 const dateLabel = formatStopDate(event.event_date);
 const timeLabel = formatTimeRange(event.start_time, event.end_time);
 
-// Back to the exact card on the board, using the anchor every card already carries.
-const boardAnchorHref = `${base}events#event-${event.id}`;
+// Back to this stop's card on the board. Every day of a run shares one card
+// there, so the anchor is the run's, not this row's. A departed stop has no
+// card any more, so its page links to the board itself.
+const boardAnchorHref =
+  event.event_date >= getChicagoDateString() ? `${base}events#${buildStopAnchor(event)}` : `${base}events`;
 
 const eventJsonLd = buildEventJsonLd(event, {
   url: canonicalUrl,
-  image: safeImageUrl || undefined,
+  image: durableImage || undefined,
 });
 const breadcrumbJsonLd = buildBreadcrumbJsonLd([
   { name: 'Home', url: new URL(base, siteUrl).toString() },
@@ -84,13 +90,13 @@ const breadcrumbJsonLd = buildBreadcrumbJsonLd([
 ]);
 
 const backLinkClass =
-  'inline-flex items-center gap-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none';
+  'inline-flex items-center gap-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none';
 ---
 <Layout
-  title={`${title} | Events | ${BRAND_NAME}`}
+  title={`${title} | ${BRAND_NAME}`}
   description={pageDescription}
-  ogImage={safeImageUrl || undefined}
-  ogImageAlt={safeImageUrl ? `Flyer for ${title}` : undefined}
+  ogImage={durableImage || undefined}
+  ogImageAlt={durableImage ? `Flyer for ${title}` : undefined}
 >
   <script type="application/ld+json" set:html={stringifyJsonLd(eventJsonLd)} />
   <script type="application/ld+json" set:html={stringifyJsonLd(breadcrumbJsonLd)} />
@@ -102,7 +108,7 @@ const backLinkClass =
         Back to the board
       </a>
 
-      <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenne font-bold mt-8">
+      <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenneInk font-bold mt-8">
         This stop
       </p>
 

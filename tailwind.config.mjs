@@ -7,6 +7,10 @@ export default {
         seashell:   '#FAF1EC',
         darkWalnut: '#642713',
         cayenne:    '#F35A0F',
+        // Cayenne for small text: same hue, deep enough to clear 4.5:1 on
+        // seashell and the card surface. Fills, borders, dots, and large
+        // display text keep plain cayenne. See design.md § 2.
+        cayenneInk: '#B8420A',
         amber:      '#FFBC29',
         celadon:    '#90D393',
         mayaBlue:   '#5BC3FF',

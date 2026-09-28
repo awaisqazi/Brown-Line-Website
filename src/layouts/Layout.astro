@@ -6,11 +6,13 @@ import Footer from '../components/Footer.astro';
 import Marquee from '../components/Marquee.astro';
 import SupportPopup from '../components/SupportPopup.astro';
 import { getTickerItems } from '../lib/ticker';
-import { buildSiteJsonLd, stringifyJsonLd } from '../lib/seo';
+import { BRAND_KEYWORDS, buildSiteJsonLd, stringifyJsonLd } from '../lib/seo';
 
 interface Props {
   title?: string;
   description?: string;
+  /** Extra search keywords for this page, added ahead of the site-wide set. */
+  keywords?: string[];
   ogImage?: string;
   ogImageAlt?: string;
   ogType?: 'website' | 'article' | 'profile';
@@ -19,14 +21,15 @@ interface Props {
 }
 
 const DEFAULT_DESCRIPTION =
-  'Chicago arts, culture, and community, through a Global South diaspora lens. One weekly stop in your inbox. Independent voices. Real neighborhoods. All aboard.';
+  "Chicago's independent guide to Global South diaspora events, arts, culture, and community media. A curated events calendar plus one weekly newsletter stop in your inbox.";
 
 // 1200x630 share card; pages can override ogImage with their own art.
 const DEFAULT_OG_IMAGE = 'og/og-card.png';
 
 const {
-  title = "The Brown Line: Chicago's Global South Arts & Culture Guide",
+  title = "The Brown Line: Chicago's Global South Diaspora Events & Media",
   description = DEFAULT_DESCRIPTION,
+  keywords = [],
   ogImage = DEFAULT_OG_IMAGE,
   ogImageAlt = "The Brown Line, Chicago's Global South arts and culture guide",
   ogType = 'website',
@@ -58,6 +61,14 @@ const siteJsonLd = buildSiteJsonLd({
 // id) is set, so the site never ships a non-collecting tracker. Uses Consent
 // Mode v2 defaulting to denied; the consent banner below upgrades to granted.
 const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+
+// Search keywords: the page's own first, then the site-wide set, deduped.
+const metaKeywords = Array.from(new Set([...keywords, ...BRAND_KEYWORDS])).join(', ');
+
+// Google Search Console ownership token (the content value of the meta tag
+// Search Console hands out under "HTML tag" verification). Set through the
+// PUBLIC_GOOGLE_SITE_VERIFICATION repo variable; nothing renders while unset.
+const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
 ---
 <!doctype html>
 <html lang="en">
@@ -65,13 +76,23 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="keywords" content={metaKeywords} />
+    <meta name="geo.region" content="US-IL" />
+    <meta name="geo.placename" content="Chicago" />
+    {googleSiteVerification && !noindex && (
+      <meta name="google-site-verification" content={googleSiteVerification} />
+    )}
     <meta name="theme-color" content="#FAF1EC" />
     <meta name="application-name" content={brandName} />
     <meta name="apple-mobile-web-app-title" content={brandName} />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    {noindex && <meta name="robots" content="noindex, nofollow, noarchive" />}
+    {noindex ? (
+      <meta name="robots" content="noindex, nofollow, noarchive" />
+    ) : (
+      <meta name="robots" content="index, follow, max-image-preview:large" />
+    )}
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/png" href={faviconUrl} />
     <link rel="apple-touch-icon" sizes="180x180" href={appleTouchIconUrl} />
@@ -128,8 +149,25 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
       </Fragment>
     )}
 
-    {/* Beehiiv V3 Attribution tracking */}
-    <script type="text/javascript" async src="https://subscribe-forms.beehiiv.com/attribution.js"></script>
+    {/* Newsletter subscribe-source attribution. When the consent banner is in
+        play it loads only after Accept, so the banner's promise holds; with no
+        banner configured there is no promise to keep and it loads directly. */}
+    <script is:inline define:vars={{ hasConsentBanner: Boolean(gaMeasurementId) }}>
+      (function () {
+        function loadAttribution() {
+          if (window.__blAttributionLoaded) return;
+          window.__blAttributionLoaded = true;
+          var s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://subscribe-forms.beehiiv.com/attribution.js';
+          document.head.appendChild(s);
+        }
+        window.blLoadAttribution = loadAttribution;
+        var stored = null;
+        try { stored = localStorage.getItem('blAnalyticsConsent'); } catch (_) {}
+        if (!hasConsentBanner || stored === 'granted') loadAttribution();
+      })();
+    </script>
   </head>
 
   <body class="font-body bg-seashell text-darkWalnut min-h-screen flex flex-col">
@@ -176,6 +214,7 @@ const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
             if (choice === 'granted' && window.gtag) {
               window.gtag('consent', 'update', { analytics_storage: 'granted' });
             }
+            if (choice === 'granted' && window.blLoadAttribution) window.blLoadAttribution();
             if (banner) banner.classList.add('hidden');
           }
           if (banner) {

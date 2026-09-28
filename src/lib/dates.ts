@@ -5,6 +5,14 @@
  */
 export const PAST_EVENT_WINDOW_DAYS = 60;
 
+/**
+ * How far back the homepage rail and the events board look so a run that
+ * began before today (an exhibit stored as one row per day) still shows its
+ * full date range. The admin caps a single range at 90 days; 120 also covers
+ * CSV imports.
+ */
+export const SERIES_LOOKBACK_DAYS = 120;
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
   'Jan',
@@ -30,10 +38,37 @@ const MONTHS = [
  */
 export function formatStopDate(dateString: string | null | undefined): string {
   if (!dateString) return '';
+  const parts = parseCalendarDate(dateString);
+  if (!parts) return dateString;
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  return `${WEEKDAYS[date.getUTCDay()]}. ${MONTHS[parts.month - 1]} ${parts.day}`;
+}
+
+/**
+ * `YYYY-MM-DD` split into numbers, or null when the string is not a date that
+ * exists on the calendar, so no label ever prints "undefined" or the weekday
+ * of a neighboring month.
+ */
+function parseCalendarDate(dateString: string): { year: number; month: number; day: number } | null {
   const [year, month, day] = dateString.split('-').map(Number);
-  if (!year || !month || !day) return dateString;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return `${WEEKDAYS[date.getUTCDay()]}. ${MONTHS[month - 1]} ${day}`;
+  if (!year || !month || !day) return null;
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) {
+    return null;
+  }
+  return { year, month, day };
+}
+
+/**
+ * Short month-and-day label for a `YYYY-MM-DD` date, e.g. "Sep 27". Used for
+ * the date-range labels on collapsed runs ("Sep 27 – Nov 29") on the board and
+ * the homepage rail.
+ */
+export function formatMonthDay(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  const parts = parseCalendarDate(dateString);
+  if (!parts) return dateString;
+  return `${MONTHS[parts.month - 1]} ${parts.day}`;
 }
 
 /**
@@ -42,8 +77,14 @@ export function formatStopDate(dateString: string | null | undefined): string {
  */
 export function formatStartTime(value: string | null | undefined): string {
   if (!value) return '';
-  const [hours, minutes] = value.split(':').map(Number);
-  if (Number.isNaN(hours)) return '';
+  const [rawHours, minutes = 0] = value.split(':').map(Number);
+  // Postgres accepts 24:00 as end of day; everything else outside the clock
+  // is not a time and renders as nothing rather than "1:61 PM".
+  if (Number.isNaN(rawHours) || rawHours < 0 || rawHours > 24 || Number.isNaN(minutes) || minutes < 0 || minutes > 59) {
+    return '';
+  }
+  if (rawHours === 24 && minutes > 0) return '';
+  const hours = rawHours === 24 ? 0 : rawHours;
   const period = hours >= 12 ? 'PM' : 'AM';
   const hour12 = hours % 12 === 0 ? 12 : hours % 12;
   return minutes ? `${hour12}:${String(minutes).padStart(2, '0')} ${period}` : `${hour12} ${period}`;
@@ -60,7 +101,8 @@ export function formatTimeRange(
   const startLabel = formatStartTime(start);
   const endLabel = formatStartTime(end);
   if (!endLabel) return startLabel;
-  if (!startLabel) return endLabel;
+  // An end with no start is still an end, not a start time in disguise.
+  if (!startLabel) return `until ${endLabel}`;
   return `${startLabel} to ${endLabel}`;
 }
 
@@ -70,6 +112,7 @@ export function formatTimeRange(
  */
 export function addDays(dateString: string, days: number): string {
   const [year, month, day] = dateString.split('-').map(Number);
+  if (!year || !month || !day) return dateString;
   const shifted = new Date(Date.UTC(year, month - 1, day + days));
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;

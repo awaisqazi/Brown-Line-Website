@@ -68,7 +68,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       <div class="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
         <div>
           <img src={`${base}logos/logo.png`} alt="The Brown Line" class="h-12 w-auto" />
-          <p class="mt-8 font-body text-xs font-bold uppercase tracking-[0.3em] text-cayenne">
+          <p class="mt-8 font-body text-xs font-bold uppercase tracking-[0.3em] text-cayenneInk">
             Internal platform
           </p>
           <h1 class="mt-3 font-heading text-[2.75rem] leading-none text-darkWalnut md:text-6xl">
@@ -103,7 +103,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         data-login-panel
         class="mt-10 max-w-xl border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7"
       >
-        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+        <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
           Staff only
         </p>
         <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -124,14 +124,14 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             />
           </label>
           <button type="submit" data-login-submit class={buttonClass}>Unlock admin</button>
-          <p data-login-status class="font-body text-sm font-bold text-cayenne" role="status" aria-live="polite"></p>
+          <p data-login-status class="font-body text-sm font-bold text-cayenneInk" role="status" aria-live="polite"></p>
         </form>
       </section>
 
       <section data-scanner-section hidden class="mt-10 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
               Camera car
             </p>
             <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -185,7 +185,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
       <section data-admin-portal hidden class="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
-          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
             Single stop
           </p>
           <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -203,13 +203,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           <form data-single-event-form novalidate class="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label class={labelClass} for="event-title">
               Title
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-title" name="title" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-date">
               Event date
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-date" name="event_date" type="date" class={inputClass} required />
             </label>
 
@@ -225,13 +225,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={labelClass} for="event-venue">
               Venue
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-venue" name="venue" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-start-time">
               Start time
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-start-time" name="start_time" type="time" class={inputClass} required />
             </label>
 
@@ -243,13 +243,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={labelClass} for="event-neighborhood">
               Neighborhood
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-neighborhood" name="neighborhood" type="text" placeholder="Pilsen, Hyde Park" class={inputClass} required />
             </label>
 
             <label class={labelClass} for="event-organizer">
               Organizer
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-organizer" name="organizer" type="text" class={inputClass} required />
             </label>
 
@@ -261,13 +261,13 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={`${labelClass} md:col-span-2`} for="event-url">
               Event URL
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-url" name="event_url" type="url" placeholder="https://..." class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`} for="event-image-url">
               Photo or flyer URL
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input id="event-image-url" name="image_url" type="url" placeholder="https://... (link to a flyer or photo)" class={inputClass} required />
             </label>
 
@@ -294,7 +294,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
             <label class={`${labelClass} md:col-span-2`} for="event-description">
               Description
-              <span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              <span class={`${fieldMarkerClass} text-cayenneInk`}>Required, 150 words max</span>
               <textarea id="event-description" name="description" rows="5" data-word-limit="150" class={inputClass} required></textarea>
               <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
@@ -330,7 +330,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         </div>
 
         <div class="border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
-          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+          <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
             Spreadsheet transfer
           </p>
           <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -351,11 +351,11 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
 
           <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="border-2 border-darkWalnut bg-seashell p-4">
-              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenne">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk">
                 Required columns
               </p>
               <p class="mt-2 font-body text-sm leading-relaxed text-darkWalnut/75">
-                event_date, title, venue, start_time, neighborhood, organizer, event_url, image_url, description (150 words max)
+                event_date, title, venue, start_time, neighborhood, organizer, event_url, image_url (copied into our storage on upload), description (150 words max)
               </p>
             </div>
 
@@ -409,7 +409,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       <section data-database-section hidden class="mt-12 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
               Control tower
             </p>
             <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -460,7 +460,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       <section data-submissions-section hidden class="mt-12 border-2 border-darkWalnut bg-[#FDFBF7] p-5 shadow-retro md:p-7">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenne">
+            <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
               Community inbox
             </p>
             <h2 class="mt-3 font-heading text-4xl leading-none text-darkWalnut">
@@ -485,7 +485,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         <article data-submission-card class="border-2 border-darkWalnut bg-seashell p-5 shadow-[3px_3px_0_#642713] md:p-6">
           <div class="flex flex-wrap items-start justify-between gap-3 border-b-2 border-dashed border-darkWalnut/35 pb-4">
             <div class="min-w-0">
-              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenne">
+              <p class="font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk">
                 From <span data-display="submitter_name"></span>
               </p>
               <p class="mt-1 font-body text-xs text-darkWalnut/70">
@@ -519,23 +519,23 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               href="#"
               target="_blank"
               rel="noopener noreferrer nofollow"
-              class="mt-2 inline-block break-all font-body text-xs font-bold text-cayenne underline"
+              class="mt-2 inline-block break-all font-body text-xs font-bold text-cayenneInk underline"
             >Open original</a>
           </div>
 
           <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label class={`${labelClass} md:col-span-2`}>
-              Title<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Title<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="title" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Event date<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Event date<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="event_date" type="date" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Start time<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Start time<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="start_time" type="time" class={inputClass} required />
             </label>
 
@@ -545,17 +545,17 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Venue<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Venue<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="venue" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Neighborhood<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Neighborhood<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="neighborhood" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Organizer<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Organizer<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="organizer" type="text" class={inputClass} required />
             </label>
 
@@ -565,12 +565,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Event URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Event URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="event_url" type="url" class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input data-field="image_url" type="url" class={inputClass} required />
             </label>
 
@@ -594,7 +594,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </fieldset>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Description<span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              Description<span class={`${fieldMarkerClass} text-cayenneInk`}>Required, 150 words max</span>
               <textarea data-field="description" rows="4" data-word-limit="150" class={inputClass} required></textarea>
               <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
@@ -642,7 +642,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               </p>
               <p class="truncate font-body text-xs text-darkWalnut/65">
                 <span data-row-venue></span>
-                <span data-row-meta class="ml-2 font-bold uppercase tracking-widest text-cayenne"></span>
+                <span data-row-meta class="ml-2 font-bold uppercase tracking-widest text-cayenneInk"></span>
               </p>
             </div>
             <div class="flex gap-2">
@@ -654,29 +654,29 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
               <button
                 type="button"
                 data-row-delete
-                class="border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenne transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60"
+                class="border-2 border-darkWalnut bg-[#FDFBF7] px-3 py-2 font-body text-[10px] font-bold uppercase tracking-widest text-cayenneInk transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue disabled:cursor-not-allowed disabled:opacity-60"
               >Delete</button>
             </div>
           </div>
 
           <form data-row-editor hidden class="grid grid-cols-1 gap-4 border-t-2 border-dashed border-darkWalnut/35 p-4 md:grid-cols-2">
             <label class={labelClass}>
-              Title<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Title<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="title" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Event date<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Event date<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="event_date" type="date" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Venue<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Venue<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="venue" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Start time<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Start time<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="start_time" type="time" class={inputClass} required />
             </label>
 
@@ -686,12 +686,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={labelClass}>
-              Neighborhood<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Neighborhood<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="neighborhood" type="text" class={inputClass} required />
             </label>
 
             <label class={labelClass}>
-              Organizer<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Organizer<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="organizer" type="text" class={inputClass} required />
             </label>
 
@@ -706,12 +706,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Event URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Event URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="event_url" type="url" class={inputClass} required />
             </label>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenne`}>Required</span>
+              Photo or flyer URL<span class={`${fieldMarkerClass} text-cayenneInk`}>Required</span>
               <input name="image_url" type="url" class={inputClass} required />
             </label>
 
@@ -730,7 +730,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             </fieldset>
 
             <label class={`${labelClass} md:col-span-2`}>
-              Description<span class={`${fieldMarkerClass} text-cayenne`}>Required, 150 words max</span>
+              Description<span class={`${fieldMarkerClass} text-cayenneInk`}>Required, 150 words max</span>
               <textarea name="description" rows="4" data-word-limit="150" class={inputClass} required></textarea>
               <span data-word-count class="mt-1.5 block font-body text-[11px] font-bold normal-case tracking-normal text-darkWalnut/60" aria-live="polite">0 / 150 words</span>
             </label>
@@ -1031,7 +1031,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       const limit = Number(textarea.dataset.wordLimit) || DESCRIPTION_WORD_LIMIT;
       const words = countWords(textarea.value);
       counter.textContent = `${words} / ${limit} words`;
-      counter.classList.toggle('text-cayenne', words > limit);
+      counter.classList.toggle('text-cayenneInk', words > limit);
       counter.classList.toggle('text-darkWalnut/60', words <= limit);
     }
 
@@ -1092,7 +1092,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     function setInlineStatus(el: HTMLElement | null, message: string, isError = false) {
       if (!el) return;
       el.textContent = message;
-      el.classList.toggle('text-cayenne', isError);
+      el.classList.toggle('text-cayenneInk', isError);
       el.classList.toggle('text-darkWalnut', !isError);
     }
 
@@ -1102,7 +1102,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     function setSingleSuccessBanner(title: string, dayCount = 1) {
       if (!singleStatus) return;
       singleStatus.textContent = '';
-      singleStatus.classList.remove('text-cayenne');
+      singleStatus.classList.remove('text-cayenneInk');
       singleStatus.classList.add('text-darkWalnut');
 
       const banner = document.createElement('div');
@@ -1225,13 +1225,68 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       return Object.values(row).every((value) => cleanText(value) === '');
     }
 
-    async function insertEvents(records: AdminEventRecord[]) {
+    // Flyer links that enter the system get copied into our own Storage so
+    // they never expire (Instagram's signed image links do, within weeks). A
+    // copy that fails never blocks a save: the link is kept as pasted and the
+    // warning is shown, since the public site skips a dead link on its own.
+    const STORED_IMAGE_PATH = '/storage/v1/object/public/event-images/';
+
+    async function mirrorImageUrl(url: string | null): Promise<{ url: string | null; warning: string }> {
+      if (!url || !adminPassword || !functionsBase || url.includes(STORED_IMAGE_PATH)) {
+        return { url, warning: '' };
+      }
+      try {
+        const res = await fetch(`${functionsBase}/mirror-event-image`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-admin-password': adminPassword },
+          body: JSON.stringify({ source_url: url }),
+        });
+        const body = await res.json().catch(() => null);
+        if (!res.ok || typeof body?.url !== 'string') {
+          return {
+            url,
+            warning: `Flyer not copied: ${body?.error ?? `status ${res.status}.`} The link was saved as pasted and may stop working.`,
+          };
+        }
+        return { url: body.url, warning: '' };
+      } catch (_) {
+        return { url, warning: 'Flyer not copied (network error). The link was saved as pasted and may stop working.' };
+      }
+    }
+
+    // Mirrors every distinct flyer link across a batch (a date range shares one
+    // link across all its rows), rewriting the records in place.
+    async function mirrorRecordImages(records: AdminEventRecord[], statusEl: HTMLElement | null) {
+      const distinct = Array.from(
+        new Set(records.map((record) => record.image_url).filter((url): url is string => Boolean(url)))
+      );
+      const todo = distinct.filter((url) => !url.includes(STORED_IMAGE_PATH));
+      if (todo.length === 0) return [] as string[];
+      setInlineStatus(statusEl, `Copying ${todo.length === 1 ? 'the flyer' : `${todo.length} flyers`} into our storage...`);
+      const warnings: string[] = [];
+      const replacements = new Map<string, string | null>();
+      for (const url of todo) {
+        const mirrored = await mirrorImageUrl(url);
+        replacements.set(url, mirrored.url);
+        if (mirrored.warning) warnings.push(mirrored.warning);
+      }
+      records.forEach((record) => {
+        if (record.image_url && replacements.has(record.image_url)) {
+          record.image_url = replacements.get(record.image_url) ?? record.image_url;
+        }
+      });
+      return warnings;
+    }
+
+    async function insertEvents(records: AdminEventRecord[], statusEl: HTMLElement | null = null) {
       if (!adminSupabase) {
         throw new Error('Unlock the admin portal first.');
       }
 
+      const warnings = await mirrorRecordImages(records, statusEl);
       const { error } = await adminSupabase.from('events').insert(records);
       if (error) throw new Error(error.message);
+      return warnings;
     }
 
     /* ---------- Community submissions review ---------- */
@@ -1356,8 +1411,12 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       if (approve) approve.disabled = true;
       if (reject) reject.disabled = true;
       try {
-        if (statusEl) statusEl.textContent = 'Publishing...';
         const record = eventRecordFromCard(card);
+        if (statusEl) statusEl.textContent = 'Copying the flyer into our storage...';
+        const mirrored = await mirrorImageUrl(record.image_url);
+        record.image_url = mirrored.url;
+        if (mirrored.warning) console.warn(mirrored.warning);
+        if (statusEl) statusEl.textContent = 'Publishing...';
         const { data, error } = await adminSupabase
           .from('events')
           .insert(record)
@@ -1748,6 +1807,10 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             if (!adminSupabase) throw new Error('Unlock the admin portal first.');
             setInlineStatus(rowStatus, '');
             const record = recordFromForm(editor);
+            setInlineStatus(rowStatus, 'Copying the flyer into our storage...');
+            const mirrored = await mirrorImageUrl(record.image_url);
+            record.image_url = mirrored.url;
+            setInlineStatus(rowStatus, '');
             // .select() so a silent zero-row update (stale password, deleted
             // row) surfaces as an error instead of a fake success.
             const { data, error } = await adminSupabase
@@ -1761,7 +1824,9 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
             }
             setInlineStatus(
               dbPublishStatus,
-              `Saved "${record.title}". It is in the database now; press Publish live site to show it publicly, or wait for the scheduled rebuild.`
+              `Saved "${record.title}". It is in the database now; press Publish live site to show it publicly, or wait for the scheduled rebuild.${
+                mirrored.warning ? ` ${mirrored.warning}` : ''
+              }`
             );
             dbPublishStatus?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             await loadDbEvents();
@@ -1846,10 +1911,21 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
         });
     }
 
+    // Re-rendering the list would discard an open row editor's unsaved edits,
+    // so search and scope changes wait, the same way realtime reloads do, and
+    // apply as soon as the editor closes.
     dbScopeSelect?.addEventListener('change', () => {
+      if (dbEditorOpen()) {
+        dbPendingReload = true;
+        return;
+      }
       void loadDbEvents();
     });
     dbSearch?.addEventListener('input', () => {
+      if (dbEditorOpen()) {
+        dbPendingReload = true;
+        return;
+      }
       renderDbList();
     });
     dbRefresh?.addEventListener('click', () => {
@@ -1961,7 +2037,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
       setValue('organizer', eventDraft.organizer);
       setValue('cost_info', eventDraft.cost_info);
       setValue('event_url', eventDraft.event_url);
-      setValue('image_url', '');
+      setValue('image_url', eventDraft.image_url);
       setValue('description', eventDraft.description);
       setValue('author_note', '');
       setValue('emoji', eventDraft.emoji);
@@ -2083,10 +2159,11 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
           const record = recordFromForm(singleEventForm);
           const endDate = cleanText(new FormData(singleEventForm).get('event_end_date'));
           const records = endDate ? expandDateRange(record, endDate) : [record];
-          await insertEvents(records);
+          const warnings = await insertEvents(records, singleStatus);
           singleEventForm.reset();
           updateWordCounters(singleEventForm);
           setSingleSuccessBanner(record.title, records.length);
+          setInlineStatus(singleStatus, warnings.join(' '), warnings.length > 0);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error.';
           setInlineStatus(singleStatus, `Could not add event: ${message}`, true);
@@ -2097,7 +2174,7 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
     function setCsvErrors(lines: string[]) {
       if (!csvStatus) return;
       csvStatus.textContent = '';
-      csvStatus.classList.add('text-cayenne');
+      csvStatus.classList.add('text-cayenneInk');
       csvStatus.classList.remove('text-darkWalnut');
       const intro = document.createElement('p');
       intro.textContent =
@@ -2162,11 +2239,15 @@ const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(`${csv
                     return;
                   }
 
-                  await insertEvents(records);
+                  const warnings = await insertEvents(records, csvStatus);
                   csvForm.reset();
                   setInlineStatus(
                     csvStatus,
-                    `${records.length} ${records.length === 1 ? 'event' : 'events'} added. Press Publish live site in the schedule section to show them publicly now, or wait for the scheduled rebuild.`
+                    `${records.length} ${records.length === 1 ? 'event' : 'events'} added. Press Publish live site in the schedule section to show them publicly now, or wait for the scheduled rebuild.${
+                      warnings.length > 0
+                        ? ` ${warnings.length} flyer ${warnings.length === 1 ? 'link' : 'links'} could not be copied and ${warnings.length === 1 ? 'was' : 'were'} saved as pasted.`
+                        : ''
+                    }`
                   );
                 } catch (error) {
                   const message = error instanceof Error ? error.message : 'Unknown error.';

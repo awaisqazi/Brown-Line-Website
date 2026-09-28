@@ -49,7 +49,7 @@ const criteria = [
 ] as const;
 
 const accentText: Record<string, string> = {
-  cayenne:  'text-cayenne',
+  cayenne:  'text-cayenneInk',
   mayaBlue: 'text-mayaBlue',
   celadon:  'text-celadon',
   amber:    'text-amber',
@@ -120,10 +120,10 @@ const accentClass: Record<string, string> = {
 };
 
 const description =
-  'The Brown Line is an independent local guide to Chicago arts, culture, and community through a Global South diaspora lens, founded and edited by journalist Ghazala Irshad. Subscribe and ride along.';
+  'The Brown Line is independent Chicago media: a local guide to events, arts, culture, and community through a Global South diaspora lens, founded and edited by journalist Ghazala Irshad. Subscribe and ride along.';
 ---
 <Layout
-  title="About · The Brown Line"
+  title="About The Brown Line: Chicago Global South Diaspora Media"
   description={description}
   ogImage="images/ghazala.jpeg"
   ogImageAlt="Ghazala Irshad, founder of The Brown Line"
@@ -132,7 +132,7 @@ const description =
   {/* ---------- Hero: the project first ---------- */}
   <section class="px-6 pt-16 md:pt-24 pb-12">
     <div class="max-w-4xl mx-auto">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-6">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-6">
         About the line
       </p>
       <h1 class="font-heading text-darkWalnut text-4xl md:text-6xl lg:text-7xl leading-[1.02] tracking-tight text-balance">
@@ -176,7 +176,7 @@ const description =
           href="#ethics"
           data-ga-event="standards_click"
           data-ga-label="about_page"
-          class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenne focus-visible:text-cayenne focus-visible:outline-none"
+          class="inline-flex items-center gap-1.5 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut/70 transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
         >
           How we curate
           <span aria-hidden="true">&rarr;</span>
@@ -193,7 +193,7 @@ const description =
   {/* ---------- Meet the founder ---------- */}
   <section class="px-6 py-12 md:py-16 bg-seashell">
     <div class="max-w-5xl mx-auto">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-8">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-8">
         Meet the founder
       </p>
 
@@ -220,7 +220,7 @@ const description =
         {/* Lead bio */}
         <div class="md:col-span-7 font-body text-darkWalnut leading-relaxed">
           <p class="text-xl md:text-2xl font-semibold text-darkWalnut leading-snug">
-            The Brown Line is founded and edited by <span class="text-cayenne font-bold">Ghazala Irshad</span>,
+            The Brown Line is founded and edited by <span class="text-cayenneInk font-bold">Ghazala Irshad</span>,
             a Chicago-based journalist, editor, and media entrepreneur whose work spans international
             reporting, nonprofit media, standards editing, and community storytelling.
           </p>
@@ -323,7 +323,7 @@ const description =
   {/* ---------- Standards & Ethics (moved here from /standards) ---------- */}
   <section id="ethics" class="scroll-mt-24 lg:scroll-mt-6 px-6 py-16 md:py-24">
     <div class="max-w-5xl mx-auto">
-      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenne font-bold mb-3">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-3">
         How we work
       </p>
       <h2 class="font-heading font-semibold text-darkWalnut text-3xl md:text-4xl leading-tight tracking-tight">
@@ -373,9 +373,9 @@ const description =
           Meeting these criteria doesn't guarantee coverage. I receive more submissions than I can
           feature, and final decisions come down to editorial judgment and space. Community members and
           event organizers can submit events through the
-          <a href={`${base}submit-event`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">event submission form</a>,
+          <a href={`${base}submit-event`} class="text-cayenneInk font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">event submission form</a>,
           or by email at
-          <a href={`mailto:${EMAIL}`} class="text-cayenne font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">{EMAIL}</a>.
+          <a href={`mailto:${EMAIL}`} class="text-cayenneInk font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne">{EMAIL}</a>.
           Submitting an event doesn't guarantee it will be featured.
         </p>
       </div>

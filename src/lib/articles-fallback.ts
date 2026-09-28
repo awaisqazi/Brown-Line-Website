@@ -7,7 +7,7 @@ import type { Article } from './articles';
  * Once supabase/articles-seed.sql has been applied these rows are dead weight
  * for normal builds, but they stay as the offline-build safety net.
  */
-export const FALLBACK_ARTICLES: Article[] = [
+export const FALLBACK_ARTICLES: Omit<Article, 'source'>[] = [
   {
     slug: 'whose-world-cup',
     title: '⚽🌎🏆 Whose World Cup? Where Chicago’s Global South Gathers to Watch',

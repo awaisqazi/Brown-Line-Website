@@ -7,19 +7,18 @@ import { getRecentIssues } from '../lib/issues';
 const base = import.meta.env.BASE_URL;
 
 const issues = await getRecentIssues();
-const latestIssueHref =
-  issues[0]?.href ?? 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation';
+const latestIssueHref = issues[0]?.href ?? `${base}newsletter`;
 
 const stops = [
   {
     label: 'Read the latest issue',
     href: latestIssueHref,
-    external: true,
+    external: /^https?:\/\//.test(latestIssueHref),
   },
   {
     label: 'Browse the full newsletter',
-    href: 'https://www.thebrownline.co',
-    external: true,
+    href: `${base}newsletter`,
+    external: false,
   },
   {
     label: 'About the founder',
@@ -65,7 +64,7 @@ const stops = [
           <span class="absolute inset-0 rounded-full translate-x-1 translate-y-1 bg-cayenne -z-0" aria-hidden="true"></span>
         </div>
 
-        <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenne font-bold mt-6 inline-flex items-center gap-2">
+        <p class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-cayenneInk font-bold mt-6 inline-flex items-center gap-2">
           <span class="inline-block w-1.5 h-1.5 rounded-full bg-cayenne animate-pulse"></span>
           Now boarding
         </p>
@@ -231,7 +230,7 @@ const stops = [
 
   .link-stop:hover,
   .link-stop:focus-visible {
-    color: #F35A0F;
+    color: #B8420A;
     transform: translateX(4px);
     outline: none;
   }
@@ -243,7 +242,7 @@ const stops = [
   .link-stop:hover .link-stop-arrow,
   .link-stop:focus-visible .link-stop-arrow {
     opacity: 1;
-    color: #F35A0F;
+    color: #B8420A;
     transform: translateX(3px);
   }
 
