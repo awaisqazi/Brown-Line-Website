@@ -5,15 +5,17 @@
  *    build time. These are the hand-migrated issues with their own hero art,
  *    tags, and summary.
  * 2. The newsletter's RSS feed (see beehiiv.ts). Every public issue in the feed
- *    that has no row of its own is rendered on site from the feed's HTML, so a
- *    new issue lands at /newsletter/<slug> on the next build with no repo or
- *    admin work. Premium (paywalled) issues cannot be rendered from the feed
- *    and stay off-site until the owner migrates them.
+ *    that has no row of its own, and that was published on or after the
+ *    archive cutoff (see archive.ts), is rendered on site from the feed's
+ *    HTML, so a new issue lands at /newsletter/<slug> on the next build with
+ *    no repo or admin work. Issues before the cutoff stay off-site by rule,
+ *    and premium (paywalled) issues cannot be rendered from the feed anyway.
  *
  * src/pages/newsletter/[slug].astro turns each article into a page. Everything
  * is loaded once per build and cached, the same way ticker.ts caches its query,
  * because several pages ask for the same list.
  */
+import { isInPublicArchive } from './archive';
 import { FALLBACK_ARTICLES } from './articles-fallback';
 import { getFeedItems, MIGRATED_ISSUES, sanitizeFeedHtml } from './beehiiv';
 import { sanitizeAuthoredHtml } from './sanitize';
@@ -205,10 +207,12 @@ async function loadSiteArticles(): Promise<Article[]> {
 }
 
 /**
- * Public feed issues that have no hand-migrated row become articles of their
- * own, rendered from the feed's HTML. An issue counts as covered (and is
- * skipped here) when a site article exists under its feed slug or under the
- * slug MIGRATED_ISSUES maps it to.
+ * Public feed issues from the public-archive era that have no hand-migrated
+ * row become articles of their own, rendered from the feed's HTML. An issue
+ * counts as covered (and is skipped here) when a site article exists under its
+ * feed slug or under the slug MIGRATED_ISSUES maps it to. Issues older than
+ * PUBLIC_ARCHIVE_FROM are never rendered from the feed, whatever their
+ * audience on the platform; the admin can still migrate one by hand.
  */
 async function loadFeedArticles(siteArticles: Article[]): Promise<Article[]> {
   const items = await getFeedItems();
@@ -222,7 +226,11 @@ async function loadFeedArticles(siteArticles: Article[]): Promise<Article[]> {
   };
 
   const renderable = items.filter(
-    (item) => !item.isPaywalled && item.contentHtml.trim() !== '' && !localSlugFor(item.slug)
+    (item) =>
+      isInPublicArchive(item.publishedAt) &&
+      !item.isPaywalled &&
+      item.contentHtml.trim() !== '' &&
+      !localSlugFor(item.slug)
   );
 
   // Every issue with a page here, so links between issues inside a body stay

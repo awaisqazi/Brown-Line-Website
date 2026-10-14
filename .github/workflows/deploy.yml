@@ -53,6 +53,11 @@ jobs:
           # repo variable is set to the numeric pixel id. Leave it unset to ship
           # nothing from Meta. It shares the GA consent banner (revoked until Accept).
           PUBLIC_META_PIXEL_ID: ${{ vars.PUBLIC_META_PIXEL_ID }}
+          # First day of the public newsletter archive (YYYY-MM-DD). Issues from
+          # this date on get an on-site page; earlier ones link to the platform's
+          # subscriber archive. Unset, the build uses the default in
+          # src/lib/archive.ts (2026-01-01).
+          NEWSLETTER_PUBLIC_FROM: ${{ vars.NEWSLETTER_PUBLIC_FROM }}
 
   deploy:
     needs: build

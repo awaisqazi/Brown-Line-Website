@@ -1,9 +1,12 @@
 /**
  * The dispatch list: every issue of the newsletter, newest first, with the
  * link each card should carry. Issues that exist on the site (hand-migrated
- * rows or feed-rendered pages, see articles.ts) link to their page here;
- * premium issues the feed cannot render keep their off-site link.
+ * rows or feed-rendered pages, see articles.ts) link to their page here. The
+ * rest, which is every issue from before the public-archive cutoff plus any
+ * premium issue the feed cannot render (see archive.ts), link off-site to the
+ * platform, where the subscriber wall applies.
  */
+import { offSiteIssueUrl } from './archive';
 import { getFeedItems, MIGRATED_ISSUES, PLATFORM_ORIGIN } from './beehiiv';
 import { buildArticlePath, getSortedArticles } from './articles';
 
@@ -89,7 +92,7 @@ async function buildIssues(): Promise<Issue[]> {
       category: article?.category ?? item.categories[0] ?? DEFAULT_CATEGORY,
       date: formatIssueDate(item.publishedAt),
       title: item.title,
-      href: article ? buildArticlePath(article.slug, base) : platformLink(item.slug, item.link),
+      href: article ? buildArticlePath(article.slug, base) : offSiteIssueUrl(item.slug, item.link),
       publishedAt: item.publishedAt,
     });
   }
@@ -119,15 +122,6 @@ async function buildIssues(): Promise<Issue[]> {
       ...issue,
       accent: index % 2 === 0 ? 'cayenne' : 'amber',
     }));
-}
-
-/**
- * Off-site link for an issue with no page here. The feed's own link names
- * whichever host the platform used when the feed was read; the permanent
- * address keeps working through a domain move.
- */
-function platformLink(slug: string, link: string) {
-  return slug ? `${PLATFORM_ORIGIN}/p/${slug}` : link;
 }
 
 function formatIssueDate(publishedAt: number) {

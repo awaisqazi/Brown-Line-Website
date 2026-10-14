@@ -4,11 +4,14 @@ import SubscribeForm from '../../components/SubscribeForm.astro';
 import IssueCard from '../../components/IssueCard.astro';
 import TransitDivider from '../../components/TransitDivider.astro';
 import { getRecentIssues } from '../../lib/issues';
+import { formatArchiveCutoff } from '../../lib/archive';
 
 const issues = await getRecentIssues();
-// Premium issues from the first season cannot be rendered here yet and open on
-// the newsletter platform instead; the caption below explains the arrow.
+// Issues from before the public-archive cutoff (and any premium issue) live on
+// the newsletter platform behind its subscriber wall and open there; the
+// caption below explains the arrow. See src/lib/archive.ts for the rule.
 const offSiteCount = issues.filter((issue) => /^https?:\/\//.test(issue.href)).length;
+const archiveCutoff = formatArchiveCutoff();
 
 const description =
   'Read The Brown Line newsletter: weekly dispatches on Chicago Global South diaspora events, arts, culture, community, and media. Subscribe free and ride along.';
@@ -46,7 +49,8 @@ const description =
         </h2>
         {offSiteCount > 0 && (
           <p class="font-body text-darkWalnut/70 text-sm mt-3">
-            Every issue, newest first. Issues from our first season open in a new tab.
+            Every issue, newest first. Issues from before {archiveCutoff} are in the subscriber
+            archive and open in a new tab.
           </p>
         )}
       </div>
