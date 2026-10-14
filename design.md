@@ -321,6 +321,7 @@ Recipes for building new pages. Match the template that matches the intent.
 ### Home (`/`)
 Current top-to-bottom structure:
 1. Hero: Cayenne uppercase eyebrow, `font-heading` H1 (heavy) with one `<em class="not-italic text-cayenne">` accent, centered `<SubscribeForm />`, and a scroll cue.
+   - Product showcase under the hero: three equal boxes (events slideshow, social media, newsletter slideshow) in a `grid auto-rows-fr` so they match height stacked on phones as well as side by side. The social box shows the publication's avatar (`logos/4.png`, the `/links` circular walnut-bordered treatment with the offset cayenne disc, static and not a link) over the `@thebrownlinechi` chip, then "Follow the line." with two baby-pink buttons, "Follow on Instagram" and "Follow on TikTok" (16px glyphs, new tab, `social_click` with labels `homepage_products_instagram` / `homepage_products_tiktok`), wrapping onto two rows in the narrow box.
 2. Credibility strip: "Supported by" partner-logo tiles + a "Featured in" tile (see § 8 Brand Assets). Real orgs only.
 3. Upcoming Stops: inside-train LED `Marquee` leading with the next Conductor's Pick, then the route timeline of `EventCard`s (curated-first), terminus link "See all stops" (to `/events`, which defaults to All upcoming), closing `<TransitDivider />`.
 4. Two-sided band: "Feeling social? -> Browse events" (Maya Blue) and "Hosting? -> Submit an event" (Amber), the platform/network story.
