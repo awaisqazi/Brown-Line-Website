@@ -10,7 +10,7 @@ const sections = [
   {
     title: 'The short version',
     body: [
-      "The Brown Line is a small, independent publication. We collect as little as possible, we don't sell your data, and we don't run ad-tracking networks. This page explains what happens when you read the site, subscribe, submit an event, or support us.",
+      "The Brown Line is a small, independent publication. We collect as little as possible and we don't sell your data. We run aggregate analytics to see what's useful and, when we promote the newsletter with ads, a measurement pixel so we know whether those ads work. This page explains what happens when you read the site, subscribe, submit an event, or support us.",
     ],
   },
   {
@@ -28,8 +28,11 @@ const sections = [
   {
     title: 'Analytics',
     body: [
-      'We use Google Analytics 4 to understand aggregate traffic (like page views and referrers). Analytics cookies are only set after you accept the consent banner; until you decide, GA4 sends cookieless pings that cannot identify you. If you decline, analytics stays off, and your choice is remembered in your browser. We never build advertising profiles.',
+      'We use Google Analytics 4 to understand aggregate traffic (like page views, referrers, and which stops get clicked). It runs by default, with IP anonymization on and advertising features off. We never build advertising profiles from it.',
+      'When we run ads to grow the newsletter, a Meta (Facebook and Instagram) pixel records page views and newsletter signups on this site so we can measure whether those ads reach the right people. Meta processes that data under its own privacy policy. The pixel is only present while a campaign is running.',
+      'You can turn all of this off for your browser with the switch below. Your choice is remembered on this device.',
     ],
+    optOut: true,
   },
   {
     title: 'Support payments',
@@ -73,6 +76,20 @@ const sections = [
         <div class="font-body text-darkWalnut text-lg leading-relaxed space-y-4">
           {section.body.map((p) => <p>{p}</p>)}
         </div>
+        {section.optOut && (
+          <div class="mt-6 flex flex-col gap-3 border-2 border-darkWalnut bg-[#FDFBF7] p-4 shadow-retro sm:flex-row sm:items-center sm:justify-between" data-analytics-optout>
+            <p class="font-body text-sm text-darkWalnut" data-optout-status aria-live="polite">
+              Analytics is on for this browser.
+            </p>
+            <button
+              type="button"
+              data-optout-toggle
+              class="shrink-0 border-2 border-darkWalnut bg-seashell px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+            >
+              Turn analytics off
+            </button>
+          </div>
+        )}
       </div>
     </section>
   ))}
@@ -80,11 +97,39 @@ const sections = [
   <section class="px-6 py-12 md:py-16">
     <div class="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
-        Last updated: June 2026
+        Last updated: October 2026
       </p>
       <p class="font-body text-darkWalnut/70 text-sm uppercase tracking-widest">
         Questions? <a href={`mailto:${EMAIL}`} class="text-darkWalnut font-bold underline decoration-2 decoration-mayaBlue underline-offset-4 hover:decoration-cayenne normal-case tracking-normal">{EMAIL}</a>
       </p>
     </div>
   </section>
+
+<script is:inline>
+  (() => {
+    // Analytics opt-out switch. Reads and writes the same localStorage key the
+    // trackers in Layout.astro honor ('denied' = off). When no tracker is
+    // configured the hook is absent and the switch just records the choice.
+    var box = document.querySelector('[data-analytics-optout]');
+    if (!box) return;
+    var status = box.querySelector('[data-optout-status]');
+    var btn = box.querySelector('[data-optout-toggle]');
+    function isOff() {
+      try { return localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) { return false; }
+    }
+    function paint() {
+      var off = isOff();
+      status.textContent = off ? 'Analytics is off for this browser.' : 'Analytics is on for this browser.';
+      btn.textContent = off ? 'Turn analytics on' : 'Turn analytics off';
+      btn.setAttribute('aria-pressed', off ? 'true' : 'false');
+    }
+    btn.addEventListener('click', function () {
+      var next = isOff() ? 'granted' : 'denied';
+      if (window.blSetAnalyticsConsent) window.blSetAnalyticsConsent(next);
+      else { try { localStorage.setItem('blAnalyticsConsent', next); } catch (_) {} }
+      paint();
+    });
+    paint();
+  })();
+</script>
 </Layout>

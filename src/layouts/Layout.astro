@@ -62,8 +62,9 @@ const siteJsonLd = buildSiteJsonLd({
 // non-collecting tracker. One gtag.js load serves every id: the first id is the
 // script's query id and every id gets its own config call, so the same hits
 // reach each property (the site's original property and the team's own one).
-// Uses Consent Mode v2 defaulting to denied; the consent banner below upgrades
-// to granted.
+// Analytics is on by default (US audience, no opt-in banner, owner decision
+// 2026-10-14); a visitor can opt out on /privacy, which stores 'denied' in
+// localStorage['blAnalyticsConsent'] and every tracker here honors it.
 const gaMeasurementIds = String(import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? '')
   .split(',')
   .map((id) => id.trim())
@@ -71,16 +72,16 @@ const gaMeasurementIds = String(import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? '')
 const gaMeasurementId = gaMeasurementIds[0];
 
 // Meta pixel for the newsletter ad campaign. Loads only when PUBLIC_META_PIXEL_ID
-// (the numeric pixel id) is set, so by default nothing from Meta ships. It shares
-// the GA consent gate: consent is revoked before init unless the visitor already
-// accepted, and the banner's Accept grants it.
+// (the numeric pixel id) is set, so by default nothing from Meta ships. It honors
+// the same /privacy opt-out as GA: consent is revoked before init when the
+// visitor has opted out.
 const metaPixelId = /^\d+$/.test(String(import.meta.env.PUBLIC_META_PIXEL_ID ?? '').trim())
   ? String(import.meta.env.PUBLIC_META_PIXEL_ID).trim()
   : '';
 
-// The consent banner (and the delegated event tracking that rides with it)
-// renders whenever any tracker is configured.
-const hasConsentBanner = Boolean(gaMeasurementId || metaPixelId);
+// The opt-out hook and the delegated event tracking render whenever any
+// tracker is configured.
+const hasAnalytics = Boolean(gaMeasurementId || metaPixelId);
 
 // Search keywords: the page's own first, then the site-wide set, deduped.
 const metaKeywords = Array.from(new Set([...keywords, ...BRAND_KEYWORDS])).join(', ');
@@ -144,24 +145,21 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
 
     {gaMeasurementId && (
       <Fragment>
-        {/* Google Analytics 4 with Consent Mode v2. Analytics storage defaults to
-            denied (no cookies) until the visitor accepts via the banner below. */}
+        {/* Google Analytics 4 with Consent Mode v2. Analytics storage is granted
+            by default and denied only for a visitor who opted out on /privacy.
+            Ad storage stays denied: GA is used for measurement, not ads. */}
         <script is:inline define:vars={{ gaMeasurementIds }}>
           window.dataLayer = window.dataLayer || [];
           function gtag(){ dataLayer.push(arguments); }
           window.gtag = gtag;
+          var optedOut = false;
+          try { optedOut = localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) {}
           gtag('consent', 'default', {
             ad_storage: 'denied',
             ad_user_data: 'denied',
             ad_personalization: 'denied',
-            analytics_storage: 'denied',
-            wait_for_update: 500,
+            analytics_storage: optedOut ? 'denied' : 'granted',
           });
-          try {
-            if (localStorage.getItem('blAnalyticsConsent') === 'granted') {
-              gtag('consent', 'update', { analytics_storage: 'granted' });
-            }
-          } catch (_) {}
           gtag('js', new Date());
           gaMeasurementIds.forEach(function (id) {
             gtag('config', id, { anonymize_ip: true });
@@ -173,18 +171,18 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
 
     {metaPixelId && (
       <Fragment>
-        {/* Meta pixel base code. Consent is revoked before init unless the
-            visitor already accepted, so nothing is sent until they do; the
-            banner's Accept calls fbq('consent', 'grant'). */}
+        {/* Meta pixel base code. Consent is revoked before init for a visitor
+            who opted out on /privacy, so nothing is sent for them; everyone
+            else sends the PageView straight away. */}
         <script is:inline define:vars={{ metaPixelId }}>
           !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
           n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
           n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
           t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
           document,'script','https://connect.facebook.net/en_US/fbevents.js');
-          var consented = false;
-          try { consented = localStorage.getItem('blAnalyticsConsent') === 'granted'; } catch (_) {}
-          if (!consented) fbq('consent', 'revoke');
+          var optedOut = false;
+          try { optedOut = localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) {}
+          if (optedOut) fbq('consent', 'revoke');
           fbq('init', metaPixelId);
           fbq('track', 'PageView');
         </script>
@@ -194,10 +192,9 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
       </Fragment>
     )}
 
-    {/* Newsletter subscribe-source attribution. When the consent banner is in
-        play it loads only after Accept, so the banner's promise holds; with no
-        banner configured there is no promise to keep and it loads directly. */}
-    <script is:inline define:vars={{ hasConsentBanner }}>
+    {/* Newsletter subscribe-source attribution. Loads unless the visitor opted
+        out of analytics on /privacy. */}
+    <script is:inline>
       (function () {
         function loadAttribution() {
           if (window.__blAttributionLoaded) return;
@@ -208,9 +205,9 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
           document.head.appendChild(s);
         }
         window.blLoadAttribution = loadAttribution;
-        var stored = null;
-        try { stored = localStorage.getItem('blAnalyticsConsent'); } catch (_) {}
-        if (!hasConsentBanner || stored === 'granted') loadAttribution();
+        var optedOut = false;
+        try { optedOut = localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) {}
+        if (!optedOut) loadAttribution();
       })();
     </script>
   </head>
@@ -227,49 +224,22 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
     {!minimal && <Footer />}
     {!minimal && <SupportPopup />}
 
-    {hasConsentBanner && (
+    {hasAnalytics && (
       <Fragment>
-      <div
-        id="bl-consent"
-        class="fixed inset-x-0 bottom-0 z-[1000] hidden border-t-2 border-darkWalnut bg-seashell px-4 py-4 shadow-[0_-4px_0_#642713]"
-        role="region"
-        aria-label="Analytics consent"
-        aria-live="polite"
-      >
-        <div class="mx-auto flex max-w-5xl flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <p class="font-body text-sm text-darkWalnut leading-relaxed">
-            We use privacy-respecting analytics to see what's useful. No ads, and we never sell your data. See our <a href={`${base}privacy`} class="font-bold underline decoration-2 decoration-mayaBlue underline-offset-2 hover:decoration-cayenne">privacy page</a>.
-          </p>
-          <div class="flex shrink-0 items-center gap-2">
-            <button type="button" data-consent="decline" class="border-2 border-darkWalnut bg-seashell px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">Decline</button>
-            <button type="button" data-consent="accept" class="border-2 border-darkWalnut bg-cayenne px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-seashell transition-transform duration-150 hover:-translate-y-0.5 hover:-translate-x-0.5 hover:shadow-[2px_2px_0_#642713] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">Accept</button>
-          </div>
-        </div>
-      </div>
-
       <script is:inline>
         (() => {
-          // Consent banner: show only when the visitor hasn't chosen yet.
-          var banner = document.getElementById('bl-consent');
-          var stored = null;
-          try { stored = localStorage.getItem('blAnalyticsConsent'); } catch (_) {}
-          if (banner && !stored) banner.classList.remove('hidden');
-          function setConsent(choice) {
+          // Analytics opt-out hook, used by the switch on /privacy. 'denied'
+          // turns GA storage and the Meta pixel off for this browser; 'granted'
+          // turns them back on. The choice is remembered in localStorage.
+          window.blSetAnalyticsConsent = function (choice) {
             try { localStorage.setItem('blAnalyticsConsent', choice); } catch (_) {}
-            if (choice === 'granted' && window.gtag) {
-              window.gtag('consent', 'update', { analytics_storage: 'granted' });
+            var granted = choice === 'granted';
+            if (window.gtag) {
+              window.gtag('consent', 'update', { analytics_storage: granted ? 'granted' : 'denied' });
             }
-            if (choice === 'granted' && window.fbq) window.fbq('consent', 'grant');
-            if (choice === 'granted' && window.blLoadAttribution) window.blLoadAttribution();
-            if (banner) banner.classList.add('hidden');
-          }
-          if (banner) {
-            banner.addEventListener('click', function (e) {
-              var btn = e.target.closest('[data-consent]');
-              if (!btn) return;
-              setConsent(btn.getAttribute('data-consent') === 'accept' ? 'granted' : 'denied');
-            });
-          }
+            if (window.fbq) window.fbq('consent', granted ? 'grant' : 'revoke');
+            if (granted && window.blLoadAttribution) window.blLoadAttribution();
+          };
 
           // Delegated custom-event tracking. No-ops if gtag isn't present.
           document.addEventListener('click', function (e) {
