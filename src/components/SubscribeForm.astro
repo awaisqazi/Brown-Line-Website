@@ -61,6 +61,27 @@ const BEEHIIV_FORM_ID = 'ca1b5de3-a598-4e22-82d6-6aa2c32dfae7';
     nameFrames(wrapper);
     new MutationObserver(() => nameFrames(wrapper)).observe(wrapper, { childList: true, subtree: true });
   });
+
+  // Signup conversion. After a successful subscribe the form iframe posts
+  // { type: 'beehiiv:submitted' } to this window (the V3 loader listens for
+  // the same message to set its own "subscribed" cookie). Count it once per
+  // page load, and leave a session flag so /welcome, if the form redirects
+  // there, does not count the same signup a second time.
+  const BEEHIIV_ORIGIN = 'https://subscribe-forms.beehiiv.com';
+  type Trackers = {
+    gtag?: (...args: unknown[]) => void;
+    fbq?: (...args: unknown[]) => void;
+  };
+  let signupCounted = false;
+  window.addEventListener('message', (event) => {
+    if (signupCounted || event.origin !== BEEHIIV_ORIGIN) return;
+    if (event.data?.type !== 'beehiiv:submitted') return;
+    signupCounted = true;
+    try { sessionStorage.setItem('blSignupTracked', String(Date.now())); } catch (_) {}
+    const w = window as unknown as Trackers;
+    try { if (typeof w.gtag === 'function') w.gtag('event', 'newsletter_signup', { label: location.pathname }); } catch (_) {}
+    try { if (typeof w.fbq === 'function') w.fbq('track', 'Lead'); } catch (_) {}
+  });
 </script>
 
 <style>

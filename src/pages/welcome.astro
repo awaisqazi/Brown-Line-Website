@@ -1,0 +1,117 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { INSTAGRAM_URL, TIKTOK_URL } from '../lib/seo';
+
+// Newsletter thank-you page. The Beehiiv form's redirect-after-subscribe
+// setting points here, so landing on it means a signup just went through.
+// It counts that signup for GA4 and the Meta pixel (when either is loaded),
+// unless the form's own message listener already counted it on the page the
+// visitor subscribed from. Kept out of search and the sitemap.
+const base = import.meta.env.BASE_URL;
+
+const description = 'You are on The Brown Line newsletter. The weekly dispatch is on its way.';
+---
+<Layout
+  title="You're on board · The Brown Line"
+  description={description}
+  noindex
+>
+  <section class="px-6 pt-16 md:pt-24 pb-20">
+    <div class="max-w-2xl mx-auto text-center">
+      <p class="font-body uppercase text-xs md:text-sm tracking-[0.3em] text-cayenneInk font-bold mb-6 inline-flex items-center gap-2">
+        <span class="inline-block w-1.5 h-1.5 rounded-full bg-cayenne" aria-hidden="true"></span>
+        Ticket punched
+      </p>
+      <h1 class="font-heading text-darkWalnut text-5xl md:text-7xl leading-[0.95] tracking-tight">
+        You&rsquo;re on <em class="not-italic text-cayenne">board</em>.
+      </h1>
+      <p class="font-body text-darkWalnut/80 text-lg md:text-xl mt-8 leading-relaxed">
+        Your seat on The Brown Line is saved. Once a week the dispatch pulls into your inbox with the
+        stops worth your time: diaspora events across Chicago, the stories behind them, and the people
+        making them happen.
+      </p>
+      <p class="font-body text-darkWalnut/75 text-sm md:text-base mt-4 leading-relaxed">
+        Your first one arrives with the next issue. If it doesn&rsquo;t show up, check Promotions or
+        spam and move us to your inbox so you never miss a stop.
+      </p>
+
+      <div class="mt-10 flex justify-center">
+        <a
+          href={`${base}events`}
+          data-ga-event="browse_click"
+          data-ga-label="welcome"
+          class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-mayaBlue px-5 md:px-6 py-3 font-body text-sm md:text-base font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:-translate-y-1 focus-visible:-translate-x-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cayenne"
+        >
+          Browse upcoming stops
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <div class="mt-14 border-t-2 border-darkWalnut/15 pt-10">
+        <h2 class="font-heading font-semibold text-darkWalnut text-2xl md:text-3xl leading-tight">
+          Follow the line.
+        </h2>
+        <p class="font-body text-darkWalnut/75 text-sm md:text-base mt-2">
+          Flyers, recaps, and last-minute stops between issues.
+        </p>
+        <div class="mt-5 flex flex-wrap justify-center gap-3">
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="social_click"
+            data-ga-label="welcome_instagram"
+            class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-babyPink px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5" />
+              <circle cx="12" cy="12" r="4" />
+              <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+            </svg>
+            Follow on Instagram
+          </a>
+          <a
+            href={TIKTOK_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ga-event="social_click"
+            data-ga-label="welcome_tiktok"
+            class="inline-flex items-center gap-2 border-2 border-darkWalnut bg-babyPink px-4 py-2 font-body text-xs font-bold uppercase tracking-widest text-darkWalnut transition-transform duration-150 hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+              <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" />
+            </svg>
+            Follow on TikTok
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  // Count the signup once per page load. If the subscribe form already
+  // counted it on the page the visitor came from (SubscribeForm.astro leaves
+  // a short-lived session flag), skip it so one signup is not counted twice.
+  type Trackers = {
+    gtag?: (...args: unknown[]) => void;
+    fbq?: (...args: unknown[]) => void;
+    __blWelcomeCounted?: boolean;
+  };
+  const w = window as unknown as Trackers;
+  const FLAG = 'blSignupTracked';
+  const FLAG_TTL_MS = 30 * 60 * 1000;
+
+  let alreadyCounted = false;
+  try {
+    const stamp = Number(sessionStorage.getItem(FLAG));
+    alreadyCounted = Number.isFinite(stamp) && stamp > 0 && Date.now() - stamp < FLAG_TTL_MS;
+    sessionStorage.removeItem(FLAG);
+  } catch (_) {}
+
+  if (!w.__blWelcomeCounted && !alreadyCounted) {
+    w.__blWelcomeCounted = true;
+    try { if (typeof w.gtag === 'function') w.gtag('event', 'newsletter_signup', { label: 'welcome' }); } catch (_) {}
+    try { if (typeof w.fbq === 'function') w.fbq('track', 'Lead'); } catch (_) {}
+  }
+</script>
