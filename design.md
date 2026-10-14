@@ -455,6 +455,7 @@ The site deploys through `.github/workflows/deploy.yml`.
 - `PUBLIC_BEEHIIV_URL` and `PUBLIC_TURNSTILE_SITE_KEY` are read from GitHub repository variables.
 - Supabase URL and publishable key are supplied at build time.
 - `PUBLIC_GA_MEASUREMENT_ID` (optional, one or more comma-separated ids) is read from a GitHub repo variable and passed through; when set, the GA4 script loads.
+- `PUBLIC_META_PIXEL_ID` (optional, the numeric Meta pixel id) is read from a GitHub repo variable the same way; when set, the Meta pixel loads.
 
 ### Structured Data (JSON-LD)
 Every schema is built at build time in `src/lib/seo.ts` and printed with `<script type="application/ld+json" set:html={stringifyJsonLd(...)}>`. `stringifyJsonLd` escapes `<`, so a stray `</script>` inside an event description or article body can never close the tag early. Empty values are left out rather than emitted blank.
@@ -481,6 +482,12 @@ Event schema notes:
 - **Custom events:** add `data-ga-event="<name>"` (and optional `data-ga-label`) to any element; a delegated click listener in `Layout.astro` fires `gtag('event', name, {label})`. A `change` listener does the same for `select[data-ga-event]` (events Category/Neighborhood filters, via `EventSelect.astro`). Scroll depth fires `scroll_depth` at 25/50/75/90%. Tagged so far: nav Support/Subscribe/Submit, homepage Browse/Submit/Support bands, events Submit + quick-filter chips + Category/Neighborhood, and each event card's Details/RSVP (`rsvp_click`, label = title) and Share (`share_click`). The submit form fires `submit_event_success` on a successful submission.
 - **Note:** the hero email capture is a Beehiiv iframe (cross-origin), so its submit can't be tracked directly; the nav **Subscribe** button click is tracked, and true subscribe conversions live in Beehiiv's own stats. "Most-viewed cards" is approximated by `rsvp_click` counts per event title.
 - To preview locally, set `PUBLIC_GA_MEASUREMENT_ID` in `.env` (commented example included); unset, no analytics or banner render.
+
+### Meta pixel
+For the Meta newsletter-ad campaign. `Layout.astro` loads the standard Meta pixel base code in `<head>`, next to the GA block, only when `PUBLIC_META_PIXEL_ID` is set; unset (the default), nothing from Meta ships. When set it fires `fbq('track', 'PageView')` on every page, and `/welcome` adds `fbq('track', 'Lead')` for a newsletter signup.
+- **Shares the GA consent gate:** `fbq('consent', 'revoke')` runs before `init` unless `localStorage.blAnalyticsConsent` is `'granted'`, and the banner's Accept calls `fbq('consent', 'grant')`, which releases the queued PageView. The banner renders when either GA or the pixel is configured. The `<noscript>` image fallback lives only inside the gated block.
+- **To turn it on:** set the `PUBLIC_META_PIXEL_ID` repo variable to the pixel id and push. The id comes from the campaign's marketing contact; there is no placeholder in the repo. Update the privacy page and banner copy first (they currently promise no advertising profiles).
+- To preview locally, uncomment `PUBLIC_META_PIXEL_ID` in `.env` with any digits.
 
 ### Data Freshness
 - `/events` is static. New rows do not appear until the next build.

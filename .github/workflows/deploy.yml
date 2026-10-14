@@ -49,6 +49,10 @@ jobs:
           # is set to the GA4 Measurement ID (G-XXXXXXXXXX). Leave it unset to ship
           # no tracker. Analytics uses Consent Mode v2 (denied until the visitor accepts).
           PUBLIC_GA_MEASUREMENT_ID: ${{ vars.PUBLIC_GA_MEASUREMENT_ID }}
+          # Meta pixel for the newsletter ad campaign. The pixel loads only when this
+          # repo variable is set to the numeric pixel id. Leave it unset to ship
+          # nothing from Meta. It shares the GA consent banner (revoked until Accept).
+          PUBLIC_META_PIXEL_ID: ${{ vars.PUBLIC_META_PIXEL_ID }}
 
   deploy:
     needs: build

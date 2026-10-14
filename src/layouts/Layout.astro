@@ -70,6 +70,18 @@ const gaMeasurementIds = String(import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? '')
   .filter((id) => /^G-[A-Z0-9]+$/i.test(id));
 const gaMeasurementId = gaMeasurementIds[0];
 
+// Meta pixel for the newsletter ad campaign. Loads only when PUBLIC_META_PIXEL_ID
+// (the numeric pixel id) is set, so by default nothing from Meta ships. It shares
+// the GA consent gate: consent is revoked before init unless the visitor already
+// accepted, and the banner's Accept grants it.
+const metaPixelId = /^\d+$/.test(String(import.meta.env.PUBLIC_META_PIXEL_ID ?? '').trim())
+  ? String(import.meta.env.PUBLIC_META_PIXEL_ID).trim()
+  : '';
+
+// The consent banner (and the delegated event tracking that rides with it)
+// renders whenever any tracker is configured.
+const hasConsentBanner = Boolean(gaMeasurementId || metaPixelId);
+
 // Search keywords: the page's own first, then the site-wide set, deduped.
 const metaKeywords = Array.from(new Set([...keywords, ...BRAND_KEYWORDS])).join(', ');
 
@@ -159,10 +171,33 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
       </Fragment>
     )}
 
+    {metaPixelId && (
+      <Fragment>
+        {/* Meta pixel base code. Consent is revoked before init unless the
+            visitor already accepted, so nothing is sent until they do; the
+            banner's Accept calls fbq('consent', 'grant'). */}
+        <script is:inline define:vars={{ metaPixelId }}>
+          !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+          n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+          n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+          t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+          document,'script','https://connect.facebook.net/en_US/fbevents.js');
+          var consented = false;
+          try { consented = localStorage.getItem('blAnalyticsConsent') === 'granted'; } catch (_) {}
+          if (!consented) fbq('consent', 'revoke');
+          fbq('init', metaPixelId);
+          fbq('track', 'PageView');
+        </script>
+        <noscript>
+          <img height="1" width="1" style="display:none" alt="" src={`https://www.facebook.com/tr?id=${metaPixelId}&ev=PageView&noscript=1`} />
+        </noscript>
+      </Fragment>
+    )}
+
     {/* Newsletter subscribe-source attribution. When the consent banner is in
         play it loads only after Accept, so the banner's promise holds; with no
         banner configured there is no promise to keep and it loads directly. */}
-    <script is:inline define:vars={{ hasConsentBanner: Boolean(gaMeasurementId) }}>
+    <script is:inline define:vars={{ hasConsentBanner }}>
       (function () {
         function loadAttribution() {
           if (window.__blAttributionLoaded) return;
@@ -192,7 +227,7 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
     {!minimal && <Footer />}
     {!minimal && <SupportPopup />}
 
-    {gaMeasurementId && (
+    {hasConsentBanner && (
       <Fragment>
       <div
         id="bl-consent"
@@ -224,6 +259,7 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
             if (choice === 'granted' && window.gtag) {
               window.gtag('consent', 'update', { analytics_storage: 'granted' });
             }
+            if (choice === 'granted' && window.fbq) window.fbq('consent', 'grant');
             if (choice === 'granted' && window.blLoadAttribution) window.blLoadAttribution();
             if (banner) banner.classList.add('hidden');
           }
