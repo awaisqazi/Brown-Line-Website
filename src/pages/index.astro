@@ -3,8 +3,8 @@ import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import EventCard from '../components/EventCard.astro';
 import TransitDivider from '../components/TransitDivider.astro';
-import { supabase } from '../lib/supabase';
-import { addDays, formatMonthDay, formatStopDate, getChicagoDateString, SERIES_LOOKBACK_DAYS } from '../lib/dates';
+import { formatStopDate } from '../lib/dates';
+import { getUpcomingStops } from '../lib/upcoming';
 import { buildEventPath } from '../lib/seo';
 import { displayImageUrl } from '../lib/images';
 import { buildArticlePath, getSortedArticles } from '../lib/articles';
@@ -39,91 +39,15 @@ const testimonialAccent: Record<string, string> = {
 // colorful line on the full events board (src/pages/events.astro).
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 
-const todayDateString = getChicagoDateString();
 // The rail shows the next stops in date order, curated or not, so the homepage
-// always reflects what is actually coming up soonest. Rows that belong to one
-// run (same title and venue, one row per day, which is how the admin stores a
-// date range) collapse into a single stop with a date range, mirroring the
-// events board, and at most HOMEPAGE_SERIES_LIMIT runs ride the rail at once.
-// Conductor's Picks still lead within a same-day tie.
-const { data: railRows, error: upcomingEventsError } = await supabase
-  .from('events')
-  .select('*')
-  .gte('event_date', addDays(todayDateString, -SERIES_LOOKBACK_DAYS))
-  .order('event_date', { ascending: true })
-  .order('is_curated', { ascending: false, nullsFirst: false })
-  .order('title', { ascending: true })
-  .returns<TransitEvent[]>();
-
-if (upcomingEventsError) {
-  throw new Error(`Failed to load homepage events: ${upcomingEventsError.message}`);
-}
-
-interface UpcomingStop {
-  /** The row for the run's next date, the one the card renders. */
-  event: TransitEvent;
-  /** "Sep 27 – Nov 29" for a run; '' for a single date. */
-  recurrenceLabel: string;
-  /** More than one row shares this title and venue. */
-  isSeries: boolean;
-  /** First date on or after today. */
-  nextDate: string;
-  /** The run's final date. */
-  lastDate: string;
-}
-
-const seriesMap = new Map<string, TransitEvent[]>();
-for (const row of railRows ?? []) {
-  const key = `${row.title}||${row.venue}`;
-  const bucket = seriesMap.get(key);
-  if (bucket) bucket.push(row);
-  else seriesMap.set(key, [row]);
-}
-
-const candidateStops: UpcomingStop[] = [];
-for (const rows of seriesMap.values()) {
-  const dates = rows.map((row) => row.event_date).filter(Boolean).sort();
-  const nextDate = dates.find((date) => date >= todayDateString);
-  // The whole run has departed.
-  if (!nextDate) continue;
-  const first = dates[0];
-  const last = dates[dates.length - 1];
-  candidateStops.push({
-    event: rows.find((row) => row.event_date === nextDate) ?? rows[0],
-    recurrenceLabel: first !== last ? `${formatMonthDay(first)} – ${formatMonthDay(last)}` : '',
-    isSeries: rows.length > 1,
-    nextDate,
-    lastDate: last,
-  });
-}
-
-// Date order first; within a day, Conductor's Picks, then single stops ahead
-// of runs, then title.
-const byDeparture = (a: UpcomingStop, b: UpcomingStop) =>
-  a.nextDate.localeCompare(b.nextDate) ||
-  Number(Boolean(b.event.is_curated)) - Number(Boolean(a.event.is_curated)) ||
-  Number(a.isSeries) - Number(b.isSeries) ||
-  a.event.title.localeCompare(b.event.title);
-
-const singleStops = candidateStops.filter((stop) => !stop.isSeries).sort(byDeparture);
-// Runs are seated by how soon they wrap up: a festival's closing week is news,
-// a two-month exhibit will still be there next week.
-const seriesStops = candidateStops
-  .filter((stop) => stop.isSeries)
-  .sort((a, b) => a.lastDate.localeCompare(b.lastDate) || byDeparture(a, b));
-
-// Seat the runs first (capped), then singles, then let leftover runs fill any
-// seats singles could not, so the rail is as full as the calendar allows.
-const seatedSeries = seriesStops.slice(0, HOMEPAGE_SERIES_LIMIT);
-const seatedSingles = singleStops.slice(0, HOMEPAGE_EVENTS_LIMIT - seatedSeries.length);
-const spareSeats = HOMEPAGE_EVENTS_LIMIT - seatedSeries.length - seatedSingles.length;
-const upcomingStops = [
-  ...seatedSingles,
-  ...seatedSeries,
-  ...seriesStops.slice(seatedSeries.length, seatedSeries.length + spareSeats),
-]
-  .sort(byDeparture)
-  .slice(0, HOMEPAGE_EVENTS_LIMIT);
+// always reflects what is actually coming up soonest. The selection (runs
+// collapsed to one stop with a date range, at most HOMEPAGE_SERIES_LIMIT runs,
+// Conductor's Picks leading a same-day tie) lives in src/lib/upcoming.ts and is
+// shared with the links page.
+const upcomingStops = await getUpcomingStops({
+  limit: HOMEPAGE_EVENTS_LIMIT,
+  seriesLimit: HOMEPAGE_SERIES_LIMIT,
+});
 const upcomingEvents = upcomingStops.map((stop) => stop.event);
 
 // No-flyer slides fall back to a brand-color panel keyed off the first tag,

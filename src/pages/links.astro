@@ -3,11 +3,34 @@ import Layout from '../layouts/Layout.astro';
 import SubscribeForm from '../components/SubscribeForm.astro';
 import TransitDivider from '../components/TransitDivider.astro';
 import { getRecentIssues } from '../lib/issues';
+import { getUpcomingStops } from '../lib/upcoming';
+import { formatStopDate } from '../lib/dates';
+import { buildEventPath } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
 
 const issues = await getRecentIssues();
 const latestIssueHref = issues[0]?.href ?? `${base}newsletter`;
+
+// The next three stops, chosen exactly the way the homepage rail chooses its
+// five (runs collapsed, at most one long run), so the bio page never
+// disagrees with the site.
+const LINKS_EVENTS_LIMIT = 3;
+const upcomingStops = await getUpcomingStops({ limit: LINKS_EVENTS_LIMIT, seriesLimit: 1 });
+const boardEvents = upcomingStops.map(({ event, recurrenceLabel }) => ({
+  href: buildEventPath(event, base),
+  title: event.title,
+  venue: event.venue,
+  dateLabel: recurrenceLabel || formatStopDate(event.event_date),
+  isCurated: Boolean(event.is_curated),
+}));
+
+// The three latest issues. Issues with an on-site page link there; older
+// platform-only issues keep their off-site link.
+const recentIssues = issues.slice(0, 3).map((issue) => ({
+  ...issue,
+  external: /^https?:\/\//.test(issue.href),
+}));
 
 const stops = [
   {
@@ -109,6 +132,69 @@ const stops = [
           </ul>
         </nav>
       </section>
+
+      {boardEvents.length > 0 && (
+        <section class="mt-10 md:mt-14" aria-labelledby="board-eyebrow">
+          <p id="board-eyebrow" class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-darkWalnut/70 font-bold mb-3 md:mb-4">
+            Upcoming stops
+          </p>
+          <ul class="flex flex-col gap-3">
+            {boardEvents.map((event, index) => (
+              <li>
+                <a
+                  href={event.href}
+                  data-ga-event="rsvp_click"
+                  data-ga-label={`links: ${event.title}`}
+                  class="link-card group"
+                >
+                  <span class:list={['link-card-date', ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon'][index % 3]]}>
+                    {event.dateLabel}
+                  </span>
+                  <span class="min-w-0 flex-1">
+                    <span class="link-card-title">
+                      {event.isCurated && <span class="link-card-pick" aria-label="Conductor's pick">★</span>}
+                      {event.title}
+                    </span>
+                    <span class="link-card-meta">{event.venue}</span>
+                  </span>
+                  <span class="link-card-arrow" aria-hidden="true">→</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a href={`${base}events`} class="link-more" data-ga-event="browse_click" data-ga-label="links_board">
+            See every stop <span aria-hidden="true">→</span>
+          </a>
+        </section>
+      )}
+
+      {recentIssues.length > 0 && (
+        <section class="mt-10 md:mt-14" aria-labelledby="dispatches-eyebrow">
+          <p id="dispatches-eyebrow" class="font-body uppercase text-[10px] md:text-xs tracking-[0.3em] text-darkWalnut/70 font-bold mb-3 md:mb-4">
+            Recent dispatches
+          </p>
+          <ul class="flex flex-col gap-3">
+            {recentIssues.map((issue) => (
+              <li>
+                <a
+                  href={issue.href}
+                  {...(issue.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                  class="link-card group"
+                >
+                  <span class="min-w-0 flex-1">
+                    <span class="link-card-kicker">{issue.date}</span>
+                    <span class="link-card-title">{issue.title}</span>
+                  </span>
+                  <span class="link-card-arrow" aria-hidden="true">{issue.external ? '↗' : '→'}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <a href={`${base}newsletter`} class="link-more" data-ga-event="browse_click" data-ga-label="links_dispatches">
+            All dispatches <span aria-hidden="true">→</span>
+          </a>
+        </section>
+      )}
 
       {/* Tagline closer pushed to bottom */}
       <footer class="mt-auto pt-12">
@@ -246,7 +332,107 @@ const stops = [
     transform: translateX(3px);
   }
 
+  /* Compact cards for the upcoming stops and recent dispatches: the site's
+     bordered card at bio-page scale, one retro shadow step on hover. */
+  .link-card {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    border: 2px solid #642713;
+    background: #FDFBF7;
+    padding: 0.75rem 0.9rem;
+    color: #642713;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+  .link-card:hover,
+  .link-card:focus-visible {
+    transform: translate(-2px, -2px);
+    box-shadow: 4px 4px 0 #642713;
+    outline: none;
+  }
+  .link-card-date {
+    flex-shrink: 0;
+    border: 2px solid #642713;
+    padding: 0.3rem 0.5rem;
+    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
+    white-space: nowrap;
+    color: #642713;
+  }
+  .link-card-kicker {
+    display: block;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(100, 39, 19, 0.7);
+    margin-bottom: 0.2rem;
+  }
+  .link-card-title {
+    display: block;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .link-card-pick {
+    color: #B8420A;
+    margin-right: 0.3rem;
+  }
+  .link-card-meta {
+    display: block;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    color: rgba(100, 39, 19, 0.75);
+    margin-top: 0.2rem;
+  }
+  .link-card-arrow {
+    flex-shrink: 0;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 1.125rem;
+    opacity: 0.55;
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+  .link-card:hover .link-card-arrow,
+  .link-card:focus-visible .link-card-arrow {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+  .link-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.9rem;
+    font-family: 'Montserrat', system-ui, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #642713;
+    text-decoration: underline;
+    text-decoration-color: #5BC3FF;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .link-more:hover,
+  .link-more:focus-visible {
+    color: #B8420A;
+    text-decoration-color: #F35A0F;
+    outline: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .link-card,
+    .link-card-arrow {
+      transition: none !important;
+    }
     .link-stop-item,
     .link-stops::before,
     .link-stop,
