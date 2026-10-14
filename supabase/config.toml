@@ -14,3 +14,8 @@ verify_jwt = false
 
 [functions.trigger-deploy]
 verify_jwt = false
+
+# Beehiiv calls this on post.sent; the gate is the Svix signature on each
+# delivery (BEEHIIV_WEBHOOK_SECRET), not a Supabase session.
+[functions.beehiiv-webhook]
+verify_jwt = false
