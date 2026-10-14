@@ -1,0 +1,141 @@
+---
+import SubscribeForm from './SubscribeForm.astro';
+import { GATED_CLASS } from '../lib/gate';
+
+interface Props {
+  /** The rest of the issue body (already rendered), hidden until unlock. */
+  remainder: string;
+}
+
+const { remainder } = Astro.props;
+---
+
+{/* Subscribe-to-unlock panel between the preview and the rest of the issue.
+    The remainder ships in the HTML with `hidden`, so search engines read the
+    whole issue and the reveal is a pure client-side toggle. Without
+    JavaScript the preview and this panel are what a visitor gets. */}
+<aside
+  class="issue-gate relative mt-10 border-2 border-darkWalnut bg-[#FDFBF7] px-5 pb-8 pt-10 text-center shadow-retro md:px-10 md:pb-10 md:pt-12"
+  aria-labelledby="issue-gate-title"
+  data-issue-gate
+>
+  <div class="transit-divider absolute left-0 top-0" aria-hidden="true"></div>
+  <p class="font-body text-xs font-bold uppercase tracking-[0.3em] text-cayenneInk">
+    Keep reading
+  </p>
+  <h2
+    id="issue-gate-title"
+    class="mx-auto mt-3 max-w-lg font-heading font-semibold text-darkWalnut text-2xl leading-tight tracking-tight text-balance md:text-[2rem]"
+  >
+    Subscribe to ride the rest of this stop.
+  </h2>
+  <p class="mx-auto mt-4 max-w-md font-body text-base leading-relaxed text-darkWalnut/85">
+    One stop a week, free. Your email unlocks this issue and every one after it.
+  </p>
+  <div class="mt-6 flex justify-center">
+    <SubscribeForm caption="Free. Unsubscribe anytime." />
+  </div>
+  <p class="mx-auto mt-6 max-w-md font-body text-sm leading-relaxed text-darkWalnut/70">
+    Already on board? Open this issue from any newsletter email and it unlocks.
+  </p>
+</aside>
+
+<div class:list={['article-prose mt-6 font-body text-darkWalnut', GATED_CLASS]} hidden data-issue-gated set:html={remainder} />
+
+<script is:inline>
+  // Unlock rules (design.md § 5 Newsletter issue gate). Inline and right after
+  // the markup, so a returning subscriber never sees the panel flash. Every
+  // storage, URL, and analytics call is guarded: any failure leaves the gate.
+  (function () {
+    var gate = document.querySelector('[data-issue-gate]');
+    var rest = document.querySelector('[data-issue-gated]');
+    var preview = document.querySelector('[data-issue-preview]');
+    if (!gate || !rest) return;
+
+    var KEY = 'blSubscriber';
+    var NEWSLETTER_HOSTS = ['newsletter.thebrownlinechi.com', 'mail.beehiiv.com'];
+    var unlocked = false;
+
+    function track(name, label) {
+      try { if (typeof window.gtag === 'function') window.gtag('event', name, { label: label }); } catch (e) {}
+    }
+    function remember() {
+      try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {}
+    }
+    function isSubscriber() {
+      try { return !!localStorage.getItem(KEY); } catch (e) { return false; }
+    }
+    function fromEmailLink() {
+      try {
+        var params = new URLSearchParams(location.search);
+        return (params.get('utm_medium') || '').toLowerCase() === 'email' ||
+          (params.get('utm_source') || '').toLowerCase() === 'beehiiv';
+      } catch (e) { return false; }
+    }
+    function fromNewsletter() {
+      try {
+        return !!document.referrer && NEWSLETTER_HOSTS.indexOf(new URL(document.referrer).hostname) !== -1;
+      } catch (e) { return false; }
+    }
+
+    function unlock(how, moveFocus) {
+      if (unlocked) return;
+      unlocked = true;
+      rest.hidden = false;
+      gate.hidden = true;
+      gate.setAttribute('inert', '');
+      if (preview) preview.classList.remove('is-gated');
+      track('issue_unlocked', how);
+      // Only after a signup on this page: focus jumps to where reading resumes.
+      // A load-time unlock leaves focus (and scroll) alone.
+      if (moveFocus) {
+        var first = rest.firstElementChild;
+        if (first) {
+          first.setAttribute('tabindex', '-1');
+          try { first.focus(); } catch (e) {}
+        }
+      }
+    }
+
+    if (isSubscriber()) {
+      unlock('subscriber', false);
+    } else if (fromEmailLink()) {
+      remember();
+      unlock('email_link', false);
+    } else if (fromNewsletter()) {
+      remember();
+      unlock('newsletter_referrer', false);
+    } else {
+      track('issue_gate_shown', location.pathname);
+    }
+
+    // SubscribeForm.astro checks the Beehiiv message origin, stores the
+    // subscriber key, and re-announces a signup as this event.
+    window.addEventListener('bl:subscribed', function () {
+      remember();
+      unlock('signup', true);
+    });
+  })();
+</script>
+
+<style is:global>
+  /* Soft fade over the last preview lines while the rest is locked. */
+  .article-prose.is-gated {
+    position: relative;
+  }
+
+  .article-prose.is-gated::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 7rem;
+    background: linear-gradient(to bottom, rgba(250, 241, 236, 0), #FAF1EC 90%);
+    pointer-events: none;
+  }
+
+  .article-gated > :first-child:focus {
+    outline: none;
+  }
+</style>

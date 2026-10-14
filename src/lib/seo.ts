@@ -485,6 +485,12 @@ export interface ArticleJsonLdOptions {
   logoUrl: string;
   section?: string;
   keywords?: string[];
+  /**
+   * CSS selector of the subscriber-only part of the body, set only when the
+   * issue is gated. Marks the article as not free and names that part, the
+   * way Google asks paywalled pages to (so the hidden text is not cloaking).
+   */
+  gatedSelector?: string;
 }
 
 /**
@@ -502,6 +508,7 @@ export function buildArticleJsonLd(options: ArticleJsonLdOptions): JsonLd {
     logoUrl,
     section,
     keywords = [],
+    gatedSelector,
   } = options;
 
   const publisher = {
@@ -527,5 +534,15 @@ export function buildArticleJsonLd(options: ArticleJsonLdOptions): JsonLd {
     inLanguage: 'en-US',
     ...(section ? { articleSection: section } : {}),
     ...(keywords.length > 0 ? { keywords: keywords.join(', ') } : {}),
+    ...(gatedSelector
+      ? {
+          isAccessibleForFree: false,
+          hasPart: {
+            '@type': 'WebPageElement',
+            isAccessibleForFree: false,
+            cssSelector: gatedSelector,
+          },
+        }
+      : {}),
   };
 }

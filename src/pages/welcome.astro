@@ -109,6 +109,11 @@ const description = 'You are on The Brown Line newsletter. The weekly dispatch i
     sessionStorage.removeItem(FLAG);
   } catch (_) {}
 
+  // The form redirects here after a subscribe, sometimes before the article
+  // page hears the iframe's message, so mark the subscriber here too. Newsletter
+  // issue pages read this key to skip the subscribe gate.
+  try { localStorage.setItem('blSubscriber', new Date().toISOString()); } catch (_) {}
+
   if (!w.__blWelcomeCounted && !alreadyCounted) {
     w.__blWelcomeCounted = true;
     try { if (typeof w.gtag === 'function') w.gtag('event', 'newsletter_signup', { label: 'welcome' }); } catch (_) {}

@@ -58,6 +58,9 @@ jobs:
           # marks them public. Unset (the default), each post's own audience
           # setting on Beehiiv is the only rule (src/lib/archive.ts).
           NEWSLETTER_PUBLIC_FROM: ${{ vars.NEWSLETTER_PUBLIC_FROM }}
+          # Subscribe-to-unlock preview on newsletter issue pages
+          # (src/lib/gate.ts). On unless this repo variable is "off".
+          PUBLIC_NEWSLETTER_GATE: ${{ vars.PUBLIC_NEWSLETTER_GATE }}
           # Beehiiv v2 API, the preferred source for newsletter issues at build
           # time (src/lib/beehiiv-api.ts). The key is a repo secret, the
           # publication id a repo variable. With either unset the build reads
