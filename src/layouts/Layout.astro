@@ -57,10 +57,18 @@ const siteJsonLd = buildSiteJsonLd({
   logoUrl: new URL(faviconUrl, baseUrl).toString(),
 });
 
-// Google Analytics 4. Loads only when PUBLIC_GA_MEASUREMENT_ID (a "G-XXXXXXXXXX"
-// id) is set, so the site never ships a non-collecting tracker. Uses Consent
-// Mode v2 defaulting to denied; the consent banner below upgrades to granted.
-const gaMeasurementId = import.meta.env.PUBLIC_GA_MEASUREMENT_ID;
+// Google Analytics 4. Loads only when PUBLIC_GA_MEASUREMENT_ID (one or more
+// "G-XXXXXXXXXX" ids, comma-separated) is set, so the site never ships a
+// non-collecting tracker. One gtag.js load serves every id: the first id is the
+// script's query id and every id gets its own config call, so the same hits
+// reach each property (the site's original property and the team's own one).
+// Uses Consent Mode v2 defaulting to denied; the consent banner below upgrades
+// to granted.
+const gaMeasurementIds = String(import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter((id) => /^G-[A-Z0-9]+$/i.test(id));
+const gaMeasurementId = gaMeasurementIds[0];
 
 // Search keywords: the page's own first, then the site-wide set, deduped.
 const metaKeywords = Array.from(new Set([...keywords, ...BRAND_KEYWORDS])).join(', ');
@@ -126,7 +134,7 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
       <Fragment>
         {/* Google Analytics 4 with Consent Mode v2. Analytics storage defaults to
             denied (no cookies) until the visitor accepts via the banner below. */}
-        <script is:inline define:vars={{ gaMeasurementId }}>
+        <script is:inline define:vars={{ gaMeasurementIds }}>
           window.dataLayer = window.dataLayer || [];
           function gtag(){ dataLayer.push(arguments); }
           window.gtag = gtag;
@@ -143,7 +151,9 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
             }
           } catch (_) {}
           gtag('js', new Date());
-          gtag('config', gaMeasurementId, { anonymize_ip: true });
+          gaMeasurementIds.forEach(function (id) {
+            gtag('config', id, { anonymize_ip: true });
+          });
         </script>
         <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}></script>
       </Fragment>
