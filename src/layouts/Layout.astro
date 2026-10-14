@@ -70,6 +70,25 @@ const gaMeasurementIds = String(import.meta.env.PUBLIC_GA_MEASUREMENT_ID ?? '')
   .map((id) => id.trim())
   .filter((id) => /^G-[A-Z0-9]+$/i.test(id));
 const gaMeasurementId = gaMeasurementIds[0];
+// The inline tag is rendered as literal text (not define:vars) so each id appears
+// in the HTML exactly as Google's "Test your website" detector expects:
+// gtag.js loaded with the first id, then a plain gtag('config', 'G-...') line
+// per id. The ids are regex-validated above, so nothing unsafe reaches the page.
+const gaInlineTag = [
+  'window.dataLayer = window.dataLayer || [];',
+  'function gtag(){ dataLayer.push(arguments); }',
+  'window.gtag = gtag;',
+  'var optedOut = false;',
+  "try { optedOut = localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) {}",
+  "gtag('consent', 'default', {",
+  "  ad_storage: 'denied',",
+  "  ad_user_data: 'denied',",
+  "  ad_personalization: 'denied',",
+  "  analytics_storage: optedOut ? 'denied' : 'granted',",
+  '});',
+  "gtag('js', new Date());",
+  ...gaMeasurementIds.map((id) => `gtag('config', '${id}', { anonymize_ip: true });`),
+].join('\n');
 
 // Meta pixel for the newsletter ad campaign. Loads only when PUBLIC_META_PIXEL_ID
 // (the numeric pixel id) is set, so by default nothing from Meta ships. It honors
@@ -148,24 +167,8 @@ const googleSiteVerification = import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION;
         {/* Google Analytics 4 with Consent Mode v2. Analytics storage is granted
             by default and denied only for a visitor who opted out on /privacy.
             Ad storage stays denied: GA is used for measurement, not ads. */}
-        <script is:inline define:vars={{ gaMeasurementIds }}>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){ dataLayer.push(arguments); }
-          window.gtag = gtag;
-          var optedOut = false;
-          try { optedOut = localStorage.getItem('blAnalyticsConsent') === 'denied'; } catch (_) {}
-          gtag('consent', 'default', {
-            ad_storage: 'denied',
-            ad_user_data: 'denied',
-            ad_personalization: 'denied',
-            analytics_storage: optedOut ? 'denied' : 'granted',
-          });
-          gtag('js', new Date());
-          gaMeasurementIds.forEach(function (id) {
-            gtag('config', id, { anonymize_ip: true });
-          });
-        </script>
         <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}></script>
+        <script is:inline set:html={gaInlineTag} />
       </Fragment>
     )}
 
