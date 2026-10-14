@@ -1,10 +1,10 @@
 /**
  * The dispatch list: every issue of the newsletter, newest first, with the
  * link each card should carry. Issues that exist on the site (hand-migrated
- * rows or feed-rendered pages, see articles.ts) link to their page here. The
- * rest, which is every issue from before the public-archive cutoff plus any
- * premium issue the feed cannot render (see archive.ts), link off-site to the
- * platform, where the subscriber wall applies.
+ * rows or platform-rendered pages, see articles.ts) link to their page here.
+ * The rest, which is every premium or gated issue (and, with a date floor
+ * set, every older one; see archive.ts), link off-site to the newsletter
+ * site, where Beehiiv checks the reader's login and tier.
  */
 import { offSiteIssueUrl } from './archive';
 import { MIGRATED_ISSUES, PLATFORM_ORIGIN } from './beehiiv';

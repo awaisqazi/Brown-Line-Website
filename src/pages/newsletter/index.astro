@@ -7,11 +7,14 @@ import { getRecentIssues } from '../../lib/issues';
 import { formatArchiveCutoff } from '../../lib/archive';
 
 const issues = await getRecentIssues();
-// Issues from before the public-archive cutoff (and any premium issue) live on
-// the newsletter platform behind its subscriber wall and open there; the
+// Premium and gated issues (and, with a date floor set, older ones) live on
+// the newsletter site behind Beehiiv's subscriber wall and open there; the
 // caption below explains the arrow. See src/lib/archive.ts for the rule.
 const offSiteCount = issues.filter((issue) => /^https?:\/\//.test(issue.href)).length;
 const archiveCutoff = formatArchiveCutoff();
+const offSiteCaption = archiveCutoff
+  ? `Every issue, newest first. Issues from before ${archiveCutoff}, and subscriber-only issues, open on our newsletter site in a new tab.`
+  : 'Every issue, newest first. Subscriber-only issues open on our newsletter site in a new tab.';
 
 const description =
   'Read The Brown Line newsletter: weekly dispatches on Chicago Global South diaspora events, arts, culture, community, and media. Subscribe free and ride along.';
@@ -49,8 +52,7 @@ const description =
         </h2>
         {offSiteCount > 0 && (
           <p class="font-body text-darkWalnut/70 text-sm mt-3">
-            Every issue, newest first. Issues from before {archiveCutoff} are in the subscriber
-            archive and open in a new tab.
+            {offSiteCaption}
           </p>
         )}
       </div>

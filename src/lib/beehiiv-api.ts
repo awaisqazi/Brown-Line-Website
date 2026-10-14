@@ -43,6 +43,8 @@ interface ApiPost {
   content_tags?: string[];
   meta_default_description?: string;
   hidden_from_feed?: boolean;
+  /** True when Beehiiv requires a login to read the post on the web. */
+  enforce_gated_content?: boolean;
   content?: {
     free?: { web?: string; email?: string; rss?: string };
     premium?: { web?: string; email?: string };
@@ -153,7 +155,7 @@ async function fetchPage(
  * One API post as a feed item, or null when the post should not be listed:
  * not sent yet (a scheduled issue is "confirmed" before it goes out), email
  * only (no web page to link), hidden from the feed on purpose, or missing a
- * slug or title.
+ * slug or title. Premium and gated posts are listed but paywalled (no body).
  */
 function toFeedItem(post: ApiPost): FeedItem | null {
   if (post.status !== 'confirmed') return null;
@@ -168,12 +170,16 @@ function toFeedItem(post: ApiPost): FeedItem | null {
   const link = safeUrl(post.web_url ?? '');
   if (!slug || !title || !link) return null;
 
-  const contentHtml = post.audience === 'premium' ? '' : (post.content?.free?.rss || post.content?.free?.web || '');
-  // The RSS rendering of a premium post is the same placeholder the feed
-  // carries, so the feed's class check still applies on top of the audience.
+  // Beehiiv's own access rule decides what the site may print: a premium
+  // (paid-tier) post or one that is gated behind a login never has its body
+  // written into the static site, whatever the API hands back. Those issues
+  // keep the off-site link, where Beehiiv checks the reader's tier. The RSS
+  // rendering of a premium post is the same placeholder the feed carries, so
+  // the feed's class check applies on top as a last guard.
+  const subscribersOnly = post.audience === 'premium' || post.enforce_gated_content === true;
+  const contentHtml = subscribersOnly ? '' : (post.content?.free?.rss || post.content?.free?.web || '');
   const isPaywalled =
-    post.audience === 'premium' ||
-    /\bclass=['"](?:[^'"]*\s)?paywall(?:\s[^'"]*)?['"]/.test(contentHtml);
+    subscribersOnly || /\bclass=['"](?:[^'"]*\s)?paywall(?:\s[^'"]*)?['"]/.test(contentHtml);
 
   return {
     slug,

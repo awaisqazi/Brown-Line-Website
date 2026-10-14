@@ -5,12 +5,13 @@
  *    build time. These are the hand-migrated issues with their own hero art,
  *    tags, and summary.
  * 2. The newsletter platform (see newsletter.ts: the Beehiiv API when the
- *    build has a key, the RSS feed otherwise). Every public issue it lists
- *    that has no row of its own, and that was published on or after the
- *    archive cutoff (see archive.ts), is rendered on site from the platform's
- *    HTML, so a new issue lands at /newsletter/<slug> on the next build with
- *    no repo or admin work. Issues before the cutoff stay off-site by rule,
- *    and premium (paywalled) issues have no body to render anyway.
+ *    build has a key, the RSS feed otherwise). Every issue it lists that
+ *    Beehiiv makes public (free audience, not gated) and that has no row of
+ *    its own is rendered on site from the platform's HTML, so a new issue
+ *    lands at /newsletter/<slug> on the next build with no repo or admin
+ *    work. Premium and gated issues arrive paywalled (no body) and stay
+ *    off-site, where Beehiiv enforces the reader's tier. An optional date
+ *    floor (archive.ts, off by default) can keep older issues off-site too.
  *
  * src/pages/newsletter/[slug].astro turns each article into a page. Everything
  * is loaded once per build and cached, the same way ticker.ts caches its query,
@@ -209,12 +210,12 @@ async function loadSiteArticles(): Promise<Article[]> {
 }
 
 /**
- * Public feed issues from the public-archive era that have no hand-migrated
- * row become articles of their own, rendered from the feed's HTML. An issue
- * counts as covered (and is skipped here) when a site article exists under its
- * feed slug or under the slug MIGRATED_ISSUES maps it to. Issues older than
- * PUBLIC_ARCHIVE_FROM are never rendered from the feed, whatever their
- * audience on the platform; the admin can still migrate one by hand.
+ * Public platform issues that have no hand-migrated row become articles of
+ * their own, rendered from the platform's HTML. An issue counts as covered
+ * (and is skipped here) when a site article exists under its feed slug or
+ * under the slug MIGRATED_ISSUES maps it to. Paywalled issues (premium or
+ * gated on Beehiiv) are never rendered; the admin can still migrate one by
+ * hand. With a date floor set, older issues are skipped as well.
  */
 async function loadFeedArticles(siteArticles: Article[]): Promise<Article[]> {
   const items = await getNewsletterItems();

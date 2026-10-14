@@ -53,10 +53,10 @@ jobs:
           # repo variable is set to the numeric pixel id. Leave it unset to ship
           # nothing from Meta. It shares the GA consent banner (revoked until Accept).
           PUBLIC_META_PIXEL_ID: ${{ vars.PUBLIC_META_PIXEL_ID }}
-          # First day of the public newsletter archive (YYYY-MM-DD). Issues from
-          # this date on get an on-site page; earlier ones link to the platform's
-          # subscriber archive. Unset, the build uses the default in
-          # src/lib/archive.ts (2026-01-01).
+          # Optional date floor for on-site newsletter pages (YYYY-MM-DD): issues
+          # published before it link to the newsletter site even when Beehiiv
+          # marks them public. Unset (the default), each post's own audience
+          # setting on Beehiiv is the only rule (src/lib/archive.ts).
           NEWSLETTER_PUBLIC_FROM: ${{ vars.NEWSLETTER_PUBLIC_FROM }}
           # Beehiiv v2 API, the preferred source for newsletter issues at build
           # time (src/lib/beehiiv-api.ts). The key is a repo secret, the
