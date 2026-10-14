@@ -54,16 +54,25 @@ const { remainder } = Astro.props;
 
     var KEY = 'blSubscriber';
     var NEWSLETTER_HOSTS = ['newsletter.thebrownlinechi.com', 'mail.beehiiv.com'];
+    // Beehiiv's V3 loader sets bhv_<publicationId>_subscribed on this domain for
+    // 365 days after a signup through the embed, and hides the form for that
+    // visitor afterwards (so the panel's form would render empty for them).
+    var BEEHIIV_COOKIE = /(^|; )bhv_[^=;]*_subscribed=/;
     var unlocked = false;
 
     function track(name, label) {
       try { if (typeof window.gtag === 'function') window.gtag('event', name, { label: label }); } catch (e) {}
     }
-    function remember() {
-      try { localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {}
-    }
     function isSubscriber() {
       try { return !!localStorage.getItem(KEY); } catch (e) { return false; }
+    }
+    // Every unlock is remembered, so the browser is never asked again even if
+    // the Beehiiv cookie is cleared later. An existing date is kept.
+    function remember() {
+      try { if (!localStorage.getItem(KEY)) localStorage.setItem(KEY, new Date().toISOString()); } catch (e) {}
+    }
+    function hasBeehiivCookie() {
+      try { return BEEHIIV_COOKIE.test(document.cookie); } catch (e) { return false; }
     }
     function fromEmailLink() {
       try {
@@ -81,6 +90,7 @@ const { remainder } = Astro.props;
     function unlock(how, moveFocus) {
       if (unlocked) return;
       unlocked = true;
+      remember();
       rest.hidden = false;
       gate.hidden = true;
       gate.setAttribute('inert', '');
@@ -99,11 +109,11 @@ const { remainder } = Astro.props;
 
     if (isSubscriber()) {
       unlock('subscriber', false);
+    } else if (hasBeehiivCookie()) {
+      unlock('beehiiv_cookie', false);
     } else if (fromEmailLink()) {
-      remember();
       unlock('email_link', false);
     } else if (fromNewsletter()) {
-      remember();
       unlock('newsletter_referrer', false);
     } else {
       track('issue_gate_shown', location.pathname);
@@ -112,7 +122,6 @@ const { remainder } = Astro.props;
     // SubscribeForm.astro checks the Beehiiv message origin, stores the
     // subscriber key, and re-announces a signup as this event.
     window.addEventListener('bl:subscribed', function () {
-      remember();
       unlock('signup', true);
     });
   })();
