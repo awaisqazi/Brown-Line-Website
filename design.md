@@ -214,7 +214,7 @@ The articles portal, moved unchanged into `src/components/admin/NewsletterPanel.
 ## 6. Layout & Integration
 - **Spacing:** Generous padding (e.g., `py-24`). Content should be constrained to readable max-widths (e.g., `max-w-3xl` for text, `max-w-5xl` for grids, `max-w-md` for the Link-in-Bio page).
 - **Beehiiv Subscribe Form:** `SubscribeForm.astro` embeds the Beehiiv V3 form (its loader injects an iframe) inside the site's own frame and accepts `caption` and `class` props. The `<noscript>` fallback is a `mailto:` to the publication's own address, not a link to the newsletter platform's domain. It also listens for the iframe's `beehiiv:submitted` message to count signups (§ 11 Analytics).
-- **Newsletter feed:** the Beehiiv RSS feed is read once per build by `src/lib/beehiiv.ts`. `issues.ts` turns it into the dispatch list; `articles.ts` renders every public issue that has no hand-migrated row as an on-site page from the feed's HTML (sanitized through `sanitize-html`). Premium issues arrive as a paywall placeholder and keep their off-site link. Nothing on the site links to the platform's `thebrownline.co` domain except those premium issues.
+- **Newsletter feed:** the Beehiiv RSS feed is read once per build by `src/lib/beehiiv.ts`. `issues.ts` turns it into the dispatch list; `articles.ts` renders every public issue that has no hand-migrated row as an on-site page from the feed's HTML (sanitized through `sanitize-html`). Premium issues arrive as a paywall placeholder and keep an off-site link, built on the platform's permanent address `thebrownline.beehiiv.com/p/<slug>` (it forwards, path kept, to whatever custom domain Beehiiv serves), so a domain move never strands them. In-body links to any host the newsletter has used (`thebrownline.co`, `newsletter.thebrownlinechi.com`, `thebrownline.beehiiv.com`) are rerouted to the on-site page. `/p/<slug>` exists here too: noindexed meta-refresh stubs (one per feed issue and on-site article, kept out of the sitemap) that forward to `/newsletter/<slug>`, or to the platform copy for a premium issue, so a platform-style link that lands on this domain still reaches the issue (§ 11 Newsletter hosting).
 - **Supabase Events:** Public events and ticker events come from Supabase at build time through `src/lib/supabase.ts`. The site is static, so data changes require a rebuild.
 - **GitHub Pages Base Path:** `astro.config.mjs` switches `base` to `/Brown-Line-Website/` only when `PUBLIC_SITE_URL` includes `github.io`; otherwise base is `/`.
 - **Scheduled Rebuilds:** GitHub Actions rebuilds every 4 hours (`0 */4 * * *`) so new Supabase event imports show up without a code push.
@@ -461,6 +461,13 @@ The site deploys through `.github/workflows/deploy.yml`.
 - `PUBLIC_GA_MEASUREMENT_ID` (optional, one or more comma-separated ids) is read from a GitHub repo variable and passed through; when set, the GA4 script loads.
 - `PUBLIC_META_PIXEL_ID` (optional, the numeric Meta pixel id) is read from a GitHub repo variable the same way; when set, the Meta pixel loads.
 
+### Newsletter hosting and domains (2026-10-14)
+One home: everything lives on `thebrownlinechi.com`. The static site is the apex (GitHub Pages). Beehiiv's hosted newsletter site is moving from `www.thebrownline.co` to `newsletter.thebrownlinechi.com` (DNS `CNAME newsletter -> cname.beehiiv.com` in Squarespace), and `thebrownline.co` becomes redirects only (Namecheap URL Redirect records: `www` to `https://newsletter.thebrownlinechi.com/`, `@` to `https://thebrownlinechi.com/`). The Beehiiv side of the move needs a publication admin; status, records, and rollback are in `PRIVATE_README.md`.
+- **Links in code:** never hard-code a Beehiiv custom domain. Use `PLATFORM_ORIGIN` (`https://thebrownline.beehiiv.com`) from `src/lib/beehiiv.ts`, which forwards to the live custom domain with the path. `PLATFORM_HOST_PATTERN` lists every host the newsletter has used so in-body links reroute on site.
+- **`/p/<slug>` stubs** (`src/pages/p/[slug].astro`): built from the same sources as `/newsletter`; the sitemap filter in `astro.config.mjs` drops them.
+- **Tracking on the Beehiiv site:** Website > Settings > Tracking pixels carries the team GA4 id, so the newsletter subdomain reports into the same property as the main site. Beehiiv shows its own cookie banner there, and its GA tag only loads after a visitor clicks Accept. Emails tag links with `utm_source=beehiiv&utm_medium=email&utm_campaign=<post slug>` (Beehiiv Settings > Publication > General info > UTM Analytics; campaign left blank so Beehiiv fills in each post's slug). Note the same source and medium also apply to links in Beehiiv web posts.
+- **Subscribe form:** the embed form redirects to `https://thebrownlinechi.com/welcome` after a signup, with "Remove emails from the redirect URL" on so no address ever reaches a URL (or GA4's `page_location`).
+
 ### Structured Data (JSON-LD)
 Every schema is built at build time in `src/lib/seo.ts` and printed with `<script type="application/ld+json" set:html={stringifyJsonLd(...)}>`. `stringifyJsonLd` escapes `<`, so a stray `</script>` inside an event description or article body can never close the tag early. Empty values are left out rather than emitted blank.
 
@@ -512,6 +519,11 @@ Future project work should keep the docs fresh as part of the work itself.
 - Skip doc edits only when the action has no meaningful documentation impact.
 
 ## 12. Changelog
+
+- **2026-10-14 (Newsletter domain consolidation, in progress):** Moving Beehiiv's hosted site from `www.thebrownline.co` to `newsletter.thebrownlinechi.com` so the brand has one domain (§ 11 Newsletter hosting).
+  - **Site code (commit `f7c1a5b`):** in-body links from every old newsletter host reroute on site; premium issues and the fallback dispatch list link through `thebrownline.beehiiv.com`, which follows whichever domain Beehiiv serves; new noindexed `/p/<slug>` redirect stubs, kept out of the sitemap. Safe to deploy before or after the Beehiiv switch.
+  - **Beehiiv (done from a non-admin login):** GA4 id on the hosted site's Tracking pixels; email UTM source `beehiiv`, medium `email`; subscribe form now redirects to `/welcome` with emails stripped from the URL.
+  - **Waiting:** the custom-domain switch inside Beehiiv needs the publication admin (the flow answers 403 for other roles), and the Squarespace DNS edit asked for an SMS code. The Namecheap redirects for `thebrownline.co` come only after the Beehiiv switch is live.
 
 - **2026-10-14 (Meta ad campaign prep):** Groundwork for the newsletter-ad campaign M Harris and Kern is running on Meta, plus a homepage tweak from the editorial team.
   - **GA4 to two properties** (commit `695ae1e`, earlier the same day): `PUBLIC_GA_MEASUREMENT_ID` takes a comma-separated list. One `gtag.js` load, one `config` call per id, same consent gate. Production sends to the site's original property and the one the team created for the campaign cohort (§ 11 Analytics).
