@@ -4,12 +4,13 @@
  * 1. Rows in public.articles, written from the admin command center (/admin#newsletter) and read here at
  *    build time. These are the hand-migrated issues with their own hero art,
  *    tags, and summary.
- * 2. The newsletter's RSS feed (see beehiiv.ts). Every public issue in the feed
+ * 2. The newsletter platform (see newsletter.ts: the Beehiiv API when the
+ *    build has a key, the RSS feed otherwise). Every public issue it lists
  *    that has no row of its own, and that was published on or after the
- *    archive cutoff (see archive.ts), is rendered on site from the feed's
+ *    archive cutoff (see archive.ts), is rendered on site from the platform's
  *    HTML, so a new issue lands at /newsletter/<slug> on the next build with
  *    no repo or admin work. Issues before the cutoff stay off-site by rule,
- *    and premium (paywalled) issues cannot be rendered from the feed anyway.
+ *    and premium (paywalled) issues have no body to render anyway.
  *
  * src/pages/newsletter/[slug].astro turns each article into a page. Everything
  * is loaded once per build and cached, the same way ticker.ts caches its query,
@@ -17,7 +18,8 @@
  */
 import { isInPublicArchive } from './archive';
 import { FALLBACK_ARTICLES } from './articles-fallback';
-import { getFeedItems, MIGRATED_ISSUES, sanitizeFeedHtml } from './beehiiv';
+import { MIGRATED_ISSUES, sanitizeFeedHtml } from './beehiiv';
+import { getNewsletterItems } from './newsletter';
 import { sanitizeAuthoredHtml } from './sanitize';
 
 export interface Article {
@@ -215,7 +217,7 @@ async function loadSiteArticles(): Promise<Article[]> {
  * audience on the platform; the admin can still migrate one by hand.
  */
 async function loadFeedArticles(siteArticles: Article[]): Promise<Article[]> {
-  const items = await getFeedItems();
+  const items = await getNewsletterItems();
   if (items.length === 0) return [];
 
   const base = import.meta.env.BASE_URL;

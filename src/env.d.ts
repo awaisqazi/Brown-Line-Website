@@ -8,6 +8,12 @@ interface ImportMetaEnv {
   readonly PUBLIC_GOOGLE_SITE_VERIFICATION?: string;
   /** First day of the public newsletter archive, YYYY-MM-DD. See src/lib/archive.ts. */
   readonly NEWSLETTER_PUBLIC_FROM?: string;
+  /** Beehiiv v2 API key (posts read). Set with BEEHIIV_PUBLICATION_ID to prefer the API over RSS. */
+  readonly BEEHIIV_API_KEY?: string;
+  /** Beehiiv publication id (pub_...). */
+  readonly BEEHIIV_PUBLICATION_ID?: string;
+  /** Test hook: base URL of a stand-in for api.beehiiv.com. Leave unset. */
+  readonly BEEHIIV_API_ORIGIN?: string;
 }
 
 interface ImportMeta {

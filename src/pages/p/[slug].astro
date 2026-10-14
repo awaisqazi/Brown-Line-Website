@@ -3,14 +3,17 @@
 // newsletter.thebrownlinechi.com/p/<slug>) sometimes land on this site with
 // the platform's path intact. Each feed issue gets a stub here that forwards
 // to its page under /newsletter, or, for a premium issue with no page here,
-// to the platform's copy. Same sources as /newsletter: the feed plus the
-// on-site articles. Noindexed and kept out of the sitemap.
+// to the platform's copy. Same sources as /newsletter: the platform's post
+// list (API or feed) plus the on-site articles. Noindexed and kept out of the
+// sitemap.
+import { offSiteIssueUrl } from '../../lib/archive';
 import { getSortedArticles, buildArticlePath } from '../../lib/articles';
-import { getFeedItems, MIGRATED_ISSUES, PLATFORM_ORIGIN } from '../../lib/beehiiv';
+import { MIGRATED_ISSUES } from '../../lib/beehiiv';
+import { getNewsletterItems } from '../../lib/newsletter';
 
 export async function getStaticPaths() {
   const base = import.meta.env.BASE_URL;
-  const [items, articles] = await Promise.all([getFeedItems(), getSortedArticles()]);
+  const [items, articles] = await Promise.all([getNewsletterItems(), getSortedArticles()]);
   const articleBySlug = new Map(articles.map((article) => [article.slug, article]));
   const targets = new Map<string, { target: string; title: string }>();
 
@@ -26,7 +29,7 @@ export async function getStaticPaths() {
 
   for (const item of items) {
     if (targets.has(item.slug)) continue;
-    targets.set(item.slug, { target: `${PLATFORM_ORIGIN}/p/${item.slug}`, title: item.title });
+    targets.set(item.slug, { target: offSiteIssueUrl(item.slug, item.link), title: item.title });
   }
 
   return Array.from(targets, ([slug, props]) => ({ params: { slug }, props }));

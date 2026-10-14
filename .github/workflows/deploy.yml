@@ -58,6 +58,12 @@ jobs:
           # subscriber archive. Unset, the build uses the default in
           # src/lib/archive.ts (2026-01-01).
           NEWSLETTER_PUBLIC_FROM: ${{ vars.NEWSLETTER_PUBLIC_FROM }}
+          # Beehiiv v2 API, the preferred source for newsletter issues at build
+          # time (src/lib/beehiiv-api.ts). The key is a repo secret, the
+          # publication id a repo variable. With either unset the build reads
+          # the RSS feed instead, exactly as a local build without them does.
+          BEEHIIV_API_KEY: ${{ secrets.BEEHIIV_API_KEY }}
+          BEEHIIV_PUBLICATION_ID: ${{ vars.BEEHIIV_PUBLICATION_ID }}
 
   deploy:
     needs: build

@@ -7,8 +7,9 @@
  * platform, where the subscriber wall applies.
  */
 import { offSiteIssueUrl } from './archive';
-import { getFeedItems, MIGRATED_ISSUES, PLATFORM_ORIGIN } from './beehiiv';
+import { MIGRATED_ISSUES, PLATFORM_ORIGIN } from './beehiiv';
 import { buildArticlePath, getSortedArticles } from './articles';
+import { getNewsletterItems } from './newsletter';
 
 export interface Issue {
   category: string;
@@ -78,7 +79,7 @@ export function getRecentIssues(): Promise<Issue[]> {
 
 async function buildIssues(): Promise<Issue[]> {
   const base = import.meta.env.BASE_URL;
-  const [items, articles] = await Promise.all([getFeedItems(), getSortedArticles()]);
+  const [items, articles] = await Promise.all([getNewsletterItems(), getSortedArticles()]);
 
   const articleBySlug = new Map(articles.map((article) => [article.slug, article]));
   const covered = new Set<string>();
@@ -112,7 +113,7 @@ async function buildIssues(): Promise<Issue[]> {
   }
 
   if (items.length === 0) {
-    console.warn('Newsletter feed unavailable; listing the bundled issues alongside on-site articles.');
+    console.warn('Newsletter platform unavailable; listing the bundled issues alongside on-site articles.');
     issues.push(...fallbackIssues);
   }
 
