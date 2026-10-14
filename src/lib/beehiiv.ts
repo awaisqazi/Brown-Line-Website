@@ -126,8 +126,20 @@ function safeUrl(value: string): string {
 // Content cleanup
 // ---------------------------------------------------------------------------
 
-/** The domain the platform hosts the newsletter on. Links there get rerouted. */
-const PLATFORM_HOST_PATTERN = /^https?:\/\/(?:www\.)?thebrownline\.co(?=[/?#]|$)/i;
+/**
+ * The publication's permanent address on the platform. It always forwards to
+ * whatever custom domain the platform currently serves (path included), so
+ * links built on it survive a domain move.
+ */
+export const PLATFORM_ORIGIN = 'https://thebrownline.beehiiv.com';
+
+/**
+ * Every host the platform has served the newsletter from. Links to any of
+ * them get rerouted: newsletter.thebrownlinechi.com (current), the retired
+ * thebrownline.co (bare or www), and the free beehiiv address.
+ */
+const PLATFORM_HOST_PATTERN =
+  /^https?:\/\/(?:(?:www\.)?thebrownline\.co|newsletter\.thebrownlinechi\.com|thebrownline\.beehiiv\.com)(?=[/?#:]|$)/i;
 
 export interface SanitizeOptions {
   /** `BASE_URL`, so rerouted links keep working under a subpath build. */
@@ -223,8 +235,10 @@ function stripTracking(href: string): string {
 
 /**
  * Links into the platform's own domain are pointed back at this site: a post
- * that has a page here goes to that page, and anything else (the home page,
- * subscribe and upgrade links) goes to the newsletter stop.
+ * that has a page here goes to that page, a post that does not (premium) goes
+ * to the platform's permanent address so a retired host never strands it, and
+ * anything else (the home page, subscribe and upgrade links) goes to the
+ * newsletter stop.
  */
 function rerouteHref(href: string, base: string, onSiteSlugs: Map<string, string>): string {
   if (!PLATFORM_HOST_PATTERN.test(href)) return href;
@@ -233,7 +247,7 @@ function rerouteHref(href: string, base: string, onSiteSlugs: Map<string, string
   const local = slug ? onSiteSlugs.get(slug) : undefined;
   const hash = href.match(/#.*$/)?.[0] ?? '';
   if (local) return `${base}newsletter/${local}${hash}`;
-  if (slug) return href;
+  if (slug) return `${PLATFORM_ORIGIN}/p/${slug}${hash}`;
 
   return `${base}newsletter`;
 }

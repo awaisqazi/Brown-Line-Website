@@ -4,7 +4,7 @@
  * rows or feed-rendered pages, see articles.ts) link to their page here;
  * premium issues the feed cannot render keep their off-site link.
  */
-import { getFeedItems, MIGRATED_ISSUES } from './beehiiv';
+import { getFeedItems, MIGRATED_ISSUES, PLATFORM_ORIGIN } from './beehiiv';
 import { buildArticlePath, getSortedArticles } from './articles';
 
 export interface Issue {
@@ -22,41 +22,43 @@ const DEFAULT_CATEGORY = 'Culture';
 /**
  * The issues that predate the feed's public run, all premium on the platform.
  * Only used when the feed itself cannot be fetched, so the list is never empty.
+ * Links use the platform's permanent address, which forwards to whatever
+ * domain the newsletter is hosted on at the time.
  */
 const fallbackIssues: Omit<Issue, 'accent'>[] = [
   {
     category: 'Culture',
     date: 'Sep 4, 2025',
     title: '💃🏾Chicago Latinos dance in defiance of 🧊deportation',
-    href: 'https://www.thebrownline.co/p/chicago-latinos-dance-in-defiance-of-deportation',
+    href: `${PLATFORM_ORIGIN}/p/chicago-latinos-dance-in-defiance-of-deportation`,
     publishedAt: Date.parse('2025-09-04T12:00:00-05:00'),
   },
   {
     category: 'Global South',
     date: 'Aug 25, 2025',
     title: '🌆 Last stops, late summer vibes, & all that jazz before Labor Day',
-    href: 'https://www.thebrownline.co/p/last-stops-late-summer-vibes-all-that-jazz-before-labor-day',
+    href: `${PLATFORM_ORIGIN}/p/last-stops-late-summer-vibes-all-that-jazz-before-labor-day`,
     publishedAt: Date.parse('2025-08-25T12:00:00-05:00'),
   },
   {
     category: 'Culture',
     date: 'Aug 19, 2025',
     title: 'This train runs on solidarity 🚉🤎✊🏾',
-    href: 'https://www.thebrownline.co/p/this-train-runs-on-solidarity',
+    href: `${PLATFORM_ORIGIN}/p/this-train-runs-on-solidarity`,
     publishedAt: Date.parse('2025-08-19T12:00:00-05:00'),
   },
   {
     category: 'Culture',
     date: 'Aug 10, 2025',
     title: 'Issue #2: Back in service! 🚆',
-    href: 'https://www.thebrownline.co/p/issue-2-back-in-service-527769c8d207ab1d',
+    href: `${PLATFORM_ORIGIN}/p/issue-2-back-in-service-527769c8d207ab1d`,
     publishedAt: Date.parse('2025-08-10T12:00:00-05:00'),
   },
   {
     category: 'Global South',
     date: 'Jul 29, 2025',
     title: 'Welcome aboard The Brown Line 🚉',
-    href: 'https://www.thebrownline.co/p/welcome-aboard-the-brown-line-35bfa6886556f128',
+    href: `${PLATFORM_ORIGIN}/p/welcome-aboard-the-brown-line-35bfa6886556f128`,
     publishedAt: Date.parse('2025-07-29T12:00:00-05:00'),
   },
 ];
@@ -87,7 +89,7 @@ async function buildIssues(): Promise<Issue[]> {
       category: article?.category ?? item.categories[0] ?? DEFAULT_CATEGORY,
       date: formatIssueDate(item.publishedAt),
       title: item.title,
-      href: article ? buildArticlePath(article.slug, base) : item.link,
+      href: article ? buildArticlePath(article.slug, base) : platformLink(item.slug, item.link),
       publishedAt: item.publishedAt,
     });
   }
@@ -117,6 +119,15 @@ async function buildIssues(): Promise<Issue[]> {
       ...issue,
       accent: index % 2 === 0 ? 'cayenne' : 'amber',
     }));
+}
+
+/**
+ * Off-site link for an issue with no page here. The feed's own link names
+ * whichever host the platform used when the feed was read; the permanent
+ * address keeps working through a domain move.
+ */
+function platformLink(slug: string, link: string) {
+  return slug ? `${PLATFORM_ORIGIN}/p/${slug}` : link;
 }
 
 function formatIssueDate(publishedAt: number) {

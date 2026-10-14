@@ -18,9 +18,11 @@ export default defineConfig({
       // and braces so they never show up in the sitemap either. /standards is
       // a redirect stub to an /about anchor, so it stays out too. /support is
       // a real page again (Keep the Line Running) and belongs in the sitemap.
-      // /welcome is the noindexed newsletter thank-you page.
+      // /welcome is the noindexed newsletter thank-you page. /p/<slug> pages
+      // are redirect stubs for old newsletter-platform links.
       filter: (page) =>
         !page.includes('/admin/') &&
+        !/\/p\/[^/]+\/?$/.test(page) &&
         !page.includes('/link-unavailable') &&
         !/\/standards\/?$/.test(page) &&
         !/\/welcome\/?$/.test(page),

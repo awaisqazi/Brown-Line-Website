@@ -1,0 +1,51 @@
+---
+// Old newsletter links (thebrownline.co/p/<slug>, now
+// newsletter.thebrownlinechi.com/p/<slug>) sometimes land on this site with
+// the platform's path intact. Each feed issue gets a stub here that forwards
+// to its page under /newsletter, or, for a premium issue with no page here,
+// to the platform's copy. Same sources as /newsletter: the feed plus the
+// on-site articles. Noindexed and kept out of the sitemap.
+import { getSortedArticles, buildArticlePath } from '../../lib/articles';
+import { getFeedItems, MIGRATED_ISSUES, PLATFORM_ORIGIN } from '../../lib/beehiiv';
+
+export async function getStaticPaths() {
+  const base = import.meta.env.BASE_URL;
+  const [items, articles] = await Promise.all([getFeedItems(), getSortedArticles()]);
+  const articleBySlug = new Map(articles.map((article) => [article.slug, article]));
+  const targets = new Map<string, { target: string; title: string }>();
+
+  for (const article of articles) {
+    targets.set(article.slug, { target: buildArticlePath(article.slug, base), title: article.title });
+  }
+
+  // Hand-migrated issues keep working even when the feed is down at build time.
+  for (const [feedSlug, articleSlug] of Object.entries(MIGRATED_ISSUES)) {
+    const article = articleBySlug.get(articleSlug);
+    if (article) targets.set(feedSlug, { target: buildArticlePath(article.slug, base), title: article.title });
+  }
+
+  for (const item of items) {
+    if (targets.has(item.slug)) continue;
+    targets.set(item.slug, { target: `${PLATFORM_ORIGIN}/p/${item.slug}`, title: item.title });
+  }
+
+  return Array.from(targets, ([slug, props]) => ({ params: { slug }, props }));
+}
+
+const { target, title } = Astro.props;
+const canonical = new URL(target, Astro.site).toString();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <link rel="canonical" href={canonical} />
+    <title>{title} · The Brown Line</title>
+  </head>
+  <body>
+    <p>This issue has moved. <a href={target}>Continue to {title}</a>.</p>
+  </body>
+</html>
