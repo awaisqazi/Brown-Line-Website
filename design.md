@@ -566,6 +566,7 @@ Future project work should keep the docs fresh as part of the work itself.
 
 ## 12. Changelog
 
+- **2026-10-28 (Meta pixel live):** `PUBLIC_META_PIXEL_ID` is set in production (id in `PRIVATE_README.md`), so the pixel built on 2026-10-14 now fires PageView on every page and Lead on newsletter signups, under the same opt-out as GA. The same id is set in Beehiiv's Tracking pixels for the newsletter subdomain. No code change.
 - **2026-10-14 (links page: stops and dispatches):** the link-in-bio page now carries the next three upcoming stops and the three latest dispatches below its link list, as compact bordered cards in the site's palette. The homepage's next-stops selection moved out of `index.astro` into a shared `src/lib/upcoming.ts` (`getUpcomingStops({ limit, seriesLimit })`, events query cached per build) so both pages pick from one rule; the homepage output is unchanged (five stops, at most two runs). Cards carry `rsvp_click` / `browse_click` GA labels prefixed `links`.
 - **2026-10-14 (Search Console):** `thebrownlinechi.com` and `thebrownline.co` verified as Domain properties by DNS TXT (Squarespace and Cloudflare), sitemap submitted (Success, 361 URLs), indexing requested for the home, events and newsletter pages, and a Change of address from `thebrownline.co` to `thebrownlinechi.com` started. Beehiiv offers no per-post canonical; the site-wide noindex toggle stays off. Bing Webmaster Tools still to do. Details in § 11 Search Console.
 
