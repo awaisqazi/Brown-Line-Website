@@ -6,8 +6,9 @@ import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
 import { fetchAllRows, supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
-import { addDays, formatMonthDay, formatStopDate, SERIES_LOOKBACK_DAYS } from '../lib/dates';
-import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, buildStopAnchor, stringifyJsonLd } from '../lib/seo';
+import { addDays, formatStopDate, SERIES_LOOKBACK_DAYS } from '../lib/dates';
+import { groupBoardStops, type BoardStop } from '../lib/board';
+import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
 const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
@@ -44,38 +45,12 @@ function getTodayChicago() {
   return `${byType.year}-${byType.month}-${byType.day}`;
 }
 
-// Collapse identical recurring / multi-day events (same title + venue) into a
-// single card with a date range, so a 25-day summer camp doesn't flood the board.
-interface EventGroup {
-  rep: TransitEvent;
-  start: string;
-  end: string;
-  recurrenceLabel: string;
-  sortDate: string;
-}
+// Rows that share a title and venue are one run. src/lib/board.ts turns them
+// into cards: a short run gets a card on each remaining date, a long run one
+// card with its date range (the same helper gives each stop page its anchor).
+const eventGroups: BoardStop[] = groupBoardStops(rows, today);
 
-const seriesMap = new Map<string, TransitEvent[]>();
-for (const event of rows) {
-  const key = `${event.title}||${event.venue}`;
-  const bucket = seriesMap.get(key);
-  if (bucket) bucket.push(event);
-  else seriesMap.set(key, [event]);
-}
-
-const eventGroups: EventGroup[] = Array.from(seriesMap.values()).flatMap((group) => {
-  const dates = group.map((r) => r.event_date).filter(Boolean).sort();
-  // The card sits on the run's first still-relevant date; a run whose every
-  // date has passed is not on the board at all.
-  const sortDate = dates.find((d) => d >= today);
-  if (!sortDate) return [];
-  const start = dates[0];
-  const end = dates[dates.length - 1];
-  const rep = group.find((r) => r.event_date === sortDate) ?? group[0];
-  const recurrenceLabel = start !== end ? `${formatMonthDay(start)} – ${formatMonthDay(end)}` : '';
-  return [{ rep, start, end, recurrenceLabel, sortDate }];
-});
-
-const groupedByDate = eventGroups.reduce<Record<string, EventGroup[]>>((groups, group) => {
+const groupedByDate = eventGroups.reduce<Record<string, BoardStop[]>>((groups, group) => {
   (groups[group.sortDate] ??= []).push(group);
   return groups;
 }, {});
@@ -361,9 +336,9 @@ function foldAccents(value: string) {
               </div>
 
               <ol class="events-route relative space-y-6">
-                {dayGroups.map(({ rep, start, end, recurrenceLabel }, index) => (
+                {dayGroups.map(({ rep, start, end, recurrenceLabel, anchor }, index) => (
                   <li
-                    id={buildStopAnchor(rep)}
+                    id={anchor}
                     data-event-card
                     data-event-date={rep.event_date}
                     data-event-start={start}

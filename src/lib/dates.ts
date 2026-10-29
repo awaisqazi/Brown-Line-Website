@@ -13,6 +13,14 @@ export const PAST_EVENT_WINDOW_DAYS = 60;
  */
 export const SERIES_LOOKBACK_DAYS = 120;
 
+/**
+ * A run (same title and venue, one row per day) with this many dates or fewer
+ * inside the lookback window is shown on the events board as one card per
+ * date; a longer run collapses to one card with a date range. The admin uses
+ * the same number to say which the editor just produced.
+ */
+export const SHORT_RUN_MAX_DATES = 6;
+
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
   'Jan',

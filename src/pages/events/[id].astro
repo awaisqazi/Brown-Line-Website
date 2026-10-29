@@ -10,14 +10,15 @@ import {
   formatTimeRange,
   getChicagoDateString,
   PAST_EVENT_WINDOW_DAYS,
+  SERIES_LOOKBACK_DAYS,
 } from '../../lib/dates';
+import { boardAnchorsById } from '../../lib/board';
 import {
   BRAND_NAME,
   buildBreadcrumbJsonLd,
   buildEventJsonLd,
   buildEventMetaDescription,
   buildEventSlug,
-  buildStopAnchor,
   stringifyJsonLd,
 } from '../../lib/seo';
 import { displayImageUrl, durableImageUrl } from '../../lib/images';
@@ -33,29 +34,37 @@ import { displayImageUrl, durableImageUrl } from '../../lib/images';
 export async function getStaticPaths() {
   const today = getChicagoDateString();
 
+  // The board's own lookback, so each row's run is grouped exactly as the
+  // board groups it and the "Back to the board" link lands on its card.
   const rows = await fetchAllRows<TransitEvent>('events for detail pages', (from, to) =>
     supabase
       .from('events')
       .select('*', { count: 'exact' })
-      .gte('event_date', addDays(today, -PAST_EVENT_WINDOW_DAYS))
+      .gte('event_date', addDays(today, -SERIES_LOOKBACK_DAYS))
       .order('event_date', { ascending: true })
       .order('title', { ascending: true })
       .order('id', { ascending: true })
       .range(from, to)
       .returns<TransitEvent[]>()
   );
+  const anchors = boardAnchorsById(rows, today);
+  const pageFloor = addDays(today, -PAST_EVENT_WINDOW_DAYS);
 
-  return rows.map((event) => ({
-    params: { id: buildEventSlug(event) },
-    props: { event },
-  }));
+  return rows
+    .filter((event) => event.event_date >= pageFloor)
+    .map((event) => ({
+      params: { id: buildEventSlug(event) },
+      props: { event, boardAnchor: anchors.get(event.id) ?? '' },
+    }));
 }
 
 interface Props {
   event: TransitEvent;
+  /** The board card that shows this row, or '' when the board has none for it. */
+  boardAnchor: string;
 }
 
-const { event } = Astro.props;
+const { event, boardAnchor } = Astro.props;
 
 const base = import.meta.env.BASE_URL;
 const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
@@ -73,11 +82,10 @@ const pageDescription = buildEventMetaDescription(event);
 const dateLabel = formatStopDate(event.event_date);
 const timeLabel = formatTimeRange(event.start_time, event.end_time);
 
-// Back to this stop's card on the board. Every day of a run shares one card
-// there, so the anchor is the run's, not this row's. A departed stop has no
+// Back to this stop's card on the board: its own card for a short run, the
+// run's one card for a long run (src/lib/board.ts). A departed stop has no
 // card any more, so its page links to the board itself.
-const boardAnchorHref =
-  event.event_date >= getChicagoDateString() ? `${base}events#${buildStopAnchor(event)}` : `${base}events`;
+const boardAnchorHref = boardAnchor ? `${base}events#${boardAnchor}` : `${base}events`;
 
 const eventJsonLd = buildEventJsonLd(event, {
   url: canonicalUrl,

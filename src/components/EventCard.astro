@@ -34,6 +34,12 @@ interface Props {
    * description, and the conductor's note.
    */
   variant?: 'preview' | 'full';
+  /**
+   * Preview cards expand their clamped description on a tap. The homepage
+   * rail turns this off: its carousel fixes each slot's height, so a card
+   * that grew would be clipped and throw the stepping off.
+   */
+  expandable?: boolean;
 }
 
 const {
@@ -43,6 +49,7 @@ const {
   linkTitle = true,
   headingLevel = 'h3',
   variant = 'preview',
+  expandable = true,
 } = Astro.props;
 
 // Defensive spelling normalization for text that comes straight from the DB.
@@ -490,7 +497,11 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
     </div>
   </article>
 ) : (
-  <article id={anchorId} class:list={['event-card group relative flex flex-col border-[3px] border-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro sm:flex-row', cardSurfaceClass]}>
+  <article
+    id={anchorId}
+    data-card-expandable={expandable && previewDescription ? '' : undefined}
+    class:list={['event-card group relative flex flex-col border-[3px] border-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro sm:flex-row', cardSurfaceClass]}
+  >
     {/* Media panel: the flyer is the hero, bleeding to the card edges. With no
         flyer it becomes a brand-color panel with the emoji as a sticker stamp. */}
     <div
@@ -590,10 +601,43 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
         )}
       </div>
 
-      {previewDescription && (
+      {previewDescription && !expandable && (
         <p class="mt-2.5 line-clamp-2 font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm">
           {previewDescription}
         </p>
+      )}
+      {previewDescription && expandable && (
+        <>
+          {/* Two clamped lines by default. A tap anywhere on the card that is
+              not a link, a button, or a menu swaps in the whole description
+              with its paragraphs; the title still opens the stop's own page.
+              The More button appears only where the clamp hides something
+              (measured on the client). Display is toggled inline because the
+              clamp and button utilities set their own display and would win
+              over the hidden attribute. */}
+          <p data-card-desc-short class="mt-2.5 line-clamp-2 font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm">
+            {previewDescription}
+          </p>
+          <div id={`${anchorId}-desc`} data-card-desc-full style="display: none" class="mt-2.5 space-y-2">
+            {splitParagraphs(description ?? '').map((paragraph) => (
+              <p class="font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm break-words whitespace-pre-line">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+          <button
+            type="button"
+            style="display: none"
+            data-card-desc-toggle
+            data-ga-label={title}
+            aria-expanded="false"
+            aria-controls={`${anchorId}-desc`}
+            aria-label={`More about ${title}`}
+            class="mt-1.5 font-card text-[11px] font-bold uppercase tracking-[0.12em] text-cayenneInk underline decoration-2 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
+          >
+            More
+          </button>
+        </>
       )}
 
       <div class="mt-4 flex flex-wrap items-center justify-between gap-x-2 gap-y-2 pt-1 sm:mt-auto">
@@ -794,6 +838,105 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
 
     setRibbonSpeeds();
     window.addEventListener('load', setRibbonSpeeds, { once: true });
+  }
+
+  // Expandable description on the preview card. The clamp hides most of a
+  // description, so a tap anywhere on the card that is not a link, a button,
+  // or a menu swaps in the full text (and back). The More button appears only
+  // where the clamp actually hides something: each clamped paragraph is
+  // measured whenever its size changes, which also covers a card that a
+  // filter reveals later, fonts arriving, and the viewport changing.
+  if (!(window as any).__brownLineExpandWired) {
+    (window as any).__brownLineExpandWired = true;
+
+    const INTERACTIVE = 'a, button, details, summary, input, select, textarea, label';
+    const OPEN_MENUS =
+      'details[data-calendar-menu][open], [data-calendar-popover]:not([hidden]), [data-themed-popover]:not([hidden])';
+
+    const parts = (card: HTMLElement) => ({
+      short: card.querySelector('[data-card-desc-short]') as HTMLElement | null,
+      full: card.querySelector('[data-card-desc-full]') as HTMLElement | null,
+      toggle: card.querySelector('[data-card-desc-toggle]') as HTMLButtonElement | null,
+    });
+
+    const isExpanded = (card: HTMLElement) => card.dataset.expanded === 'true';
+
+    const setExpanded = (card: HTMLElement, expanded: boolean) => {
+      const { short, full, toggle } = parts(card);
+      if (!short || !full) return;
+      short.style.display = expanded ? 'none' : '';
+      full.style.display = expanded ? '' : 'none';
+      card.dataset.expanded = expanded ? 'true' : 'false';
+      if (toggle) {
+        toggle.textContent = expanded ? 'Less' : 'More';
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        const label = toggle.dataset.gaLabel ?? '';
+        toggle.setAttribute('aria-label', `${expanded ? 'Less' : 'More'} about ${label}`);
+        const gtag = (window as any).gtag;
+        if (expanded && typeof gtag === 'function') gtag('event', 'description_expand', { label });
+      }
+    };
+
+    // Show the More button, and make the card read as tappable, only when the
+    // clamp hides text or the full version has more than one paragraph. A
+    // card with no layout box (hidden by a filter) keeps its last state.
+    const measureCard = (card: HTMLElement) => {
+      if (isExpanded(card)) return;
+      const { short, full, toggle } = parts(card);
+      if (!short || !full || !toggle) return;
+      if (short.getClientRects().length === 0) return;
+      const clamped = short.scrollHeight > short.clientHeight + 1;
+      const hasMore = clamped || full.children.length > 1;
+      toggle.style.display = hasMore ? '' : 'none';
+      card.classList.toggle('cursor-pointer', hasMore);
+      card.dataset.canExpand = hasMore ? 'true' : 'false';
+    };
+
+    const cards = Array.from(document.querySelectorAll('[data-card-expandable]')) as HTMLElement[];
+    const measureAll = () => cards.forEach(measureCard);
+
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          const card = (entry.target as HTMLElement).closest('[data-card-expandable]') as HTMLElement | null;
+          if (card) measureCard(card);
+        });
+      });
+      cards.forEach((card) => {
+        const { short } = parts(card);
+        if (short) observer.observe(short);
+      });
+    } else {
+      let resizeTimer: number | undefined;
+      window.addEventListener('resize', () => {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(measureAll, 150);
+      });
+    }
+    measureAll();
+    window.addEventListener('load', measureAll, { once: true });
+    if ((document as any).fonts?.ready) (document as any).fonts.ready.then(measureAll).catch(() => {});
+
+    // Capture phase, so an open menu can be checked before the close-on-click
+    // handlers (this file's calendar menu, the board's filter popovers) have
+    // closed it: that tap only dismisses the menu.
+    document.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target as HTMLElement | null;
+        const card = target?.closest('[data-card-expandable]') as HTMLElement | null;
+        if (!card) return;
+        const toggle = target?.closest('[data-card-desc-toggle]');
+        if (document.querySelector(OPEN_MENUS)) return;
+        // Links, buttons, and the calendar menu keep their own jobs.
+        if (!toggle && target?.closest(INTERACTIVE)) return;
+        // A drag to select text is not a tap.
+        if (!toggle && (window.getSelection()?.toString() ?? '') !== '') return;
+        if (!toggle && card.dataset.canExpand !== 'true') return;
+        setExpanded(card, !isExpanded(card));
+      },
+      true
+    );
   }
 
   // One delegated handler for every card's Share button. Astro includes this

@@ -363,8 +363,8 @@ const jumps = [
         list: {DIASPORA_TAGS.join(', ')}. For pick or giveaway columns, use true, false, yes,
         no, 1, or 0. Start time and end time both use 24-hour HH:MM. An end time may be
         earlier than its start time when the event runs past midnight. For a multi-day run,
-        add one row per day with the same title and venue; the public board collapses them
-        into a single card with a date range.
+        add one row per day with the same title and venue; the public board shows a run of up
+        to six dates as a card on each date, and a longer run as one card with a date range.
       </p>
 
       <form data-csv-form class="mt-7 space-y-5">
@@ -568,6 +568,7 @@ const jumps = [
     publishLiveSite,
     type ScanQuota,
   } from '../../lib/admin-session';
+  import { SERIES_LOOKBACK_DAYS, SHORT_RUN_MAX_DATES } from '../../lib/dates';
 
   type CsvRow = Record<string, unknown>;
 
@@ -728,27 +729,34 @@ const jumps = [
       singleStatus.appendChild(banner);
     }
 
-    // The public pages fold every row that shares a title and venue into one
-    // card (that is how a run is stored: one row per day). Adding a date to a
-    // run already on the schedule therefore adds no new card, which can look
-    // like the event never arrived. Say so, and where the card sits.
+    // Rows that share a title and venue are one run on the public pages (that
+    // is how a run is stored: one row per day). A short run gets a card on
+    // each date; a long one collapses to a single card, so adding a date to it
+    // adds no new card, which can look like the event never arrived. Say which
+    // this save produced. The window matches the board's own lookback.
     async function describeExistingRun(record: AdminEventRecord, addedCount: number) {
       if (!adminSupabase) return '';
       try {
+        const today = chicagoToday();
         const { data, error } = await adminSupabase
           .from('events')
           .select('event_date')
           .eq('title', record.title)
           .eq('venue', record.venue)
-          .gte('event_date', chicagoToday())
+          .gte('event_date', addDaysToDateString(today, -SERIES_LOOKBACK_DAYS))
           .order('event_date', { ascending: true });
         if (error || !data) return '';
-        const dates = data.map((row) => String(row.event_date)).filter(Boolean);
-        const others = dates.length - addedCount;
+        const dates = Array.from(new Set(data.map((row) => String(row.event_date)).filter(Boolean))).sort();
+        const upcoming = dates.filter((d) => d >= today);
+        const others = upcoming.length - addedCount;
         if (others <= 0) return '';
-        const first = formatRowDate(dates[0], null);
+        const first = formatRowDate(upcoming[0], null);
         const last = formatRowDate(dates[dates.length - 1], null);
-        return `Heads up: ${others} other upcoming ${others === 1 ? 'date' : 'dates'} with this exact title and venue ${others === 1 ? 'is' : 'are'} already on the schedule, so the public page shows them all as one card on ${first} with the range through ${last}, not a separate card on each date. If this is a different event, give it its own title.`;
+        const lead = `Heads up: ${others} other upcoming ${others === 1 ? 'date' : 'dates'} with this exact title and venue ${others === 1 ? 'is' : 'are'} already on the schedule.`;
+        if (dates.length <= SHORT_RUN_MAX_DATES) {
+          return `${lead} The public page shows this run as one card on each of its dates, each noting the others. If this is a different event, give it its own title.`;
+        }
+        return `${lead} With ${dates.length} dates in all, the public page shows the whole run as one card on ${first} with the range through ${last}, not a separate card on each date. If this is a different event, give it its own title.`;
       } catch (_) {
         return '';
       }
