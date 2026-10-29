@@ -16,6 +16,9 @@ import { buttonClass, inputClass, labelClass, quietButtonClass } from '../../com
 const supabaseUrl = import.meta.env.SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.SUPABASE_PUBLISHABLE_KEY;
 const base = import.meta.env.BASE_URL;
+// The public site, for the "Open the live events page" link after a publish.
+// Unset locally, so the link then points at this origin.
+const siteUrl = import.meta.env.PUBLIC_SITE_URL ?? '';
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error('Missing Supabase environment variables.');
@@ -44,6 +47,7 @@ const tabClass =
     data-supabase-key={supabasePublishableKey}
     data-functions-base={`${supabaseUrl}/functions/v1`}
     data-site-base={base}
+    data-site-url={siteUrl}
     class="min-h-screen"
   >
     <header class="border-b-[3px] border-darkWalnut bg-seashell px-4 py-4 md:px-8">
@@ -204,7 +208,7 @@ const tabClass =
 </style>
 
 <script>
-  import { cleanText, errorMessage, setInlineStatus, withBusy } from '../../lib/admin-shared';
+  import { cleanText, errorMessage, renderPublishProgress, setInlineStatus, withBusy } from '../../lib/admin-shared';
   import { isUnlocked, lock, on, publishLiveSite, unlock } from '../../lib/admin-session';
 
   const TAB_IDS = ['overview', 'events', 'submissions', 'newsletter'] as const;
@@ -443,6 +447,12 @@ const tabClass =
     on('published', (record) => {
       const time = record.at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       setInlineStatus(publishStatus, `${time}: ${record.message}`, !record.ok);
+    });
+
+    // A successful publish is then followed through to the live site; the
+    // session reports each stage here (queued, building, live with a link).
+    on('publish-progress', (progress) => {
+      renderPublishProgress(publishStatus, progress);
     });
 
     headerPublish?.addEventListener('click', () => {

@@ -72,18 +72,19 @@ async function getUpcomingEvents() {
   const windowEnd = addDaysToDateString(today, EVENT_WINDOW_DAYS);
 
   try {
-    const { supabase } = await import('./supabase');
-    const { data, error } = await supabase
-      .from('events')
-      .select('event_date,title,venue,event_url,is_curated')
-      .gte('event_date', today)
-      .lte('event_date', windowEnd)
-      .order('event_date', { ascending: true })
-      .order('title', { ascending: true });
-
-    if (error) throw error;
-
-    return (data ?? []) as TickerEvent[];
+    const { fetchAllRows, supabase } = await import('./supabase');
+    return fetchAllRows<TickerEvent>('ticker events', (from, to) =>
+      supabase
+        .from('events')
+        .select('event_date,title,venue,event_url,is_curated', { count: 'exact' })
+        .gte('event_date', today)
+        .lte('event_date', windowEnd)
+        .order('event_date', { ascending: true })
+        .order('title', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+        .returns<TickerEvent[]>()
+    );
   } catch (error) {
     console.error('Error fetching upcoming ticker events:', error);
     return [];

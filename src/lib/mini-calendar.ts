@@ -7,6 +7,15 @@
  */
 import { formatStopDate, formatTimeRange, getChicagoDateString } from './dates';
 
+type CalendarRow = {
+  event_date: string;
+  title: string | null;
+  venue: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  description: string | null;
+};
+
 export interface PanelEvent {
   date: string;
   title: string;
@@ -55,18 +64,20 @@ async function load(): Promise<MiniCalendarData> {
   let loadError = false;
 
   try {
-    const { supabase } = await import('./supabase');
-    const { data, error } = await supabase
-      .from('events')
-      .select('event_date, title, venue, start_time, end_time, description')
-      .gte('event_date', windowStart)
-      .lte('event_date', windowEnd)
-      .order('event_date', { ascending: true })
-      .order('start_time', { ascending: true, nullsFirst: true });
+    const { fetchAllRows, supabase } = await import('./supabase');
+    const data = await fetchAllRows<CalendarRow>('calendar events', (from, to) =>
+      supabase
+        .from('events')
+        .select('event_date, title, venue, start_time, end_time, description', { count: 'exact' })
+        .gte('event_date', windowStart)
+        .lte('event_date', windowEnd)
+        .order('event_date', { ascending: true })
+        .order('start_time', { ascending: true, nullsFirst: true })
+        .order('id', { ascending: true })
+        .range(from, to)
+    );
 
-    if (error) throw error;
-
-    for (const row of data ?? []) {
+    for (const row of data) {
       const blurb = (row.description ?? '').replace(/\s+/g, ' ').trim();
       panelEvents.push({
         date: row.event_date,

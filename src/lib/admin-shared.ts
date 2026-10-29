@@ -164,6 +164,35 @@ export function setInlineStatus(el: HTMLElement | null, message: string, isError
   el.classList.toggle('text-darkWalnut', !isError);
 }
 
+/**
+ * Where a Publish live site request stands, from the rebuild signal through
+ * to the public site serving the new build (src/lib/admin-session.ts follows
+ * the GitHub Actions run). `liveUrl` is set once the site is live: a link to
+ * the public events page with a one-off query string, so the browser and the
+ * CDN fetch the fresh build instead of a copy cached before the publish.
+ */
+export type PublishProgress = {
+  phase: 'started' | 'queued' | 'building' | 'live' | 'failed' | 'lost';
+  message: string;
+  liveUrl?: string;
+};
+
+/** Status text for a publish, plus the "Open the live events page" link once it is live. */
+export function renderPublishProgress(el: HTMLElement | null, progress: PublishProgress) {
+  if (!el) return;
+  const isError = progress.phase === 'failed';
+  setInlineStatus(el, progress.message, isError);
+  if (!progress.liveUrl) return;
+  el.append(' ');
+  const link = document.createElement('a');
+  link.href = progress.liveUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.className = 'underline decoration-2 underline-offset-2 hover:text-cayenneInk';
+  link.textContent = 'Open the live events page';
+  el.appendChild(link);
+}
+
 // Buttons with work in flight. The disabled attribute already blocks a second
 // click; this also blocks programmatic re-entry (a form submitted with Enter
 // while its button is busy, a second listener on the same control).

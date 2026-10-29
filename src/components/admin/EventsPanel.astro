@@ -550,6 +550,7 @@ const jumps = [
     requiredText,
     requiredTimeOfDay,
     requiredUrl,
+    renderPublishProgress,
     setInlineStatus,
     STORED_IMAGE_PATH,
     updateWordCounters,
@@ -684,8 +685,11 @@ const jumps = [
 
     // The single-add form confirms with a themed banner rather than a text line.
     // It is built inside the existing status element so the same live region
-    // announces it, and so the next setInlineStatus call wipes it.
-    function setSingleSuccessBanner(title: string, dayCount = 1) {
+    // announces it. Anything else worth saying about the save (a flyer that
+    // could not be copied, a run the event joined) goes inside the banner, so
+    // the confirmation stays on screen instead of being replaced by a note
+    // that reads like a failure.
+    function setSingleSuccessBanner(title: string, dayCount = 1, runNote = '', warnings: string[] = []) {
       if (!singleStatus) return;
       singleStatus.textContent = '';
       singleStatus.classList.remove('text-cayenneInk');
@@ -706,7 +710,48 @@ const jumps = [
           : `"${title}" is on the schedule. Press Publish live site to show it publicly now, or wait for the scheduled rebuild.`;
 
       banner.append(heading, body);
+
+      if (runNote) {
+        const note = document.createElement('p');
+        note.className = 'mt-2 font-body text-sm font-normal leading-relaxed text-darkWalnut';
+        note.textContent = runNote;
+        banner.appendChild(note);
+      }
+
+      if (warnings.length > 0) {
+        const warning = document.createElement('p');
+        warning.className = 'mt-2 font-body text-sm font-bold leading-relaxed text-cayenneInk';
+        warning.textContent = warnings.join(' ');
+        banner.appendChild(warning);
+      }
+
       singleStatus.appendChild(banner);
+    }
+
+    // The public pages fold every row that shares a title and venue into one
+    // card (that is how a run is stored: one row per day). Adding a date to a
+    // run already on the schedule therefore adds no new card, which can look
+    // like the event never arrived. Say so, and where the card sits.
+    async function describeExistingRun(record: AdminEventRecord, addedCount: number) {
+      if (!adminSupabase) return '';
+      try {
+        const { data, error } = await adminSupabase
+          .from('events')
+          .select('event_date')
+          .eq('title', record.title)
+          .eq('venue', record.venue)
+          .gte('event_date', chicagoToday())
+          .order('event_date', { ascending: true });
+        if (error || !data) return '';
+        const dates = data.map((row) => String(row.event_date)).filter(Boolean);
+        const others = dates.length - addedCount;
+        if (others <= 0) return '';
+        const first = formatRowDate(dates[0], null);
+        const last = formatRowDate(dates[dates.length - 1], null);
+        return `Heads up: ${others} other upcoming ${others === 1 ? 'date' : 'dates'} with this exact title and venue ${others === 1 ? 'is' : 'are'} already on the schedule, so the public page shows them all as one card on ${first} with the range through ${last}, not a separate card on each date. If this is a different event, give it its own title.`;
+      } catch (_) {
+        return '';
+      }
     }
 
     function parseBoolean(value: unknown) {
@@ -1181,6 +1226,12 @@ const jumps = [
       });
     });
 
+    // The session follows the rebuild to the live site; this line shows each
+    // stage (queued, building, live with a fresh link) next to the button.
+    on('publish-progress', (progress) => {
+      renderPublishProgress(dbPublishStatus, progress);
+    });
+
     /* ---------- Flyer scanner (Gemini) ---------- */
 
     function setScanQuota(quota: ScanQuota) {
@@ -1366,8 +1417,8 @@ const jumps = [
           const warnings = await insertEvents(records, singleStatus);
           singleEventForm.reset();
           updateWordCounters(singleEventForm);
-          setSingleSuccessBanner(record.title, records.length);
-          setInlineStatus(singleStatus, warnings.join(' '), warnings.length > 0);
+          const runNote = await describeExistingRun(record, records.length);
+          setSingleSuccessBanner(record.title, records.length, runNote, warnings);
         } catch (error) {
           const message = errorMessage(error);
           setInlineStatus(singleStatus, `Could not add event: ${message}`, true);

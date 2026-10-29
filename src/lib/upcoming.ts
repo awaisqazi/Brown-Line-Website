@@ -13,7 +13,7 @@
  * mini-calendar.ts do it.
  */
 import { addDays, formatMonthDay, getChicagoDateString, SERIES_LOOKBACK_DAYS } from './dates';
-import { supabase } from './supabase';
+import { fetchAllRows, supabase } from './supabase';
 import type { TransitEvent } from './supabase';
 
 export interface UpcomingStop {
@@ -42,18 +42,18 @@ function loadRows(): Promise<TransitEvent[]> {
   if (!rowsCache) {
     rowsCache = (async () => {
       const todayDateString = getChicagoDateString();
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .gte('event_date', addDays(todayDateString, -SERIES_LOOKBACK_DAYS))
-        .order('event_date', { ascending: true })
-        .order('is_curated', { ascending: false, nullsFirst: false })
-        .order('title', { ascending: true })
-        .returns<TransitEvent[]>();
-      if (error) {
-        throw new Error(`Failed to load upcoming events: ${error.message}`);
-      }
-      return data ?? [];
+      return fetchAllRows<TransitEvent>('upcoming events', (from, to) =>
+        supabase
+          .from('events')
+          .select('*', { count: 'exact' })
+          .gte('event_date', addDays(todayDateString, -SERIES_LOOKBACK_DAYS))
+          .order('event_date', { ascending: true })
+          .order('is_curated', { ascending: false, nullsFirst: false })
+          .order('title', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to)
+          .returns<TransitEvent[]>()
+      );
     })();
   }
   return rowsCache;

@@ -4,7 +4,7 @@ import TransitDivider from '../components/TransitDivider.astro';
 import EventCard from '../components/EventCard.astro';
 import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
-import { supabase } from '../lib/supabase';
+import { fetchAllRows, supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
 import { addDays, formatMonthDay, formatStopDate, SERIES_LOOKBACK_DAYS } from '../lib/dates';
 import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, buildStopAnchor, stringifyJsonLd } from '../lib/seo';
@@ -19,20 +19,18 @@ const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
 // filtered, and marked on the calendar.
 const today = getTodayChicago();
 
-const { data, error } = await supabase
-  .from('events')
-  .select('*')
-  .gte('event_date', addDays(today, -SERIES_LOOKBACK_DAYS))
-  .order('event_date', { ascending: true })
-  .order('is_curated', { ascending: false })
-  .order('title', { ascending: true })
-  .returns<TransitEvent[]>();
-
-if (error) {
-  throw new Error(`Failed to load events: ${error.message}`);
-}
-
-const rows = data ?? [];
+const rows = await fetchAllRows<TransitEvent>('events', (from, to) =>
+  supabase
+    .from('events')
+    .select('*', { count: 'exact' })
+    .gte('event_date', addDays(today, -SERIES_LOOKBACK_DAYS))
+    .order('event_date', { ascending: true })
+    .order('is_curated', { ascending: false })
+    .order('title', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, to)
+    .returns<TransitEvent[]>()
+);
 const events = rows.filter((event) => event.event_date >= today);
 
 function getTodayChicago() {

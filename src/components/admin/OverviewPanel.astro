@@ -343,6 +343,21 @@ const tileCtaClass =
     on('published', (record) => {
       if (adminSupabase) renderPublish(record);
     });
+    // The follow-through after a successful publish: the tile reads
+    // "Rebuilding", then "Live now" with the time, or says what went wrong.
+    on('publish-progress', (progress) => {
+      if (!adminSupabase) return;
+      const label =
+        progress.phase === 'live'
+          ? 'Live now'
+          : progress.phase === 'failed'
+            ? 'Rebuild failed'
+            : progress.phase === 'lost'
+              ? 'Rebuild sent'
+              : 'Rebuilding';
+      setStat('publish', label);
+      setStat('publish-meta', progress.message);
+    });
     on('realtime-status', renderLive);
     on('events-change', () => {
       if (!adminSupabase) return;

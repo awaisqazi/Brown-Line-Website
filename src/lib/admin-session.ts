@@ -10,7 +10,7 @@
 // reaching into each other's DOM.
 
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
-import { errorMessage } from './admin-shared';
+import { errorMessage, type PublishProgress } from './admin-shared';
 
 export type ScanQuota = { remaining?: unknown; limit?: unknown } | null | undefined;
 
@@ -29,6 +29,9 @@ type SessionEventMap = {
   // Fired while a Publish live site request starts (true) and ends (false).
   'publish-busy': boolean;
   published: PublishRecord;
+  // The rebuild a successful publish started, followed through to the live
+  // site (or to a failure, or to losing track of it).
+  'publish-progress': PublishProgress;
   // A debounced-by-listener signal that public.events changed somewhere.
   'events-change': undefined;
   // 'connecting' | 'SUBSCRIBED' | any other channel status | 'off'
@@ -83,6 +86,8 @@ const root = appRoot();
 const supabaseUrl = root?.dataset.supabaseUrl ?? '';
 const supabaseKey = root?.dataset.supabaseKey ?? '';
 export const functionsBase = root?.dataset.functionsBase ?? '';
+const siteUrl = root?.dataset.siteUrl ?? '';
+const siteBase = root?.dataset.siteBase ?? '/';
 
 /* ---------- Session state (memory only) ---------- */
 
@@ -205,6 +210,7 @@ export function lock() {
   adminClient = null;
   adminPassword = '';
   lastPublish = null;
+  stopFollowingPublish();
   closeEventsChannel(client);
   emit('lock');
 }
@@ -238,5 +244,142 @@ export async function publishLiveSite(source = 'header'): Promise<PublishRecord 
   if (adminPassword !== password) return record;
   lastPublish = record;
   emit('published', record);
+  if (record.ok) followPublish(record);
   return record;
+}
+
+/* ---------- Following a publish through to the live site ---------- */
+
+// "Site rebuild started" only means GitHub accepted the signal. The site is
+// live a few minutes later, when the Actions run finishes, and nothing used to
+// say when that was: an admin who looked too early saw the old page and
+// pressed Publish again. The site repo is public, so its runs can be read
+// without a token (60 requests an hour per address; one publish uses about
+// 20 at most). The repo and workflow match trigger-deploy's defaults.
+const DEPLOY_REPO = 'awaisqazi/Brown-Line-Website';
+const DEPLOY_WORKFLOW = 'deploy.yml';
+const PROGRESS_FIRST_POLL_MS = 6_000;
+const PROGRESS_POLL_MS = 15_000;
+const PROGRESS_MAX_POLLS = 24;
+// Polls before giving up on GitHub ever listing the run.
+const PROGRESS_UNLISTED_POLLS = 5;
+
+type WorkflowRun = {
+  id: number;
+  event: string;
+  status: string;
+  conclusion: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+let progressTimer: ReturnType<typeof setTimeout> | undefined;
+let progressToken = 0;
+
+function clockTime(date: Date) {
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+// The public events page with a one-off query string, so the browser and the
+// CDN fetch the new build instead of a copy cached before the publish.
+function liveEventsUrl() {
+  const origin = siteUrl || `${window.location.origin}${siteBase}`;
+  const url = new URL('events/', origin.endsWith('/') ? origin : `${origin}/`);
+  url.searchParams.set('fresh', String(Date.now()));
+  return url.toString();
+}
+
+function stopFollowingPublish() {
+  if (progressTimer) clearTimeout(progressTimer);
+  progressTimer = undefined;
+  progressToken += 1;
+}
+
+async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
+  const res = await fetch(
+    `https://api.github.com/repos/${DEPLOY_REPO}/actions/workflows/${DEPLOY_WORKFLOW}/runs?per_page=5`,
+    { headers: { Accept: 'application/vnd.github+json' } }
+  );
+  if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
+  const payload = (await res.json()) as { workflow_runs?: WorkflowRun[] };
+  return payload.workflow_runs ?? [];
+}
+
+// A newer publish or a lock replaces this follow; its token stops stale ticks.
+function followPublish(record: PublishRecord) {
+  stopFollowingPublish();
+  const token = progressToken;
+  const since = record.at.getTime() - 60_000;
+  const sentAt = clockTime(record.at);
+  let polls = 0;
+  let runId: number | null = null;
+
+  const report = (progress: PublishProgress) => {
+    if (token === progressToken) emit('publish-progress', progress);
+  };
+  const schedule = (ms: number) => {
+    if (token !== progressToken) return;
+    progressTimer = setTimeout(() => void tick(), ms);
+  };
+
+  const tick = async () => {
+    if (token !== progressToken) return;
+    polls += 1;
+    let runs: WorkflowRun[];
+    try {
+      runs = await fetchWorkflowRuns();
+    } catch (_) {
+      report({
+        phase: 'lost',
+        message: `${sentAt}: Rebuild started, but its progress could not be checked from here. Give it about 3 minutes, then open the live page.`,
+        liveUrl: liveEventsUrl(),
+      });
+      return;
+    }
+    const run = runId
+      ? runs.find((r) => r.id === runId)
+      : runs.find((r) => r.event === 'workflow_dispatch' && Date.parse(r.created_at) >= since);
+    if (!run) {
+      if (polls >= PROGRESS_UNLISTED_POLLS) {
+        report({
+          phase: 'lost',
+          message: `${sentAt}: Rebuild signal sent, but GitHub has not listed the run. Give it about 3 minutes, then open the live page; if nothing changed, press Publish live site again.`,
+          liveUrl: liveEventsUrl(),
+        });
+        return;
+      }
+      report({ phase: 'queued', message: `${sentAt}: Rebuild signal sent. Waiting for GitHub to pick it up...` });
+      schedule(PROGRESS_POLL_MS);
+      return;
+    }
+    runId = run.id;
+    if (run.status === 'completed') {
+      if (run.conclusion === 'success') {
+        report({
+          phase: 'live',
+          message: `Live site updated at ${clockTime(new Date(run.updated_at))}. Your changes are public now.`,
+          liveUrl: liveEventsUrl(),
+        });
+      } else {
+        report({
+          phase: 'failed',
+          message: `The rebuild started at ${sentAt} did not finish (${run.conclusion ?? 'unknown'}). Press Publish live site once more; if it fails again, tell Fez.`,
+        });
+      }
+      return;
+    }
+    if (polls >= PROGRESS_MAX_POLLS) {
+      report({
+        phase: 'lost',
+        message: `${sentAt}: The rebuild is taking longer than usual. Check back in a few minutes and open the live page.`,
+        liveUrl: liveEventsUrl(),
+      });
+      return;
+    }
+    report({ phase: 'building', message: `${sentAt}: Rebuilding the site now, usually 2 to 3 minutes. This line updates when it is live.` });
+    schedule(PROGRESS_POLL_MS);
+  };
+
+  report({ phase: 'started', message: `${sentAt}: ${record.message}` });
+  schedule(PROGRESS_FIRST_POLL_MS);
 }
