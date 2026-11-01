@@ -120,7 +120,7 @@ const controlsGridClass =
     : 'lg:grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(0,1fr))]';
 const stopColors = ['bg-babyPink', 'bg-mayaBlue', 'bg-celadon', 'bg-amber', 'bg-cayenne'];
 const pageDescription =
-  "Chicago's Global South diaspora events, curated by a human: arts, culture, food, film, music, and community stops across the city's neighborhoods. Updated weekly.";
+  "Chicago's Global South diaspora events, curated by a human: arts, culture, food, film, music, and community stops across the city's neighborhoods. Updated as new stops come in.";
 
 function getEventKind(event: TransitEvent) {
   if (event.is_giveaway) return 'giveaway';
@@ -296,7 +296,7 @@ function foldAccents(value: string) {
             New stops are on the way.
           </h2>
           <p class="font-body text-darkWalnut/80 text-base md:text-lg leading-relaxed mt-5 max-w-2xl">
-            The board updates every week. Check back soon, or submit an event to put it on the map.
+            The board updates as new stops come in. Check back soon, or submit an event to put it on the map.
           </p>
         </div>
       ) : (

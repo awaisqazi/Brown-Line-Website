@@ -38,7 +38,7 @@ export const BRAND_KEYWORDS = [
 
 /** One-line description of the publication, reused across the site schemas. */
 export const BRAND_DESCRIPTION =
-  'Chicago events, arts, culture, community, and media through a Global South diaspora lens. A curated guide to diaspora events plus a weekly newsletter.';
+  'Chicago events, arts, culture, community, and media through a Global South diaspora lens. A curated guide to diaspora events plus the newsletter.';
 
 const SCHEMA_CONTEXT = 'https://schema.org';
 
