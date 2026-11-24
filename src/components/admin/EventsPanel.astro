@@ -158,7 +158,7 @@ const jumps = [
           For a run of consecutive days, set the final date and we add one event per day from
           the event date through this one. Leave blank for a single day. On the public page a
           run of up to six dates gets a card on every date; a longer run gets one card on its
-          first date and a line under Also running on each later date.
+          first date and a small card under Also running on each later date.
         </span>
       </label>
 
@@ -367,7 +367,7 @@ const jumps = [
         earlier than its start time when the event runs past midnight. For a multi-day run,
         add one row per day with the same title and venue; the public board shows a run of up
         to six dates as a card on each date, and a longer run as one card with a date range on
-        its first date, then a line under Also running on each later date.
+        its first date, then a small card under Also running on each later date.
       </p>
 
       <form data-csv-form class="mt-7 space-y-5">
@@ -734,8 +734,8 @@ const jumps = [
 
     // Rows that share a title and venue are one run on the public pages (that
     // is how a run is stored: one row per day). A short run gets a card on
-    // each date; a long one gets a single card plus an "Also running" line on
-    // each later date, so adding a date to it adds no new card, which can look
+    // each date; a long one gets a single card plus a small "Also running" card
+    // on each later date, so adding a date to it adds no new card, which can look
     // like the event never arrived. Say which this save produced. The window
     // matches the board's own lookback.
     async function describeExistingRun(record: AdminEventRecord, addedCount: number) {
@@ -760,7 +760,7 @@ const jumps = [
         if (dates.length <= SHORT_RUN_MAX_DATES) {
           return `${lead} The public page shows this run as one card on each of its dates, each noting the others. If this is a different event, give it its own title.`;
         }
-        return `${lead} With ${dates.length} dates in all, the public page shows the run as one card on ${first} with the range through ${last}, and lists it under Also running on each later date. If this is a different event, give it its own title.`;
+        return `${lead} With ${dates.length} dates in all, the public page shows the run as one card on ${first} with the range through ${last}, and shows it as a small card under Also running on each later date. If this is a different event, give it its own title.`;
       } catch (_) {
         return '';
       }

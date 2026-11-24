@@ -40,6 +40,14 @@ interface Props {
    * that grew would be clipped and throw the stepping off.
    */
   expandable?: boolean;
+  /**
+   * The events board renders one preview card per long run inside a
+   * `<template>` and clones it under any later day of the run, filling in that
+   * day (the `data-card-*` hooks: date tile and hours) and its links. Such a
+   * card shows the whole description and leaves out the calendar menu, whose
+   * links are built for one date.
+   */
+  runTemplate?: boolean;
 }
 
 const {
@@ -50,6 +58,7 @@ const {
   headingLevel = 'h3',
   variant = 'preview',
   expandable = true,
+  runTemplate = false,
 } = Astro.props;
 
 // Defensive spelling normalization for text that comes straight from the DB.
@@ -263,7 +272,7 @@ const quietActionClass =
 const googleCalendarUrl = buildGoogleCalendarUrl(event);
 const icsDataUri = buildIcsDataUri(event);
 const icsFileName = buildIcsFileName(event);
-const hasCalendarLinks = Boolean(googleCalendarUrl && icsDataUri);
+const hasCalendarLinks = Boolean(googleCalendarUrl && icsDataUri) && !runTemplate;
 
 // The <summary> carries the same look as the Share button, minus the default
 // disclosure triangle.
@@ -499,7 +508,7 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
 ) : (
   <article
     id={anchorId}
-    data-card-expandable={expandable && previewDescription ? '' : undefined}
+    data-card-expandable={expandable && previewDescription && !runTemplate ? '' : undefined}
     class:list={['event-card group relative flex flex-col border-[3px] border-darkWalnut transition-transform duration-150 ease-out hover:-translate-y-1 hover:-translate-x-1 hover:shadow-retro sm:flex-row', cardSurfaceClass]}
   >
     {/* Media panel: the flyer is the hero, bleeding to the card edges. With no
@@ -540,8 +549,8 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
 
       {hasDate && (
         <div class="absolute left-0 top-0 z-[2] border-b-2 border-r-2 border-darkWalnut bg-seashell px-2.5 py-1.5 text-center">
-          <span class="block font-card text-[9px] font-bold uppercase leading-none tracking-[0.22em] text-cayenneInk">{tileMonth}</span>
-          <span class="mt-0.5 block font-heading text-xl font-extrabold leading-none text-darkWalnut">{tileDay}</span>
+          <span data-card-month class="block font-card text-[9px] font-bold uppercase leading-none tracking-[0.22em] text-cayenneInk">{tileMonth}</span>
+          <span data-card-day class="mt-0.5 block font-heading text-xl font-extrabold leading-none text-darkWalnut">{tileDay}</span>
         </div>
       )}
 
@@ -588,12 +597,14 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
         </p>
       )}
 
-      <p class="mt-1.5 truncate font-card text-[11px] font-bold uppercase tracking-[0.14em] text-darkWalnut/80 md:text-xs">
+      {/* A run's card opened under a later day wraps this line, so the run's
+          dates at its end are never cut off. */}
+      <p class:list={['mt-1.5 font-card text-[11px] font-bold uppercase tracking-[0.14em] text-darkWalnut/80 md:text-xs', runTemplate ? 'break-words' : 'truncate']}>
         {metaLine}
       </p>
 
       <div class="mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        {startTime && <span class={timeChipClass}>{startTime}</span>}
+        {startTime && <span data-card-time class={timeChipClass}>{startTime}</span>}
         {priceLabelInCluster && (
           <span class="font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/70">
             {priceLabelInCluster}
@@ -601,12 +612,21 @@ const cardSurfaceClass = isCurated ? 'bg-amber' : 'bg-[#FDFBF7]';
         )}
       </div>
 
-      {previewDescription && !expandable && (
+      {runTemplate && (
+        <div class="mt-2.5 space-y-2">
+          {splitParagraphs(description ?? '').map((paragraph) => (
+            <p class="font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm break-words whitespace-pre-line">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      )}
+      {previewDescription && !expandable && !runTemplate && (
         <p class="mt-2.5 line-clamp-2 font-card text-[13px] leading-relaxed text-darkWalnut/85 md:text-sm">
           {previewDescription}
         </p>
       )}
-      {previewDescription && expandable && (
+      {previewDescription && expandable && !runTemplate && (
         <>
           {/* Two clamped lines by default. A tap anywhere on the card that is
               not a link, a button, or a menu swaps in the whole description

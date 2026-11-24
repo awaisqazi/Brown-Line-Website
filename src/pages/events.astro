@@ -50,15 +50,19 @@ function getTodayChicago() {
 // card with its date range (the same helper gives each stop page its anchor).
 const eventGroups: BoardStop[] = groupBoardStops(rows, today);
 
-// A long run's card sits on one day only, so each of its later dates gets an
-// "Also running" line under that day instead: every day on the board lists
-// everything on, without an exhibit repeating its full card for two months.
+// A long run's full card sits on one day only, so each of its later dates
+// gets a small "Also running" card under that day instead: every day on the
+// board lists everything on, without an exhibit repeating its full card for
+// two months. A small card names the run and its dates, and opens into the
+// full card for that day.
 interface RunningLine {
-  /** The run's row for this date; the line links to its page. */
+  /** The run's row for this date; the card opens to this day and links to its page. */
   row: TransitEvent;
-  /** The run's one card. */
+  /** The run's one full card. */
   stop: BoardStop;
 }
+// A day shows this many small cards; the rest sit behind "Show more".
+const RUNNING_PREVIEW = 3;
 const days = new Map<string, { dayGroups: BoardStop[]; running: RunningLine[] }>();
 function dayFor(date: string) {
   let day = days.get(date);
@@ -89,7 +93,12 @@ const groupedEventEntries = Array.from(days.entries())
     eventDate,
     label: formatStopDate(eventDate),
     dayGroups: dayGroups.sort((a, b) => picksThenTitle(a.rep, b.rep)),
-    running: running.sort((a, b) => picksThenTitle(a.row, b.row)),
+    // Picks lead, then whatever closes soonest, so a last chance is not
+    // behind "Show more".
+    running: running.sort((a, b) => {
+      if (a.row.is_curated !== b.row.is_curated) return a.row.is_curated ? -1 : 1;
+      return a.stop.end.localeCompare(b.stop.end) || a.row.title.localeCompare(b.row.title);
+    }),
   }));
 
 // ItemList structured data for the board, in the order the page prints it and
@@ -182,13 +191,13 @@ function foldAccents(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-// "11 AM to 5 PM · Art Institute of Chicago · Through Jan 25" for an "Also
-// running" line: that day's own hours, the venue's name without its street
-// address, and how long the run still has.
+// "Nov 23 – Jan 25 · 11 AM to 5 PM · Art Institute of Chicago" for a small
+// "Also running" card: the run's first and last date, that day's own hours,
+// and the venue's name without its street address.
 function getRunningMeta({ row, stop }: RunningLine) {
   const venueName = fixSpelling(row.venue).split(',')[0].trim();
-  const until = row.event_date === stop.end ? 'Last day' : `Through ${formatMonthDay(stop.end)}`;
-  return [formatTimeRange(row.start_time, row.end_time), venueName, until].filter(Boolean).join(' · ');
+  const dates = `${formatMonthDay(stop.start)} – ${formatMonthDay(stop.end)}`;
+  return [dates, formatTimeRange(row.start_time, row.end_time), venueName].filter(Boolean).join(' · ');
 }
 ---
 <Layout
@@ -351,7 +360,7 @@ function getRunningMeta({ row, stop }: RunningLine) {
             </p>
           </div>
 
-          <div data-events-board class="space-y-14 md:space-y-16">
+          <div data-events-board data-running-preview={RUNNING_PREVIEW} class="space-y-14 md:space-y-16">
             {groupedEventEntries.map(({ eventDate, label, dayGroups, running }, sectionIndex) => (
             <section
               data-event-day-section
@@ -369,9 +378,7 @@ function getRunningMeta({ row, stop }: RunningLine) {
                 </h2>
               </div>
 
-              <div class="min-w-0 space-y-6">
-              {dayGroups.length > 0 && (
-              <ol data-day-route class="events-route relative space-y-6">
+              <ol class="events-route relative min-w-0 space-y-6">
                 {dayGroups.map((stop, index) => (
                   <li
                     id={stop.anchor}
@@ -399,56 +406,92 @@ function getRunningMeta({ row, stop }: RunningLine) {
                     <EventCard event={stop.rep} recurrenceLabel={stop.recurrenceLabel} />
                   </li>
                 ))}
-              </ol>
-              )}
 
-              {running.length > 0 && (
-                <details data-also-running class="also-running ml-12 border-2 border-darkWalnut/30 bg-[#FDFBF7] md:ml-14">
-                  <summary class="cursor-pointer px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
-                    <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span class="shrink-0 font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
-                        Also running
-                      </span>
-                      <span data-running-count class="shrink-0 font-mono text-[11px] font-bold text-darkWalnut">
-                        {running.length}
-                      </span>
-                      <span data-running-preview aria-hidden="true" class="also-running-preview order-last min-w-0 basis-full truncate font-card text-[13px] text-darkWalnut/75 sm:order-none sm:flex-1 sm:basis-0">
-                        {running.map(({ row }) => fixSpelling(row.title)).join(', ')}
-                      </span>
-                      <span class="also-running-chevron ml-auto shrink-0" aria-hidden="true"></span>
-                    </span>
-                  </summary>
-                  <ul class="divide-y divide-darkWalnut/15 border-t-2 border-darkWalnut/30 px-4">
-                    {running.map((line) => (
-                      <li
-                        data-running-line
-                        data-stop={stopKeys.get(line.stop)}
-                        data-event-date={line.row.event_date}
-                        data-event-free={isFreeEvent(line.row) ? 'true' : 'false'}
-                        data-event-curated={line.row.is_curated ? 'true' : 'false'}
-                        data-event-tags={(line.row.tags ?? []).join('|')}
-                        data-event-neighborhood={line.row.neighborhood ?? ''}
-                        class="py-2.5"
+                {running.length > 0 && (
+                  <li data-running-group class="relative pl-12 md:pl-14">
+                    <p class="font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
+                      Also running
+                      <span data-running-count class="ml-1 font-mono text-[11px] tracking-normal text-darkWalnut">{running.length}</span>
+                    </p>
+                    <ul class="mt-2.5 space-y-2">
+                      {running.map((line, lineIndex) => (
+                        <li
+                          data-running-line
+                          data-stop={stopKeys.get(line.stop)}
+                          data-event-date={line.row.event_date}
+                          data-event-time={formatTimeRange(line.row.start_time, line.row.end_time)}
+                          data-event-free={isFreeEvent(line.row) ? 'true' : 'false'}
+                          data-event-curated={line.row.is_curated ? 'true' : 'false'}
+                          data-event-tags={(line.row.tags ?? []).join('|')}
+                          data-event-neighborhood={line.row.neighborhood ?? ''}
+                          class:list={['relative', lineIndex >= RUNNING_PREVIEW && 'is-extra']}
+                        >
+                          <span class="running-stop" aria-hidden="true"></span>
+                          <details data-running-card class="running-card border-2 border-darkWalnut/30 bg-[#FDFBF7]">
+                            <summary class="cursor-pointer px-3.5 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
+                              <span class="flex items-center gap-3">
+                                <span class="min-w-0 flex-1">
+                                  <span class="block font-card text-sm font-bold leading-snug text-darkWalnut">
+                                    {line.row.is_curated && <span aria-hidden="true">★ </span>}{fixSpelling(line.row.title)}
+                                  </span>
+                                  <span class="mt-0.5 block font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/70">
+                                    {getRunningMeta(line)}
+                                  </span>
+                                </span>
+                                {line.row.event_date === line.stop.end && (
+                                  <span class="shrink-0 border-2 border-darkWalnut bg-amber px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-darkWalnut">
+                                    Last day
+                                  </span>
+                                )}
+                                <span class="running-chevron shrink-0" aria-hidden="true"></span>
+                              </span>
+                            </summary>
+                            {/* Opened, the page script swaps this link for the run's full card,
+                                set to this day. The link is what a visitor without it gets. */}
+                            <div data-running-body class="border-t-2 border-darkWalnut/30 p-3">
+                              <a
+                                href={buildEventPath(line.row, base)}
+                                data-ga-event="event_detail_click"
+                                data-ga-label={line.row.title}
+                                class="link-transit font-card text-[13px] font-bold text-darkWalnut transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
+                              >
+                                Full details for {formatStopDate(line.row.event_date)} <span aria-hidden="true">&rarr;</span>
+                              </a>
+                            </div>
+                          </details>
+                        </li>
+                      ))}
+                    </ul>
+                    {running.length > RUNNING_PREVIEW && (
+                      <button
+                        type="button"
+                        data-running-more
+                        aria-expanded="false"
+                        class="mt-2.5 font-card text-[11px] font-bold uppercase tracking-[0.12em] text-cayenneInk underline decoration-2 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue"
                       >
-                        <a
-                          href={buildEventPath(line.row, base)}
-                          data-running-title
-                          data-ga-event="event_detail_click"
-                          data-ga-label={line.row.title}
-                          class="link-transit font-card text-sm font-bold leading-snug text-darkWalnut transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
-                        >{line.row.is_curated && <span aria-hidden="true">★ </span>}{fixSpelling(line.row.title)}</a>
-                        <p class="mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/70">
-                          {getRunningMeta(line)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-              </div>
+                        Show {running.length - RUNNING_PREVIEW} more
+                      </button>
+                    )}
+                  </li>
+                )}
+              </ol>
             </section>
           ))}
           </div>
+
+          {/* One full card per long run, cloned into a small "Also running"
+              card when it is opened and set to that card's day. */}
+          {eventGroups.filter((stop) => stop.alsoRunning.length > 0).map((stop) => (
+            <template data-stop-card={stopKeys.get(stop)}>
+              <EventCard event={stop.rep} recurrenceLabel={stop.recurrenceLabel} runTemplate />
+            </template>
+          ))}
+          <noscript>
+            <style is:inline>
+              [data-running-line].is-extra { display: block !important; }
+              [data-running-more] { display: none; }
+            </style>
+          </noscript>
         </>
       )}
     </div>
@@ -502,16 +545,43 @@ function getRunningMeta({ row, stop }: RunningLine) {
     }
   }
 
-  /* "Also running": the day's long runs, one line each, folded by default. */
-  .also-running > summary {
-    list-style: none;
-  }
-
-  .also-running > summary::-webkit-details-marker {
+  /* "Also running": a small card per long run still going that day, each on
+     the route under a hollow stop. Past the first few, the rest wait behind
+     "Show more". */
+  [data-running-group]:not([data-open='true']) .is-extra {
     display: none;
   }
 
-  .also-running-chevron {
+  .running-stop {
+    position: absolute;
+    left: calc(-3rem + 5px);
+    top: 0.95rem;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #642713;
+    border-radius: 9999px;
+    background: #FAF1EC;
+  }
+
+  @media (min-width: 768px) {
+    .running-stop {
+      left: calc(-3.5rem + 5px);
+    }
+  }
+
+  .running-card > summary {
+    list-style: none;
+  }
+
+  .running-card > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .running-card[open] {
+    border-color: #642713;
+  }
+
+  .running-chevron {
     width: 0.5rem;
     height: 0.5rem;
     margin-right: 0.125rem;
@@ -521,17 +591,12 @@ function getRunningMeta({ row, stop }: RunningLine) {
     transition: transform 120ms ease;
   }
 
-  .also-running[open] .also-running-chevron {
+  .running-card[open] .running-chevron {
     transform: translateY(2px) rotate(225deg);
   }
 
-  /* Open, the lines themselves name the runs; the preview would repeat them. */
-  .also-running[open] .also-running-preview {
-    display: none;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .also-running-chevron {
+    .running-chevron {
       transition: none;
     }
   }
@@ -576,11 +641,12 @@ function getRunningMeta({ row, stop }: RunningLine) {
     const board = document.querySelector('[data-events-board]');
     const eventCards = board ? Array.from(board.querySelectorAll('[data-event-card]')) : [];
     const daySections = board ? Array.from(board.querySelectorAll('[data-event-day-section]')) : [];
-    // A long run has one card, on its first day; each later day carries an
-    // "Also running" line for it. Lines are filtered like cards; a line and
-    // its run's card share a `data-stop` key, and a line is searched by that
-    // card's text.
-    const runningGroups = board ? Array.from(board.querySelectorAll('[data-also-running]')) : [];
+    // A long run has one full card, on its first day; each later day carries
+    // a small "Also running" card for it (a "line" below). Lines are filtered
+    // like cards; a line and its run's card share a `data-stop` key, and a
+    // line is searched by that card's text.
+    const runningGroups = board ? Array.from(board.querySelectorAll('[data-running-group]')) : [];
+    const runningPreview = Number(board?.dataset.runningPreview) || 3;
     const runningLines = board ? Array.from(board.querySelectorAll('[data-running-line]')) : [];
     const searchTextByStop = new Map(
       eventCards.map((card) => [card.dataset.stop, card.dataset.eventSearch ?? ''])
@@ -1053,15 +1119,14 @@ function getRunningMeta({ row, stop }: RunningLine) {
         if (shouldShow) visibleStops.add(stop);
       });
 
-      // Each day's fold counts and previews only the lines the filters kept.
+      // Each day counts the lines the filters kept and shows the first few.
       runningGroups.forEach((group) => {
-        const titles = Array.from(group.querySelectorAll('[data-running-line]:not([hidden]) [data-running-title]'))
-          .map((title) => title.textContent.trim());
-        group.hidden = titles.length === 0;
+        const lines = Array.from(group.querySelectorAll('[data-running-line]:not([hidden])'));
+        group.hidden = lines.length === 0;
+        lines.forEach((line, index) => line.classList.toggle('is-extra', index >= runningPreview));
         const count = group.querySelector('[data-running-count]');
-        const preview = group.querySelector('[data-running-preview]');
-        if (count) count.textContent = String(titles.length);
-        if (preview) preview.textContent = titles.join(', ');
+        if (count) count.textContent = String(lines.length);
+        syncRunningMore(group, lines.length);
       });
 
       const visibleCount = visibleStops.size;
@@ -1075,9 +1140,6 @@ function getRunningMeta({ row, stop }: RunningLine) {
         const isPastDay =
           hasVisibleCard &&
           visibleCards.every((card) => (card.dataset.eventDate ?? '') < today);
-        // A day left with only its fold drops the empty route, gap and all.
-        const route = section.querySelector('[data-day-route]');
-        if (route) route.hidden = !hasVisibleCard;
         section.hidden = !hasVisibleStop;
         section.classList.toggle('hidden', !hasVisibleStop);
         section.classList.toggle('is-past-day', isPastDay);
@@ -1104,6 +1166,77 @@ function getRunningMeta({ row, stop }: RunningLine) {
         });
       }
     }
+
+    // "Show 9 more" / "Show fewer" under a day's small cards.
+    function syncRunningMore(group, lineCount) {
+      const button = group.querySelector('[data-running-more]');
+      if (!button) return;
+      const extra = lineCount - runningPreview;
+      const open = group.dataset.open === 'true';
+      button.hidden = extra <= 0;
+      button.textContent = open ? 'Show fewer' : `Show ${extra} more`;
+      button.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    // A small card opens into its run's full card, set to the small card's
+    // own day: the date tile, that day's hours, and links to that day's page.
+    // The full card is rendered once per run in a <template>, not once per day.
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function fillRunningCard(line) {
+      const body = line.querySelector('[data-running-body]');
+      const template = document.querySelector(`template[data-stop-card="${line.dataset.stop}"]`);
+      if (!body || !template || body.dataset.filled === 'true') return;
+
+      const card = template.content.cloneNode(true);
+      const dayUrl = body.querySelector('a')?.href ?? '';
+      const [, month, day] = (line.dataset.eventDate ?? '').split('-').map(Number);
+      const setText = (selector, text) => {
+        const node = card.querySelector(selector);
+        if (node) node.textContent = text;
+      };
+
+      // The run's own card is on the page already, under its first day.
+      card.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+      if (month && day) {
+        setText('[data-card-month]', MONTHS[month - 1]);
+        setText('[data-card-day]', String(day));
+      }
+      const time = card.querySelector('[data-card-time]');
+      if (time && line.dataset.eventTime) time.textContent = line.dataset.eventTime;
+      else time?.remove();
+      if (dayUrl) {
+        card.querySelectorAll('a[data-ga-event="event_detail_click"]').forEach((link) => {
+          link.href = dayUrl;
+        });
+        card.querySelectorAll('[data-share-button]').forEach((button) => {
+          button.dataset.shareUrl = dayUrl;
+        });
+      }
+
+      body.replaceChildren(card);
+      body.dataset.filled = 'true';
+    }
+
+    // `toggle` does not bubble, so it is caught on the way down.
+    board?.addEventListener(
+      'toggle',
+      (event) => {
+        const details = event.target;
+        if (!(details instanceof HTMLElement) || !details.matches('[data-running-card]')) return;
+        const line = details.closest('[data-running-line]');
+        if (details.open && line) fillRunningCard(line);
+      },
+      true
+    );
+
+    board?.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-running-more]');
+      const group = button?.closest('[data-running-group]');
+      if (!group) return;
+      group.dataset.open = group.dataset.open === 'true' ? 'false' : 'true';
+      syncRunningMore(group, group.querySelectorAll('[data-running-line]:not([hidden])').length);
+    });
 
     function resetFilters() {
       if (searchInput) searchInput.value = '';

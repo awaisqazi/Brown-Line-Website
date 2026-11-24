@@ -8,7 +8,7 @@
  * dates in the window gets a card on each date still to come, each naming the
  * others, so a four-night show is found on every night. A longer run (an
  * exhibit, a course) gets one card on its first still-relevant date, carrying
- * the full date range, and a one-line "Also running" entry on each later date
+ * the full date range, and a small "Also running" card on each later date
  * (`alsoRunning`), so every day on the board still lists everything on.
  */
 import { formatMonthDay, SHORT_RUN_MAX_DATES } from './dates';
@@ -31,7 +31,7 @@ export interface BoardStop {
   anchor: string;
   /**
    * A collapsed long run's rows after the card's own date, one per date: the
-   * board prints each as an "Also running" line under its day. Empty for a
+   * board prints each as a small "Also running" card under its day. Empty for a
    * single stop and for a short run, whose every date has a card already.
    */
   alsoRunning: TransitEvent[];
