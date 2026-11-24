@@ -7,8 +7,9 @@
  * a date range: one row per day). A run with at most `SHORT_RUN_MAX_DATES`
  * dates in the window gets a card on each date still to come, each naming the
  * others, so a four-night show is found on every night. A longer run (an
- * exhibit, a course) collapses to one card on its first still-relevant date,
- * carrying the full date range.
+ * exhibit, a course) gets one card on its first still-relevant date, carrying
+ * the full date range, and a one-line "Also running" entry on each later date
+ * (`alsoRunning`), so every day on the board still lists everything on.
  */
 import { formatMonthDay, SHORT_RUN_MAX_DATES } from './dates';
 import { buildStopAnchor } from './seo';
@@ -19,7 +20,7 @@ export { SHORT_RUN_MAX_DATES };
 export interface BoardStop {
   /** The row the card renders. */
   rep: TransitEvent;
-  /** The card's window for the week and weekend filters. */
+  /** The run's first and last date in the window; equal for a card that stands for one date. */
   start: string;
   end: string;
   /** "Oct 2 – Nov 7" for a collapsed run, "Also Oct 31, Nov 6 and Nov 7" for a short one, '' otherwise. */
@@ -28,6 +29,12 @@ export interface BoardStop {
   sortDate: string;
   /** The card's `id` on the board; a short run's later cards carry a date suffix so ids stay unique. */
   anchor: string;
+  /**
+   * A collapsed long run's rows after the card's own date, one per date: the
+   * board prints each as an "Also running" line under its day. Empty for a
+   * single stop and for a short run, whose every date has a card already.
+   */
+  alsoRunning: TransitEvent[];
 }
 
 function joinDates(dates: string[]) {
@@ -67,6 +74,7 @@ export function groupBoardStops(rows: TransitEvent[], today: string): BoardStop[
           recurrenceLabel: others.length > 0 ? `Also ${joinDates(others)}` : '',
           sortDate: date,
           anchor: index === 0 ? baseAnchor : `${baseAnchor}-${date}`,
+          alsoRunning: [],
         };
       });
     }
@@ -76,7 +84,8 @@ export function groupBoardStops(rows: TransitEvent[], today: string): BoardStop[
     const end = dates[dates.length - 1];
     const rep = rowFor(sortDate);
     const recurrenceLabel = start !== end ? `${formatMonthDay(start)} – ${formatMonthDay(end)}` : '';
-    return [{ rep, start, end, recurrenceLabel, sortDate, anchor: buildStopAnchor(rep) }];
+    const alsoRunning = upcoming.slice(1).map(rowFor);
+    return [{ rep, start, end, recurrenceLabel, sortDate, anchor: buildStopAnchor(rep), alsoRunning }];
   });
 }
 

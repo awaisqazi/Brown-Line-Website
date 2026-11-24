@@ -6,9 +6,9 @@ import EventDatePicker from '../components/EventDatePicker.astro';
 import EventSelect from '../components/EventSelect.astro';
 import { fetchAllRows, supabase } from '../lib/supabase';
 import type { TransitEvent } from '../lib/supabase';
-import { addDays, formatStopDate, SERIES_LOOKBACK_DAYS } from '../lib/dates';
+import { addDays, formatMonthDay, formatStopDate, formatTimeRange, SERIES_LOOKBACK_DAYS } from '../lib/dates';
 import { groupBoardStops, type BoardStop } from '../lib/board';
-import { BRAND_NAME, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
+import { BRAND_NAME, buildEventPath, buildEventUrl, buildItemListJsonLd, stringifyJsonLd } from '../lib/seo';
 
 const base = import.meta.env.BASE_URL;
 const siteUrl = Astro.site?.toString() ?? Astro.url.origin;
@@ -50,21 +50,46 @@ function getTodayChicago() {
 // card with its date range (the same helper gives each stop page its anchor).
 const eventGroups: BoardStop[] = groupBoardStops(rows, today);
 
-const groupedByDate = eventGroups.reduce<Record<string, BoardStop[]>>((groups, group) => {
-  (groups[group.sortDate] ??= []).push(group);
-  return groups;
-}, {});
+// A long run's card sits on one day only, so each of its later dates gets an
+// "Also running" line under that day instead: every day on the board lists
+// everything on, without an exhibit repeating its full card for two months.
+interface RunningLine {
+  /** The run's row for this date; the line links to its page. */
+  row: TransitEvent;
+  /** The run's one card. */
+  stop: BoardStop;
+}
+const days = new Map<string, { dayGroups: BoardStop[]; running: RunningLine[] }>();
+function dayFor(date: string) {
+  let day = days.get(date);
+  if (!day) {
+    day = { dayGroups: [], running: [] };
+    days.set(date, day);
+  }
+  return day;
+}
+for (const stop of eventGroups) {
+  dayFor(stop.sortDate).dayGroups.push(stop);
+  for (const row of stop.alsoRunning) dayFor(row.event_date).running.push({ row, stop });
+}
 
-// One segment per calendar day; curated picks lead within a day.
-const groupedEventEntries = Object.entries(groupedByDate)
+// Ties a long run's lines to its card for the client filters. The card's
+// anchor would not do: it is a slug cut to 80 characters, so two runs can share one.
+const stopKeys = new Map(eventGroups.map((stop, index) => [stop, `s${index}`]));
+
+function picksThenTitle(a: TransitEvent, b: TransitEvent) {
+  if (a.is_curated !== b.is_curated) return a.is_curated ? -1 : 1;
+  return a.title.localeCompare(b.title);
+}
+
+// One segment per calendar day with anything on; curated picks lead within a day.
+const groupedEventEntries = Array.from(days.entries())
   .sort(([a], [b]) => a.localeCompare(b))
-  .map(([eventDate, dayGroups]) => ({
+  .map(([eventDate, { dayGroups, running }]) => ({
     eventDate,
     label: formatStopDate(eventDate),
-    dayGroups: dayGroups.sort((a, b) => {
-      if (a.rep.is_curated !== b.rep.is_curated) return a.rep.is_curated ? -1 : 1;
-      return a.rep.title.localeCompare(b.rep.title);
-    }),
+    dayGroups: dayGroups.sort((a, b) => picksThenTitle(a.rep, b.rep)),
+    running: running.sort((a, b) => picksThenTitle(a.row, b.row)),
   }));
 
 // ItemList structured data for the board, in the order the page prints it and
@@ -155,6 +180,15 @@ function getEventSearchText(event: TransitEvent) {
 
 function foldAccents(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// "11 AM to 5 PM · Art Institute of Chicago · Through Jan 25" for an "Also
+// running" line: that day's own hours, the venue's name without its street
+// address, and how long the run still has.
+function getRunningMeta({ row, stop }: RunningLine) {
+  const venueName = fixSpelling(row.venue).split(',')[0].trim();
+  const until = row.event_date === stop.end ? 'Last day' : `Through ${formatMonthDay(stop.end)}`;
+  return [formatTimeRange(row.start_time, row.end_time), venueName, until].filter(Boolean).join(' · ');
 }
 ---
 <Layout
@@ -318,7 +352,7 @@ function foldAccents(value: string) {
           </div>
 
           <div data-events-board class="space-y-14 md:space-y-16">
-            {groupedEventEntries.map(({ eventDate, label, dayGroups }, sectionIndex) => (
+            {groupedEventEntries.map(({ eventDate, label, dayGroups, running }, sectionIndex) => (
             <section
               data-event-day-section
               data-event-date={eventDate}
@@ -335,22 +369,23 @@ function foldAccents(value: string) {
                 </h2>
               </div>
 
-              <ol class="events-route relative space-y-6">
-                {dayGroups.map(({ rep, start, end, recurrenceLabel, anchor }, index) => (
+              <div class="min-w-0 space-y-6">
+              {dayGroups.length > 0 && (
+              <ol data-day-route class="events-route relative space-y-6">
+                {dayGroups.map((stop, index) => (
                   <li
-                    id={anchor}
+                    id={stop.anchor}
                     data-event-card
-                    data-event-date={rep.event_date}
-                    data-event-start={start}
-                    data-event-end={end}
-                    data-event-free={isFreeEvent(rep) ? 'true' : 'false'}
-                    data-event-kind={getEventKind(rep)}
-                    data-event-curated={rep.is_curated ? 'true' : 'false'}
-                    data-event-giveaway={rep.is_giveaway ? 'true' : 'false'}
-                    data-event-tags={(rep.tags ?? []).join('|')}
-                    data-event-neighborhood={rep.neighborhood ?? ''}
-                    data-event-search={getEventSearchText(rep)}
-                    data-has-link={rep.event_url ? 'true' : 'false'}
+                    data-stop={stopKeys.get(stop)}
+                    data-event-date={stop.rep.event_date}
+                    data-event-free={isFreeEvent(stop.rep) ? 'true' : 'false'}
+                    data-event-kind={getEventKind(stop.rep)}
+                    data-event-curated={stop.rep.is_curated ? 'true' : 'false'}
+                    data-event-giveaway={stop.rep.is_giveaway ? 'true' : 'false'}
+                    data-event-tags={(stop.rep.tags ?? []).join('|')}
+                    data-event-neighborhood={stop.rep.neighborhood ?? ''}
+                    data-event-search={getEventSearchText(stop.rep)}
+                    data-has-link={stop.rep.event_url ? 'true' : 'false'}
                     class="relative pl-12 md:pl-14"
                   >
                     <span
@@ -361,10 +396,56 @@ function foldAccents(value: string) {
                       aria-hidden="true"
                     ></span>
 
-                    <EventCard event={rep} recurrenceLabel={recurrenceLabel} />
+                    <EventCard event={stop.rep} recurrenceLabel={stop.recurrenceLabel} />
                   </li>
                 ))}
               </ol>
+              )}
+
+              {running.length > 0 && (
+                <details data-also-running class="also-running ml-12 border-2 border-darkWalnut/30 bg-[#FDFBF7] md:ml-14">
+                  <summary class="cursor-pointer px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mayaBlue">
+                    <span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span class="shrink-0 font-body text-[10px] font-bold uppercase tracking-[0.3em] text-cayenneInk">
+                        Also running
+                      </span>
+                      <span data-running-count class="shrink-0 font-mono text-[11px] font-bold text-darkWalnut">
+                        {running.length}
+                      </span>
+                      <span data-running-preview aria-hidden="true" class="also-running-preview order-last min-w-0 basis-full truncate font-card text-[13px] text-darkWalnut/75 sm:order-none sm:flex-1 sm:basis-0">
+                        {running.map(({ row }) => fixSpelling(row.title)).join(', ')}
+                      </span>
+                      <span class="also-running-chevron ml-auto shrink-0" aria-hidden="true"></span>
+                    </span>
+                  </summary>
+                  <ul class="divide-y divide-darkWalnut/15 border-t-2 border-darkWalnut/30 px-4">
+                    {running.map((line) => (
+                      <li
+                        data-running-line
+                        data-stop={stopKeys.get(line.stop)}
+                        data-event-date={line.row.event_date}
+                        data-event-free={isFreeEvent(line.row) ? 'true' : 'false'}
+                        data-event-curated={line.row.is_curated ? 'true' : 'false'}
+                        data-event-tags={(line.row.tags ?? []).join('|')}
+                        data-event-neighborhood={line.row.neighborhood ?? ''}
+                        class="py-2.5"
+                      >
+                        <a
+                          href={buildEventPath(line.row, base)}
+                          data-running-title
+                          data-ga-event="event_detail_click"
+                          data-ga-label={line.row.title}
+                          class="link-transit font-card text-sm font-bold leading-snug text-darkWalnut transition-colors hover:text-cayenneInk focus-visible:text-cayenneInk focus-visible:outline-none"
+                        >{line.row.is_curated && <span aria-hidden="true">★ </span>}{fixSpelling(line.row.title)}</a>
+                        <p class="mt-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-darkWalnut/70">
+                          {getRunningMeta(line)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              </div>
             </section>
           ))}
           </div>
@@ -421,6 +502,40 @@ function foldAccents(value: string) {
     }
   }
 
+  /* "Also running": the day's long runs, one line each, folded by default. */
+  .also-running > summary {
+    list-style: none;
+  }
+
+  .also-running > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .also-running-chevron {
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.125rem;
+    border-right: 2px solid #642713;
+    border-bottom: 2px solid #642713;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 120ms ease;
+  }
+
+  .also-running[open] .also-running-chevron {
+    transform: translateY(2px) rotate(225deg);
+  }
+
+  /* Open, the lines themselves name the runs; the preview would repeat them. */
+  .also-running[open] .also-running-preview {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .also-running-chevron {
+      transition: none;
+    }
+  }
+
   [data-event-card].is-past-event .event-stop {
     opacity: 0.35;
     filter: grayscale(1);
@@ -461,6 +576,15 @@ function foldAccents(value: string) {
     const board = document.querySelector('[data-events-board]');
     const eventCards = board ? Array.from(board.querySelectorAll('[data-event-card]')) : [];
     const daySections = board ? Array.from(board.querySelectorAll('[data-event-day-section]')) : [];
+    // A long run has one card, on its first day; each later day carries an
+    // "Also running" line for it. Lines are filtered like cards; a line and
+    // its run's card share a `data-stop` key, and a line is searched by that
+    // card's text.
+    const runningGroups = board ? Array.from(board.querySelectorAll('[data-also-running]')) : [];
+    const runningLines = board ? Array.from(board.querySelectorAll('[data-running-line]')) : [];
+    const searchTextByStop = new Map(
+      eventCards.map((card) => [card.dataset.stop, card.dataset.eventSearch ?? ''])
+    );
     const noMatches = document.querySelector('[data-no-event-matches]');
 
     let eventDates = [];
@@ -872,25 +996,26 @@ function foldAccents(value: string) {
     }
 
     /* ---------- Filtering ---------- */
+    // Decides a card and an "Also running" line alike.
     function eventMatches(card) {
       const query = normalize(searchInput?.value ?? '');
       const category = categorySelect?.value ?? '';
       const neighborhood = neighborhoodSelect?.value ?? '';
-      const cardStart = card.dataset.eventStart || card.dataset.eventDate || '';
-      const cardEnd = card.dataset.eventEnd || card.dataset.eventDate || '';
+      const cardDate = card.dataset.eventDate ?? '';
       const cardTags = (card.dataset.eventTags ?? '').split('|').filter(Boolean);
       const cardNeighborhood = card.dataset.eventNeighborhood ?? '';
       const isFree = card.dataset.eventFree === 'true';
 
-      if (query && !(card.dataset.eventSearch ?? '').includes(query)) return false;
+      const searchText = card.dataset.eventSearch ?? searchTextByStop.get(card.dataset.stop) ?? '';
+      if (query && !searchText.includes(query)) return false;
 
-      // A multi-day / recurring event matches when its [start, end] range overlaps
-      // the active window. Searching expands the window to all upcoming, since a
-      // search means "find this anywhere," not "only this week."
+      // Each card and line stands for one day (a long run is its card plus a
+      // line on every later day), so it matches when that day is in the active
+      // window. Searching expands the window to all upcoming, since a search
+      // means "find this anywhere," not "only this week."
       const range = getActiveRange();
       const hi = query ? '9999-12-31' : range.hi;
-      if (cardEnd && cardEnd < range.lo) return false;
-      if (cardStart && cardStart > hi) return false;
+      if (cardDate && (cardDate < range.lo || cardDate > hi)) return false;
 
       if (freeOnly && !isFree) return false;
       if (curatedOnly && card.dataset.eventCurated !== 'true') return false;
@@ -901,23 +1026,60 @@ function foldAccents(value: string) {
     }
 
     function renderFilters() {
-      let visibleCount = 0;
+      // Stops on screen: every card, plus every long run showing only as
+      // lines, counted once however many days it is listed under.
+      const visibleStops = new Set();
 
       eventCards.forEach((card) => {
         const shouldShow = eventMatches(card);
         card.hidden = !shouldShow;
-        if (shouldShow) visibleCount += 1;
+        if (shouldShow) visibleStops.add(card.dataset.stop);
       });
+
+      // The board is a list of days, so a long run is named under every day
+      // it is on. An open-ended window (All upcoming, or any search) narrowed
+      // by search, Category, Neighborhood, Free, or picks reads as a list of
+      // stops instead, where a run shows once: its card, or failing that its
+      // first line, rather than the same exhibit under sixty day headings.
+      const query = normalize(searchInput?.value ?? '');
+      const oncePerRun =
+        (dateMode === 'all' || Boolean(query)) &&
+        Boolean(query || categorySelect?.value || neighborhoodSelect?.value || freeOnly || curatedOnly);
+
+      runningLines.forEach((line) => {
+        const stop = line.dataset.stop;
+        const shouldShow = eventMatches(line) && !(oncePerRun && visibleStops.has(stop));
+        line.hidden = !shouldShow;
+        if (shouldShow) visibleStops.add(stop);
+      });
+
+      // Each day's fold counts and previews only the lines the filters kept.
+      runningGroups.forEach((group) => {
+        const titles = Array.from(group.querySelectorAll('[data-running-line]:not([hidden]) [data-running-title]'))
+          .map((title) => title.textContent.trim());
+        group.hidden = titles.length === 0;
+        const count = group.querySelector('[data-running-count]');
+        const preview = group.querySelector('[data-running-preview]');
+        if (count) count.textContent = String(titles.length);
+        if (preview) preview.textContent = titles.join(', ');
+      });
+
+      const visibleCount = visibleStops.size;
 
       daySections.forEach((section) => {
         const sectionCards = Array.from(section.querySelectorAll('[data-event-card]'));
         const visibleCards = sectionCards.filter((card) => !card.hidden);
         const hasVisibleCard = visibleCards.length > 0;
+        const hasVisibleStop =
+          hasVisibleCard || Boolean(section.querySelector('[data-running-line]:not([hidden])'));
         const isPastDay =
           hasVisibleCard &&
           visibleCards.every((card) => (card.dataset.eventDate ?? '') < today);
-        section.hidden = !hasVisibleCard;
-        section.classList.toggle('hidden', !hasVisibleCard);
+        // A day left with only its fold drops the empty route, gap and all.
+        const route = section.querySelector('[data-day-route]');
+        if (route) route.hidden = !hasVisibleCard;
+        section.hidden = !hasVisibleStop;
+        section.classList.toggle('hidden', !hasVisibleStop);
         section.classList.toggle('is-past-day', isPastDay);
       });
 
@@ -1034,16 +1196,11 @@ function foldAccents(value: string) {
       // The browser's own load-time scrolling cancels the smooth scroll that
       // setSelectedDate queues, so re-jump instantly once the page settles.
       const jumpToParamDate = () => {
-        const target =
-          daySections.find(
-            (section) => !section.hidden && (section.dataset.eventDate ?? '') >= paramDate
-          ) ??
-          // No stop on or after that day: land on a run that covers it (its
-          // card sits on the run's first day, not on the day that was picked).
-          eventCards.find(
-            (card) =>
-              (card.dataset.eventStart ?? '') <= paramDate && paramDate <= (card.dataset.eventEnd ?? '')
-          );
+        // Every day with anything on has a section (a run's later days carry
+        // its "Also running" line), so the day picked, or the next one, is there.
+        const target = daySections.find(
+          (section) => !section.hidden && (section.dataset.eventDate ?? '') >= paramDate
+        );
         target?.scrollIntoView({ block: 'start' });
       };
       if (document.readyState === 'complete') jumpToParamDate();
